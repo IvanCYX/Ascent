@@ -1,4 +1,4 @@
-# SENDLOG
+# Ascent
 
 A single-user bouldering progress tracker for several Malaysian gyms that each grade
 differently, plus KilterBoard and TensionBoard 2 on the V-scale. It answers one question —
