@@ -3,3 +3,11 @@ dist
 .DS_Store
 *.local
 *.log
+
+# iOS
+ios/AscentKit/.build
+ios/AscentKit/.swiftpm
+xcuserdata/
+*.xcuserstate
+DerivedData/
+ios/build/

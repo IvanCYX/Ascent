@@ -1,0 +1,94 @@
+name: Ascent
+options:
+  bundleIdPrefix: com.ivancyx
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+packages:
+  AscentKit:
+    path: AscentKit
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+targets:
+  Ascent:
+    type: application
+    platform: iOS
+    sources:
+      - path: Ascent
+    dependencies:
+      - package: AscentKit
+        product: AscentCore
+      - package: AscentKit
+        product: AscentUI
+      - target: AscentWidgets
+    info:
+      path: Ascent/Info.plist
+      properties:
+        CFBundleDisplayName: Ascent
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen:
+          UIColorName: ""
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSFaceIDUsageDescription: Ascent uses Face ID to keep your climbing and injury log private.
+        NSSupportsLiveActivities: true
+        ITSAppUsesNonExemptEncryption: false
+        CFBundleURLTypes:
+          - CFBundleURLName: com.ivancyx.ascent
+            CFBundleURLSchemes: [ascent]
+    entitlements:
+      path: Ascent/Ascent.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.ivancyx.ascent]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ivancyx.ascent
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+  AscentWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: AscentWidgets
+    dependencies:
+      - package: AscentKit
+        product: AscentCore
+      - package: AscentKit
+        product: AscentUI
+      - package: AscentKit
+        product: AscentWidgetsUI
+    info:
+      path: AscentWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Ascent
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: AscentWidgets/AscentWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.ivancyx.ascent]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ivancyx.ascent.widgets
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+schemes:
+  Ascent:
+    build:
+      targets:
+        Ascent: all
+        AscentWidgets: all
+    run:
+      config: Debug
+    archive:
+      config: Release

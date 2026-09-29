@@ -1,0 +1,1230 @@
+<title>Ascent iOS Draft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
+<style>
+/* ── Board chrome (the page itself) ─────────────────────────────────────── */
+:root{
+  --bg:#e4e0d6; --panel:#f5f2ea; --text:#17150f; --sub:#6f6a5e; --line:rgba(23,21,15,.14);
+  --serif:Newsreader,Georgia,'Times New Roman',serif;
+  --sans:Archivo,-apple-system,'Helvetica Neue',Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --sys:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#0c0b09; --panel:#1a1814; --text:#ece6d8; --sub:#a39c8c; --line:rgba(236,230,216,.14); color-scheme:dark; }
+}
+:root[data-theme="dark"]{ --bg:#0c0b09; --panel:#1a1814; --text:#ece6d8; --sub:#a39c8c; --line:rgba(236,230,216,.14); color-scheme:dark; }
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font:400 14px/1.5 var(--sans);-webkit-font-smoothing:antialiased;padding-inline:16px;padding-block:0 80px}
+.wrap{max-width:1880px;margin:0 auto}
+header.top{padding-block:36px 24px;border-bottom:2px solid var(--text);display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between}
+header.top h1{font:400 44px/1 var(--serif);margin:0;text-wrap:balance}
+header.top .eyebrow{font:400 11px/1 var(--mono);letter-spacing:.14em;color:var(--sub);text-transform:uppercase;margin-bottom:12px}
+header.top p{max-width:640px;margin:12px 0 0;color:var(--sub);text-wrap:pretty}
+.controls{display:flex;flex-wrap:wrap;gap:18px;align-items:center;position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:var(--bg);padding-block:12px;border-bottom:1px solid var(--line)}
+.ctl{display:flex;align-items:center;gap:8px;font:400 10.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--sub)}
+.segc{display:flex;gap:2px;padding:3px;background:var(--line)}
+.segc button{font:500 12px/1 var(--sans);border:0;background:transparent;color:var(--sub);padding:8px 12px;cursor:pointer}
+.segc button.on{background:var(--text);color:var(--bg)}
+.segc button:focus-visible,.sw:focus-visible,.navlink:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.sw{width:26px;height:26px;border:1px solid var(--line);cursor:pointer;padding:0}
+.sw.on{outline:2px solid var(--text);outline-offset:2px}
+#customAccent{width:34px;height:28px;border:1px solid var(--line);padding:0;background:none;cursor:pointer}
+.ctl label{display:flex;gap:6px;align-items:center;cursor:pointer;text-transform:none;letter-spacing:0;font:400 12.5px/1 var(--sans);color:var(--text)}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px 16px;padding-block:14px}
+.navlink{font:500 12px/1 var(--sans);color:var(--sub);text-decoration:none;padding-block:4px}
+.navlink:hover{color:var(--text)}
+section.sec-board{padding-block:40px 8px;border-bottom:1px solid var(--line)}
+.sec-board>h2{font:400 30px/1.1 var(--serif);margin:0 0 6px}
+.sec-board>.lede{color:var(--sub);max-width:760px;margin:0 0 28px;text-wrap:pretty}
+.rowf{display:flex;flex-wrap:wrap;gap:56px 44px;align-items:flex-start}
+.frame{display:flex;flex-direction:column;gap:14px;max-width:100%}
+.fcap{display:flex;align-items:baseline;gap:10px}
+.fcap .fid{font:500 11px/1 var(--mono);color:var(--sub);letter-spacing:.06em}
+.fcap .fname{font:500 15px/1.2 var(--sans)}
+.phones{display:flex;gap:28px;overflow-x:auto;padding:14px 14px 18px;max-width:100%}
+.notes{margin:0;padding:0 0 0 16px;max-width:393px;color:var(--sub);font:400 12.5px/1.5 var(--sans)}
+.notes li{margin-bottom:4px;text-wrap:pretty}
+.notes code{font:400 11.5px/1 var(--mono);color:var(--text)}
+.spec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.spec-card{background:var(--panel);border:1px solid var(--line);padding:18px}
+.spec-card h3{font:400 20px/1.2 var(--serif);margin:0 0 12px}
+.spec-card table{width:100%;border-collapse:collapse;font:400 12px/1.4 var(--sans)}
+.spec-card td,.spec-card th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.spec-card th{font:500 10px/1 var(--mono);letter-spacing:.1em;color:var(--sub);text-transform:uppercase}
+.chipv{display:inline-block;width:14px;height:14px;vertical-align:middle;border:1px solid var(--line);margin-right:6px}
+.mono-s{font:400 11px/1.4 var(--mono)}
+.ia{overflow-x:auto;background:var(--panel);border:1px solid var(--line);padding:18px}
+.ia pre.mermaid{margin:0;background:transparent}
+.wall{display:flex;flex-wrap:wrap;gap:36px}
+.wgroup{display:flex;flex-direction:column;gap:12px}
+.wgroup h4{margin:0;font:500 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--sub)}
+.wpair{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+.wcol{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.wcol .tag{font:500 10px/1 var(--mono);letter-spacing:.1em;color:var(--sub)}
+.wallpaper{padding:22px;background:linear-gradient(160deg,#6f7f86 0%,#8c7f6c 45%,#3b3f3a 100%);max-width:100%;overflow-x:auto}
+.wallpaper.dk{background:linear-gradient(160deg,#1c2327 0%,#2a2620 50%,#0e0f0d 100%)}
+@media (prefers-reduced-motion:no-preference){ .live-dot{animation:pulse 1.6s ease-in-out infinite} }
+@keyframes pulse{50%{opacity:.35}}
+
+/* ── Phone tokens: paper palette, light + dark ──────────────────────────── */
+.tok{
+  --paper:#f5f2ea; --card:#ffffff; --ink:#17150f; --muted:#6f6a5e; --faint:#a09a8c;
+  --rule:rgba(23,21,15,.12); --rule-strong:rgba(23,21,15,.22); --rule-chip:rgba(23,21,15,.16);
+  --track:rgba(23,21,15,.06); --worked:rgba(23,21,15,.2);
+  --warn:#c0392b; --warn-bg:rgba(192,57,43,.07); --warn-border:rgba(192,57,43,.4); --warn-soft:rgba(192,57,43,.28); --warn-mid:rgba(192,57,43,.55);
+  --watch:#f2c744;
+  --glass:rgba(250,248,242,.58); --glass-edge:rgba(255,255,255,.95); --glass-rim:rgba(23,21,15,.08); --glass-shadow:rgba(23,21,15,.16);
+  --dim:rgba(23,21,15,.26); --sheet:#f5f2ea; --grouped:#ece8de; --grouped-row:#fbfaf6;
+  --sysblue:#0a7aff; --sysred:#ff3b30; --sysgreen:#34c759;
+  --accent:#17150f; --on-accent:#f5f2ea; --data:var(--ink);
+  color:var(--ink);
+}
+.tok[data-mode="dark"]{
+  --paper:#12110e; --card:#1d1b17; --ink:#ece6d8; --muted:#a39c8c; --faint:#6e6859;
+  --rule:rgba(236,230,216,.12); --rule-strong:rgba(236,230,216,.24); --rule-chip:rgba(236,230,216,.18);
+  --track:rgba(236,230,216,.07); --worked:rgba(236,230,216,.26);
+  --warn:#e5594c; --warn-bg:rgba(229,89,76,.12); --warn-border:rgba(229,89,76,.5); --warn-soft:rgba(229,89,76,.3); --warn-mid:rgba(229,89,76,.6);
+  --glass:rgba(44,41,35,.5); --glass-edge:rgba(255,255,255,.26); --glass-rim:rgba(255,255,255,.1); --glass-shadow:rgba(0,0,0,.55);
+  --dim:rgba(0,0,0,.55); --sheet:#171612; --grouped:#0d0c0a; --grouped-row:#1d1b17;
+  --sysblue:#0a84ff; --sysred:#ff453a; --sysgreen:#30d158;
+  color-scheme:dark;
+}
+
+/* ── Phone frame ────────────────────────────────────────────────────────── */
+.phone{width:393px;height:852px;border-radius:55px;position:relative;overflow:hidden;background:var(--paper);flex:none;
+  box-shadow:0 0 0 9px #111,0 0 0 10px #3a3a3a,0 24px 50px rgba(0,0,0,.28);font:400 14px/1.4 var(--sans)}
+.phone.tall{height:auto;min-height:852px}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:124px;height:36px;border-radius:20px;background:#000;z-index:90}
+.status{height:54px;display:flex;align-items:center;justify-content:space-between;padding:6px 32px 0 42px;font:600 16px/1 var(--sys);position:relative;z-index:80}
+.status .ic{display:flex;gap:6px;align-items:center}
+.homebar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:139px;height:5px;border-radius:3px;background:var(--ink);opacity:.85;z-index:95}
+.fold{position:absolute;left:0;right:0;top:852px;border-top:1px dashed var(--warn);z-index:70}
+.fold span{position:absolute;right:10px;top:-16px;font:500 9px/1 var(--mono);letter-spacing:.1em;color:var(--warn);background:var(--paper);padding:2px 4px}
+svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg.i.s{width:17px;height:17px}
+svg.i.xs{width:14px;height:14px}
+
+/* ── Glass (navigation/control layer only) ──────────────────────────────── */
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(14px) saturate(180%);backdrop-filter:blur(14px) saturate(180%);
+  box-shadow:inset 0 1px 0 var(--glass-edge),inset 0 0 0 .5px var(--glass-rim),inset 0 -8px 16px -12px var(--glass-edge),0 8px 22px -6px var(--glass-shadow);position:relative}
+.glass::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(120% 60% at 30% 0%,rgba(255,255,255,.35),transparent 55%)}
+.tok[data-mode="dark"] .glass::after{background:radial-gradient(120% 60% at 30% 0%,rgba(255,255,255,.12),transparent 55%)}
+.gbtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--ink)}
+.gcap{height:44px;border-radius:22px;display:flex;align-items:center;gap:2px;padding:0 4px;color:var(--ink)}
+.gcap .gbtn{box-shadow:none;background:transparent}
+.gcap .gbtn::after{display:none}
+.gtext{height:44px;border-radius:22px;display:flex;align-items:center;gap:6px;padding:0 16px;font:600 15px/1 var(--sys);color:var(--ink)}
+
+/* nav bar */
+.nav{padding:0 16px 10px;position:relative;z-index:30}
+.nav-tools{display:flex;justify-content:space-between;align-items:center;height:48px}
+.lt{font:400 36px/1.05 var(--serif);margin:6px 0 0;letter-spacing:-.01em}
+.lt-sub{font:400 11px/1 var(--mono);letter-spacing:.12em;color:var(--muted);margin-top:8px;text-transform:uppercase}
+.inline-nav{position:absolute;left:0;right:0;top:0;height:112px;z-index:60;background:linear-gradient(var(--paper) 55%,transparent)}
+.inline-nav .t{position:absolute;top:66px;left:0;right:0;text-align:center;font:600 16px/1 var(--sans)}
+.inline-nav .gbtn{position:absolute;top:56px}
+
+/* tab bar + plus */
+.tabbar{position:absolute;left:21px;right:21px;bottom:24px;height:64px;border-radius:32px;display:flex;align-items:center;padding:4px;z-index:85}
+.tab{flex:1;height:56px;border-radius:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--ink);font:600 10px/1 var(--sys)}
+.tab.on{color:var(--accent);background:var(--track)}
+.tabbar.min{right:auto;width:56px;height:56px;padding:0;bottom:28px}
+.tabbar.min .tab{height:56px;border-radius:28px}
+.plus{position:absolute;left:50%;transform:translateX(-50%);bottom:98px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;z-index:86;color:var(--on-accent);
+  background:color-mix(in srgb,var(--accent) 86%,transparent)}
+.plus svg{width:26px;height:26px;stroke-width:2.4}
+.plus.min{bottom:32px;width:48px;height:48px}
+.plus.min svg{width:22px;height:22px}
+.plus .livebadge{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);white-space:nowrap;font:600 11px/1 var(--mono);letter-spacing:.04em;height:26px;padding:0 10px;border-radius:13px;color:var(--ink);display:flex;align-items:center;gap:6px}
+.plus.ring::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--accent);opacity:.85}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:160px;height:31px;background:#000;border-radius:0 0 20px 20px;z-index:90}
+.di{position:absolute;top:11px;left:50%;transform:translateX(-50%);background:#000;z-index:95;color:#fff;font-family:var(--sys)}
+.di.compact{width:236px;height:37px;border-radius:20px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 12px}
+.di.expanded{top:9px;width:375px;border-radius:44px;padding:18px 20px 16px}
+.la{border-radius:24px;padding:14px 16px;background:var(--paper);color:var(--ink)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px}
+.cal .dow{font:400 10px/1 var(--mono);color:var(--muted);text-align:center;padding-bottom:8px}
+.cal .d{height:46px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:7px;gap:5px;font:400 15px/1 var(--sans);position:relative}
+.cal .d.out{color:var(--faint)}
+.cal .d.peak{background:var(--track)}
+.cal .d.taper{background:repeating-linear-gradient(135deg,var(--track) 0 4px,transparent 4px 8px)}
+.cal .d.cw{background:repeating-linear-gradient(135deg,var(--worked) 0 4px,transparent 4px 8px)}
+.cal .d .num{width:28px;height:28px;display:grid;place-items:center;margin-top:-5px}
+.cal .d.today .num{border:1.5px solid var(--ink)}
+.cal .d.sel .num{background:var(--ink);color:var(--paper)}
+.cal .d.comp .num{background:var(--accent);color:var(--on-accent);font-weight:600}
+.cal .d i{width:5px;height:5px;display:block;background:var(--data);margin-top:-3px}
+.cal .d i.pl{background:transparent;border:1px solid var(--data)}
+.phasebar{display:flex;gap:2px;height:30px}
+.phasebar span{display:flex;align-items:center;justify-content:center;font:500 9.5px/1 var(--mono);letter-spacing:.08em;color:var(--muted);background:var(--track);position:relative}
+.phasebar span.now{background:var(--data);color:var(--paper)}
+.phasebar span.tp{background:repeating-linear-gradient(135deg,var(--worked) 0 4px,var(--track) 4px 8px);color:var(--ink)}
+.phasebar span.cp{background:var(--accent);color:var(--on-accent)}
+.tw{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--rule)}
+.tw .wk{width:52px;flex:none;font:400 10.5px/1.3 var(--mono);color:var(--muted)}
+.tw .wk b{display:block;font:500 10.5px/1 var(--mono);color:var(--ink);letter-spacing:.08em;margin-bottom:4px}
+.tw .bd{flex:1;font:400 13px/1.45 var(--sans);color:var(--muted);text-wrap:pretty}
+.tw .bd strong{color:var(--ink);font-weight:600}
+.loadbar{height:6px;background:var(--track);position:relative;margin-top:8px}
+.loadbar i{position:absolute;left:0;top:0;bottom:0;background:var(--data)}
+.loadbar em{position:absolute;top:-3px;bottom:-3px;width:1.5px;background:var(--ink)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block}
+.plus.pressed{transform:translateX(-50%) scale(1.08)}
+.toast{position:absolute;left:50%;transform:translateX(-50%);bottom:112px;border-radius:24px;height:48px;display:flex;align-items:center;gap:12px;padding:0 8px 0 18px;z-index:88;font:500 14px/1 var(--sans);white-space:nowrap}
+.toast b{font-weight:600}
+.toast .u{font:600 14px/1 var(--sys);color:var(--accent);padding:10px 12px}
+
+/* ── Content (paper layer): zero radius, hairlines, ink ────────────────── */
+.scroll{position:relative}
+.pad{padding:0 16px}
+.band{padding:20px 16px;border-top:1px solid var(--rule)}
+.micro{font:400 10.5px/1 var(--mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.sh{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px}
+.st{font:400 21px/1.1 var(--serif)}
+.note{font:400 10px/1.3 var(--mono);letter-spacing:.08em;color:var(--muted);text-transform:uppercase;text-align:right}
+.read{margin-top:14px;font:400 13px/1.5 var(--sans);color:var(--muted);text-wrap:pretty}
+.read b{color:var(--ink);font-weight:600}
+.serif{font-family:var(--serif)}
+.monot{font-family:var(--mono)}
+.mutedt{color:var(--muted)}
+.faintt{color:var(--faint)}
+.warnt{color:var(--warn)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips.nowrap{flex-wrap:nowrap;overflow:hidden}
+.chip{font:500 14px/1 var(--sans);color:var(--ink);background:var(--card);border:1px solid var(--rule-chip);padding:0 14px;height:40px;display:inline-flex;align-items:center;white-space:nowrap}
+.chip.sm{font-size:13px;padding:0 12px;height:36px}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip.pain{border-color:var(--warn-border);color:var(--warn)}
+.chip.pain.on{background:var(--warn);color:#fff;border-color:var(--warn)}
+.chip.dashed{border-style:dashed;border-color:var(--rule-strong);background:transparent}
+.chip.blocked{color:var(--faint);text-decoration:line-through;border-color:var(--rule)}
+.seg{display:flex;gap:2px;background:var(--track);padding:3px}
+.seg span{flex:1;text-align:center;font:500 13px/1 var(--sans);color:var(--muted);padding:10px 0}
+.seg span.on{background:var(--ink);color:var(--paper)}
+.btn{height:50px;display:flex;align-items:center;justify-content:center;font:600 15px/1 var(--sans);flex:1;white-space:nowrap}
+.btn.pri{background:var(--accent);color:var(--on-accent)}
+.btn.sec{border:1px solid var(--rule-strong);color:var(--ink)}
+.btn.dis{background:var(--track);color:var(--faint)}
+.link{font:500 13px/1 var(--sans);color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.warnp{background:var(--warn-bg);border:1px solid var(--warn-border);padding:12px 14px;font:400 13px/1.5 var(--sans);color:var(--muted);text-wrap:pretty}
+.warnp b{color:var(--warn);font-weight:600}
+.card{background:var(--card);border:1px solid var(--rule)}
+.field{display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;background:var(--card);border:1px solid var(--rule)}
+.field label{font:400 11px/1 var(--mono);letter-spacing:.06em;color:var(--muted)}
+.field span{font:400 14px/1 var(--sans)}
+.field .ph{color:var(--faint)}
+.meter{height:6px;background:var(--track);flex:1;position:relative}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:var(--data)}
+.meter.warn i{background:var(--warn)}
+.kpis{display:grid;grid-template-columns:1fr 1fr}
+.kpi{padding:16px 16px 18px;border-top:1px solid var(--rule)}
+.kpi:nth-child(odd){border-right:1px solid var(--rule)}
+.kpi .v{font:400 40px/.9 var(--serif);margin-top:12px;display:flex;align-items:baseline;gap:7px}
+.kpi .v small{font:400 11.5px/1.2 var(--sans);color:var(--muted)}
+.kpi .d{font:400 11px/1.3 var(--mono);color:var(--muted);margin-top:10px}
+.kpi .d.s{color:var(--ink)}
+.pyr{display:flex;flex-direction:column;gap:6px}
+.pyr .r{display:flex;align-items:center;gap:10px}
+.pyr .g{width:24px;text-align:right;font:400 16px/1 var(--serif)}
+.pyr .bar{flex:1;height:20px;background:var(--track);display:flex}
+.pyr .bar .w{background:var(--worked);display:flex}
+.pyr .bar .f{background:var(--data)}
+.pyr .c{width:22px;font:400 12px/1 var(--mono);color:var(--muted)}
+.legend{display:flex;gap:12px;font:400 11px/1 var(--sans);color:var(--muted);align-items:center}
+.legend i{width:9px;height:9px;display:inline-block;margin-right:4px;vertical-align:-1px}
+.tally{display:flex;align-items:flex-end;gap:6px;height:100px}
+.tally .t{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.tally .t span{font:400 11px/1 var(--mono);color:var(--muted)}
+.tally .t em{font:400 9.5px/1 var(--mono);font-style:normal;color:var(--muted)}
+.tally .t i{width:100%;display:block}
+.bcard{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px}
+.bcode{width:36px;height:36px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font:500 11px/1 var(--mono);flex:none}
+.inj{padding:14px 16px;border:1px solid var(--warn-border);background:var(--warn-bg)}
+.spark{display:flex;align-items:flex-end;gap:3px;height:36px;margin:12px 0 8px}
+.spark i{flex:1;display:block}
+.rr{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.rr .l{width:118px;font:400 13px/1 var(--sans)}
+.rr .n{width:24px;text-align:right;font:400 12px/1 var(--mono);color:var(--muted)}
+.rr.w .l{color:var(--warn);font-weight:600}
+.rr.w .n{color:var(--warn)}
+.heat{display:grid;grid-template-columns:84px repeat(5,1fr);gap:4px;align-items:center}
+.heat .hl{font:500 12px/1.1 var(--sans)}
+.heat .hl.w{color:var(--warn);font-weight:600}
+.heat .hb{font:400 9.5px/1 var(--mono);color:var(--muted);text-align:center}
+.heat .c{height:36px;display:grid;place-items:center;font:500 11.5px/1 var(--mono)}
+.heat .c.na{background:var(--track);color:var(--faint)}
+.heat .c.gap{border:1px solid var(--warn-mid);color:var(--warn)}
+.ledger .row{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--rule);align-items:center}
+.ledger .dt{width:44px;flex:none;font:400 11px/1.25 var(--mono);color:var(--muted)}
+.ledger .dt b{display:block;font:400 20px/1 var(--serif);color:var(--ink);margin-bottom:3px}
+.ledger .mid{flex:1;min-width:0}
+.ledger .gym{font:600 14px/1.2 var(--sans)}
+.ledger .it{font:400 12px/1.3 var(--sans);color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ledger .tg{display:flex;gap:3px;margin-top:7px;align-items:center}
+.ledger .rt{text-align:right;flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+.gchip{font:500 10.5px/1 var(--mono);padding:4px 6px;background:var(--track)}
+.gchip.top{background:var(--ink);color:var(--paper)}
+.hsw{width:15px;height:15px;display:inline-block;flex:none}
+.felt{display:flex;align-items:center;gap:6px;font:400 14px/1 var(--serif)}
+.felt .meter{width:40px;flex:none;height:5px}
+.trend .tr{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.trend .tl{width:118px;font:400 13px/1.2 var(--sans);flex:none}
+.trend .cells{flex:1;display:flex;gap:2px}
+.trend .cells i{flex:1;height:16px;display:block;background:var(--track)}
+.trend .cells i.on{background:var(--data)}
+.trend .tc{width:26px;text-align:right;font:400 12px/1 var(--mono)}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.gb{height:52px;display:grid;place-items:center;font:500 17px/1 var(--mono);background:var(--card);border:1px solid var(--rule)}
+.gb.on{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+.holds{display:flex;gap:1px}
+.holds i{flex:1;height:48px;display:block;position:relative}
+.holds i.on::after{content:"";position:absolute;inset:-4px;border:2px solid var(--ink)}
+.confirm{display:flex;align-items:center;gap:12px;padding:10px 10px 10px 14px;background:var(--card);border:2px solid var(--ink)}
+.confirm.idle{border-color:var(--rule)}
+.confirm .gv{font:400 26px/1 var(--serif);width:30px;text-align:center}
+.confirm .sendb{width:96px;flex:none}
+.logrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rule)}
+.logrow .g{width:30px;font:400 17px/1 var(--serif);flex:none}
+.logrow .d{flex:1;font:400 13px/1.3 var(--sans);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.logrow .tm{font:400 11px/1 var(--mono);color:var(--faint)}
+.logrow.new{background:linear-gradient(90deg,var(--track),transparent)}
+.tagrow{display:flex;align-items:center;gap:12px;padding:9px 12px;background:var(--card);border:1px solid var(--rule);margin-bottom:6px}
+.tagrow.on{border:2px solid var(--ink);padding:8px 11px}
+.tagrow .sq{width:30px;height:30px;flex:none}
+.tagrow .nm{flex:1;font:500 14px/1 var(--sans)}
+.tagrow .nm div{font:400 10px/1 var(--mono);color:var(--muted);letter-spacing:.06em;margin-top:5px}
+.tagrow .ct{font:400 19px/1 var(--mono)}
+.tagrow .add{width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--rule-chip);font:400 20px/1 var(--sans);flex:none}
+.tagrow.on .add{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.hist{display:flex;align-items:flex-end;gap:5px;height:70px}
+.hist div{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+.hist i{width:100%;display:block}
+.hist span{font:400 9.5px/1 var(--mono);color:var(--muted)}
+.blocks .b{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--rule);margin-bottom:6px}
+.blocks .b.em{border:2px solid var(--ink);padding:11px 13px}
+.blocks .m{width:44px;font:400 11px/1 var(--mono);color:var(--muted);flex:none}
+.blocks .ds{flex:1;font:500 13.5px/1.35 var(--sans)}
+.blocks .tg{font:400 12px/1.3 var(--sans);color:var(--muted);text-align:right;max-width:92px}
+.intent{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.intent span{padding:12px 10px;font:500 13px/1.25 var(--sans);background:var(--card);border:1px solid var(--rule-chip);min-height:56px;display:flex;align-items:center}
+.intent span.on{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+.body-map{display:flex;flex-direction:column;align-items:center;gap:4px;transform:scale(.78);transform-origin:top center;height:236px}
+.bp{border:1px solid var(--rule-strong);background:var(--card)}
+.bp.a{background:var(--warn);border-color:var(--ink)}
+.bp.w{background:var(--watch);border-color:var(--ink)}
+.painrow{display:flex;gap:3px}
+.painrow span{flex:1;height:44px;display:grid;place-items:center;font:500 12px/1 var(--mono);border:1px solid var(--rule-chip);background:var(--card)}
+.painrow span.on{background:var(--warn);color:#fff;border-color:var(--warn)}
+.painrow span.last{border-color:var(--warn-border);color:var(--warn)}
+.adh{display:flex;gap:3px;margin-top:10px}
+.adh i{flex:1;height:20px;display:block;background:var(--track)}
+.adh i.on{background:var(--data)}
+.rx{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--rule);margin-bottom:6px}
+.rx .box{width:22px;height:22px;border:1.5px solid var(--rule-strong);flex:none;display:grid;place-items:center}
+.rx .box.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.rx .nm{flex:1;font:500 14px/1.3 var(--sans)}
+.rx .nm div{font:400 10.5px/1.3 var(--mono);color:var(--muted);margin-top:4px}
+.rx .stt{font:500 10.5px/1 var(--mono);color:var(--muted)}
+.rx .stt.due{color:var(--warn)}
+.rule{padding:13px 15px;background:var(--warn-bg);border:1px solid var(--warn-border);margin-bottom:8px}
+.rule.plain{background:var(--card);border-color:var(--rule)}
+.rule .h{font:600 13px/1.3 var(--sans);color:var(--warn);display:flex;justify-content:space-between}
+.rule.plain .h{color:var(--ink)}
+.pips{display:flex;gap:4px;margin:9px 0}
+.pips i{width:30px;height:8px;display:block;background:var(--track)}
+.pips i.on{background:var(--warn)}
+.physio{padding:13px 15px;border:1px dashed var(--rule-strong);font:400 13.5px/1.5 var(--sans)}
+
+/* sheets */
+.dimmed{position:absolute;inset:0;background:var(--dim);z-index:100}
+.under{position:absolute;inset:0;transform:scale(.94) translateY(8px);transform-origin:top center;border-radius:38px;overflow:hidden;filter:saturate(.9);opacity:.9}
+.sheet{position:absolute;left:0;right:0;bottom:0;top:62px;background:var(--sheet);border-radius:38px 38px 0 0;z-index:110;overflow:hidden}
+.sheet.float{left:8px;right:8px;bottom:8px;top:auto;border-radius:44px}
+.sheet.opaque{background:var(--sheet)}
+.grabber{width:36px;height:5px;border-radius:3px;background:var(--rule-strong);margin:6px auto 0}
+.sheet-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 6px;min-height:58px}
+.sheet-nav .ttl{text-align:center;font:600 16px/1.15 var(--sans)}
+.sheet-nav .ttl div{font:400 10px/1 var(--mono);letter-spacing:.1em;color:var(--muted);margin-top:4px}
+.stick{position:absolute;left:0;right:0;bottom:0;padding:10px 16px 34px;background:linear-gradient(transparent,var(--sheet) 22%);z-index:5}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px}
+.tile{border-radius:22px;background:var(--card);padding:14px 14px 13px;display:flex;flex-direction:column;gap:9px;min-height:94px}
+.tile .tt{font:600 15px/1.1 var(--sans)}
+.tile .ts{font:400 10.5px/1.25 var(--mono);color:var(--muted);letter-spacing:.03em}
+.tile .ts.w{color:var(--warn)}
+.tile .ico{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--track);color:var(--ink)}
+.tile.hero{background:var(--accent);color:var(--on-accent)}
+.tile.hero .ico{background:rgba(255,255,255,.18);color:var(--on-accent)}
+.tile.hero .ts{color:var(--on-accent);opacity:.8}
+.tile .ico.w{color:var(--warn);background:var(--warn-bg)}
+
+/* grouped settings (system layer) */
+.grp{margin:0 16px 22px}
+.grp-h{font:400 10.5px/1 var(--mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase;padding:0 16px 8px}
+.grp-b{background:var(--grouped-row);border-radius:22px;overflow:hidden}
+.grp-f{font:400 12.5px/1.45 var(--sans);color:var(--muted);padding:8px 16px 0;text-wrap:pretty}
+.cell{display:flex;align-items:center;gap:12px;min-height:50px;padding:0 16px;border-bottom:.5px solid var(--rule);font:400 15.5px/1.2 var(--sys)}
+.cell:last-child{border-bottom:0}
+.cell .grow{flex:1}
+.cell .val{color:var(--muted)}
+.cell .chev{color:var(--faint)}
+.toggle{width:62px;height:28px;border-radius:14px;background:var(--track);position:relative;flex:none;border:1px solid var(--rule)}
+.toggle::after{content:"";position:absolute;top:2px;left:2px;width:37px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.toggle.on{background:var(--accent);border-color:transparent}
+.toggle.on::after{left:21px}
+.toggle.dis{opacity:.45}
+.sseg{display:flex;background:var(--track);border-radius:18px;padding:3px;flex:1}
+.sseg span{flex:1;text-align:center;border-radius:15px;padding:8px 0;font:500 13.5px/1 var(--sys);color:var(--ink)}
+.sseg span.on{background:var(--card);box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.dots{display:flex;gap:10px;align-items:center;padding:14px 16px}
+.dots i{width:32px;height:32px;border-radius:50%;display:block;position:relative;border:1px solid var(--rule)}
+.dots i.on::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px solid var(--ink)}
+.dots i.rainbow{background:conic-gradient(#f44,#fc3,#4c6,#3af,#84f,#f4a,#f44)}
+.preview{display:flex;align-items:center;gap:12px;padding:12px 16px}
+.alert{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:290px;border-radius:30px;z-index:130;text-align:center;overflow:hidden}
+.alert .ab{padding:20px 20px 16px}
+.alert .ab b{display:block;font:600 17px/1.25 var(--sys);margin-bottom:6px}
+.alert .ab p{margin:0;font:400 13.5px/1.35 var(--sys)}
+.alert .aa{display:flex;flex-direction:column;gap:8px;padding:0 14px 14px}
+.alert .aa span{height:44px;border-radius:22px;display:grid;place-items:center;font:600 16px/1 var(--sys);background:var(--track)}
+.alert .aa span.p{background:var(--sysblue);color:#fff}
+.hud{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:160px;height:160px;border-radius:32px;display:grid;place-items:center;z-index:130;background:rgba(30,30,30,.72);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);color:#fff}
+.hud svg{width:64px;height:64px;stroke-width:1.5}
+.hud div{position:absolute;bottom:18px;font:500 13px/1 var(--sys)}
+.keys{display:grid;grid-template-columns:repeat(3,78px);gap:16px 26px;justify-content:center}
+.keys span{width:78px;height:78px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.18);font:400 32px/1 var(--sys);color:#fff}
+.keys span small{display:block;font:600 9px/1 var(--sys);letter-spacing:.18em;margin-top:-10px}
+.keys span.blank{background:transparent}
+
+/* widgets */
+.wd{border-radius:22px;background:var(--paper);color:var(--ink);padding:14px;position:relative;overflow:hidden;flex:none}
+.wd.sm{width:170px;height:170px}
+.wd.md{width:364px;height:170px}
+.wd.lg{width:364px;height:382px}
+.wd .wl{font:400 9.5px/1 var(--mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.red{display:inline-block;height:10px;background:var(--track);border-radius:2px;vertical-align:middle}
+.wk{display:flex;gap:4px}
+.wk span{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font:400 9px/1 var(--mono);color:var(--muted)}
+.wk i{width:100%;height:16px;display:block;background:var(--track)}
+.wk i.on{background:var(--data)}
+.acc{color:#fff;font-family:var(--sys)}
+.acc-c{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:grid;place-items:center;position:relative}
+.acc-r{width:172px;height:76px;border-radius:16px;background:rgba(255,255,255,.12);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:8px 10px;display:flex;flex-direction:column;justify-content:center;gap:3px}
+.acc-i{font:600 15px/1 var(--sys);display:flex;gap:6px;align-items:center}
+.redw{display:inline-block;height:9px;border-radius:3px;background:rgba(255,255,255,.35);vertical-align:middle}
+.lockscreen{background:linear-gradient(170deg,#56666d 0%,#7d6f5c 48%,#2b2d29 100%);color:#fff}
+.lockscreen .status,.lockscreen .homebar{color:#fff}
+.lockscreen .homebar{background:#fff}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Ascent · iOS 26 port · designer draft r2 · 28 Sep 2026</div>
+      <h1>Ascent for iPhone</h1>
+      <p>Every web screen redrawn for a 393 × 852 phone. The paper-and-ink editorial layer carries the content; Liquid Glass owns navigation and controls. Tall frames show a whole scroll, and the red dashed line marks the bottom of the first screen. Use the controls to flip light and dark and to try accent colours across every frame.</p>
+    </div>
+  </header>
+
+  <div class="controls" role="toolbar" aria-label="Board controls">
+    <div class="ctl">Appearance
+      <div class="segc" id="modeSeg">
+        <button type="button" data-mode="both" class="on">Side by side</button>
+        <button type="button" data-mode="light">Light</button>
+        <button type="button" data-mode="dark">Dark</button>
+      </div>
+    </div>
+    <div class="ctl">Accent
+      <div style="display:flex;gap:6px" id="accentSw"></div>
+      <input type="color" id="customAccent" value="#2c55c7" aria-label="Custom accent colour">
+    </div>
+  </div>
+
+  <nav class="toc" aria-label="Sections">
+    <a class="navlink" href="#ia">Information architecture</a>
+    <a class="navlink" href="#nav">1 · Nav + quick add</a>
+    <a class="navlink" href="#flows">2 · Quick-add flows</a>
+    <a class="navlink" href="#tabs">3 · Tabs</a>
+    <a class="navlink" href="#settings">4 · Settings</a>
+    <a class="navlink" href="#faceid">5 · Face ID</a>
+    <a class="navlink" href="#widgets">6 · Widgets</a>
+    <a class="navlink" href="#tokens">Tokens</a>
+  </nav>
+
+  <section class="sec-board" id="ia">
+    <h2>Information architecture</h2>
+    <p class="lede">Five tabs: Today, Plan, History, Body and Settings. No tab root has a toolbar button for settings or appearance; that all lives in the Settings tab. Logging is an action, so it lives behind the + as sheets. Competitions, the calendar and taper suggestions live in Plan under a Today | Season switch.</p>
+    <div class="ia">
+<pre class="mermaid">
+flowchart LR
+  subgraph TabBar["Floating glass tab bar"]
+    T1["Today · Dashboard"]
+    T2["Plan · Today | Season"]
+    T3["History · trends + ledger"]
+    T4["Body · injury &amp; rehab"]
+    T5["Settings"]
+  end
+  P(("+ quick add")) --> S["Selector sheet · zoom from +"]
+  S --> G["Log a send · sheet"]
+  S --> B["Board send · same sheet, Board segment"]
+  S --> ST["Start session · sheet"] --> G
+  S --> R["End &amp; rate → Review (push in sheet)"]
+  S --> PC["Pain check-in · sheet"]
+  S --> RH["Rehab done · sheet"]
+  S --> T2
+  G --> R
+  T2 --> SEA["Season · calendar, comps, taper"]
+  SEA --> AC["Add / edit comp · sheet"]
+  SEA --> CD["Comp detail (push)"]
+  T5 --> GY["Gyms &amp; boards (push)"]
+  T5 --> DATA["Export / Import / Reset"]
+  T3 --> SD["Session detail (push)"] --> R
+  T1 -->|recent row| SD
+  T1 -->|injury watch| T4
+  T1 -->|comp readiness| SEA
+  T2 -->|Start session| G
+  G -.->|leave app| LA["Live Activity · Dynamic Island + Lock Screen"]
+</pre>
+    </div>
+  </section>
+
+  <section class="sec-board" id="nav"><h2>1 · Navigation and the + button</h2>
+    <p class="lede">The + is its own glass circle floating 10 pt above the tab bar's centre. It is an action, so it stays out of the tab bar. When the bar minimises on scroll, the + drops into the freed bottom row. The live-session timer depends on the phone. Without a Dynamic Island, it floats 8 pt above the +. With one, it lives in a Live Activity. iOS only shows that in the island once you leave the app, so inside the app the + gets an accent ring instead.</p>
+    <div class="rowf" data-group="nav"></div></section>
+
+  <section class="sec-board" id="flows"><h2>2 · Quick-add flows</h2>
+    <p class="lede">Gym send end to end: selector → start session → log a send → sent. Then the Camp5 tally, board, review, pain and rehab flows.</p>
+    <div class="rowf" data-group="flows"></div></section>
+
+  <section class="sec-board" id="tabs"><h2>3 · Tabs</h2>
+    <p class="lede">Full scrolls. The content keeps the web's order and copy; wide tables became two-line rows, and the dashboard's two columns now stack. Plan has a new Season view with a calendar, competitions and a taper plan that shortens your sessions as the comp nears.</p>
+    <div class="rowf" data-group="tabs"></div></section>
+
+  <section class="sec-board" id="settings"><h2>4 · Settings</h2>
+    <p class="lede">Settings is now the fifth tab. It is the one screen that is entirely control layer, so it uses the system grouped Form on paper-tinted backgrounds. The accent colours navigation, primary actions and every chart. Selection state stays ink. Injury red and hold colours never change.</p>
+    <div class="rowf" data-group="settings"></div></section>
+
+  <section class="sec-board" id="faceid"><h2>5 · Face ID app lock</h2>
+    <p class="lede">Optional and off by default. The lock uses <code class="mono-s">.deviceOwnerAuthentication</code>, so iOS supplies the passcode fallback. A privacy cover replaces the app-switcher snapshot whenever the lock is on.</p>
+    <div class="rowf" data-group="faceid"></div></section>
+
+  <section class="sec-board" id="widgets"><h2>6 · Widgets</h2>
+    <p class="lede">"Limited" shows sessions this week, the weekly streak and weeks to the next comp. It hides grades, gym names, injuries, pain and rehab. Redaction applies only while the Face ID lock is on. Home Screen sizes appear locked in StandBy and on iPad's Lock Screen.</p>
+    <div id="widgetWall"></div>
+    <div class="rowf" data-group="lock" style="margin-top:48px"></div>
+  </section>
+
+  <section class="sec-board" id="tokens"><h2>Tokens</h2>
+    <p class="lede">The same token set as the web app, with a dark counterpart and phone-sized type. The full table is in DESIGN.md.</p>
+    <div class="spec-grid" id="tokenGrid"></div>
+  </section>
+</div>
+
+<script>
+/* ── Icons ─────────────────────────────────────────────────────────────── */
+const P = {
+  today:'<path d="M5 20V11M12 20V4M19 20v-6"/>',
+  plan:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.5h6v3H9zM9 11h6M9 15h4"/>',
+  history:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',
+  body:'<circle cx="12" cy="4.8" r="2"/><path d="M12 8v7M7.5 10.5 12 9l4.5 1.5M9 21l3-6 3 6"/>',
+  settings:'<path d="M18.99 10.26 L21.90 10.61 L21.90 13.39 L18.99 13.74 L18.17 15.71 L19.99 18.02 L18.02 19.99 L15.71 18.17 L13.74 18.99 L13.39 21.90 L10.61 21.90 L10.26 18.99 L8.29 18.17 L5.98 19.99 L4.01 18.02 L5.83 15.71 L5.01 13.74 L2.10 13.39 L2.10 10.61 L5.01 10.26 L5.83 8.29 L4.01 5.98 L5.98 4.01 L8.29 5.83 L10.26 5.01 L10.61 2.10 L13.39 2.10 L13.74 5.01 L15.71 5.83 L18.02 4.01 L19.99 5.98 L18.17 8.29Z"/><circle cx="12" cy="12" r="3"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  x:'<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
+  chev:'<path d="M9.5 5.5 16 12l-6.5 6.5"/>',
+  back:'<path d="M15 5 8 12l7 7"/>',
+  faceid:'<path d="M4 8.5V6.5a2.5 2.5 0 0 1 2.5-2.5h2M15.5 4h2A2.5 2.5 0 0 1 20 6.5v2M20 15.5v2a2.5 2.5 0 0 1-2.5 2.5h-2M8.5 20h-2A2.5 2.5 0 0 1 4 17.5v-2M9 9v1.6M15 9v1.6M12.3 9v4.2h-1.1M9.2 16c1.7 1.2 3.9 1.2 5.6 0"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  unlock:'<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 7.6-1.8"/>',
+  hold:'<path d="M5.5 15.5c0-5 3.2-9 7.3-9 3 0 5.2 2.1 5.2 5.1 0 4.2-4 7.4-8.2 7.4-2.6 0-4.3-1.3-4.3-3.5z"/><circle cx="12.3" cy="12" r="1.4"/>',
+  board:'<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9.3h16M4 14.7h16M9.3 4v16M14.7 4v16"/>',
+  pulse:'<path d="M3 12h4l2.2-5.5L13.5 18l2.2-6H21"/>',
+  check:'<circle cx="12" cy="12" r="8.5"/><path d="M8 12.4l2.8 2.8L16.2 9.6"/>',
+  tick:'<path d="M6 12.5l4 4L18 8"/>',
+  play:'<path d="M8 5.5v13l10.5-6.5z"/>',
+  flag:'<path d="M5.5 21V4h11l-2.2 4 2.2 4h-11"/>',
+  filter:'<path d="M4 7h16M7 12h10M10 17h4"/>',
+  share:'<path d="M12 14.5V3.5M8 7.5l4-4 4 4M5.5 11.5v7a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-7"/>',
+  import:'<path d="M12 3.5v11M8 10.5l4 4 4-4M5.5 14.5v4a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-4"/>',
+  reset:'<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v4.5H9"/>',
+  more:'<circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>',
+  del:'<path d="M9.5 6.5 4 12l5.5 5.5H20v-11z M12 9.5l5 5M17 9.5l-5 5"/>'
+};
+const ic = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`;
+const statusIcons = `<span class="ic"><svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5.5" width="3" height="6.5" rx="1" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg><svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 11.5 5.6 9a3.4 3.4 0 0 1 4.8 0zM3.4 6.8a6.5 6.5 0 0 1 9.2 0l-1.4 1.4a4.5 4.5 0 0 0-6.4 0zM1 4.4a10 10 0 0 1 14 0l-1.4 1.4a8 8 0 0 0-11.2 0z" fill="currentColor"/></svg><svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="16" height="9" rx="2" fill="currentColor"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="currentColor" opacity=".4"/></svg></span>`;
+
+/* ── Demo data (same shape as the seeded web log) ──────────────────────── */
+const HOLD = {yellow:'#f2c744',pink:'#ec6ba8',blue:'#3f7fd6',orange:'#f08a3c',green:'#4caf6a',purple:'#8a63d2',red:'#d8443c',black:'#1b1b1b',white:'#ffffff'};
+const CODE = {yellow:'YEL',pink:'PNK',blue:'BLU',orange:'ORG',green:'GRN',purple:'PUR',red:'RED',black:'BLK',white:'WHT'};
+const hsw = (c, s = 15) => `<i class="hsw" style="width:${s}px;height:${s}px;background:${HOLD[c]};${c==='white'||c==='black'?'outline:1px solid var(--rule-strong);outline-offset:-1px':''}"></i>`;
+const chip = (l, o = {}) => `<span class="chip${o.sm?' sm':''}${o.on?' on':''}${o.pain?' pain':''}${o.dashed?' dashed':''}${o.blocked?' blocked':''}">${l}</span>`;
+const meter = (p, w) => `<div class="meter${w?' warn':''}"><i style="width:${p}%"></i></div>`;
+
+/* ── Shared chrome ─────────────────────────────────────────────────────── */
+const status = (t = '20:14', notch = false) => notch ? `<div class="notch"></div><div class="status" style="padding:4px 26px 0 38px;height:47px"><span>${t}</span>${statusIcons}</div>` : `<div class="island"></div><div class="status"><span>${t}</span>${statusIcons}</div>`;
+const tabs = [['today','Today'],['plan','Plan'],['history','History'],['body','Body'],['settings','Settings']];
+function tabBar(active, min = false) {
+  if (min) { const t = tabs.find(x => x[0] === active); return `<div class="tabbar glass min"><div class="tab on">${ic(t[0])}</div></div>`; }
+  return `<div class="tabbar glass">${tabs.map(([k,l]) => `<div class="tab${k===active?' on':''}">${ic(k)}<span>${l}</span></div>`).join('')}</div>`;
+}
+/* live: 'badge' = timer capsule above the + (phones without a Dynamic Island); 'ring' = accent ring only (Dynamic Island phones, timer lives in the Live Activity) */
+const plus = (o = {}) => `<div class="plus glass${o.min?' min':''}${o.pressed?' pressed':''}${o.live==='ring'?' ring':''}">${o.live==='badge'?`<span class="livebadge glass"><i class="live-dot"></i>1:12:05</span>`:''}${ic('plus')}</div>`;
+const chromeTabs = (active, o = {}) => tabBar(active, o.min) + plus(o) + '<div class="homebar"></div>';
+const navLarge = (title, sub, tools = [], lead = '') => `<div class="nav"><div class="nav-tools"><div>${lead}</div><div style="display:flex;gap:8px">${tools.map(t => t.startsWith('<') ? t : `<div class="gbtn glass">${ic(t)}</div>`).join('')}</div></div><h1 class="lt">${title}</h1><div class="lt-sub">${sub}</div></div>`;
+const sheetNav = (title, sub, lead, trail) => `<div class="sheet-nav"><div style="width:44px">${lead||''}</div><div class="ttl">${title}${sub?`<div>${sub}</div>`:''}</div><div style="min-width:44px;display:flex;justify-content:flex-end">${trail||''}</div></div>`;
+const closeBtn = `<div class="gbtn glass">${ic('x','s')}</div>`;
+const backBtn = `<div class="gbtn glass">${ic('back','s')}</div>`;
+const doneBtn = `<div class="gtext glass" style="background:var(--accent);color:var(--on-accent)">Done</div>`;
+
+/* ── Today (Dashboard) ─────────────────────────────────────────────────── */
+function todayContent(live = true) {
+  const kp = [
+    ['Max grade sent','12','Batuu · 19 Sep','▲ +1 vs previous 8 weeks',1],
+    ['Flash rate','34%','grade 8+','▲ +6 pts',1],
+    ['Attempts / send','3.4','at 10+','▼ 4.1 → 3.4 (better)',1],
+    ['Volume at 10+','23','sends / 8 weeks','— 1.6 per session',0]];
+  const pyr = [[13,1,0],[12,4,1],[11,9,3],[10,14,5],[9,19,8],[8,22,11],[7,17,10]];
+  const tal = [['yellow',6],['pink',8],['blue',7],['orange',5],['green',3],['purple',1],['red',0],['black',0]];
+  const ready = [['Coordination',71],['Power',64],['Slab',48,1],['Power endurance',59],['Compression',42,1],['Crimps',57]];
+  const heat = [['Crimpy',[92,78,54,31,null]],['Compression',[74,39,18,0,null],1],['Slopey',[88,70,48,22,null]],['Slab',[81,52,20,0,null],1],['Coordination',[95,83,61,38,null]],['Power',[90,76,57,29,null]]];
+  const alpha = p => 0.07 + p / 100 * 0.78;
+  return `
+  ${navLarge('Today','Wk 39 · 21–27 Sep')}
+  ${live ? `<div class="pad" style="margin-bottom:14px"><div class="card" style="border:2px solid var(--ink);padding:12px 12px 12px 14px;display:flex;align-items:center;gap:12px">
+    <div style="flex:1"><div class="micro" style="color:var(--ink);display:flex;align-items:center;gap:6px"><i class="live-dot"></i>Live · Batuu · 1h 12m</div>
+    <div style="font:400 13px/1.3 var(--sans);color:var(--muted);margin-top:7px">7 sends · high <b style="color:var(--ink)">12</b> · 3 flashed</div></div>
+    <div class="btn pri" style="flex:none;width:92px;height:40px;font-size:14px">Resume</div></div></div>` : ''}
+  <div class="pad" style="margin-bottom:14px"><div class="seg"><span class="on">8 weeks</span><span>6 months</span><span>Season</span></div></div>
+  <div class="kpis">${kp.map(k => `<div class="kpi"><div class="micro">${k[0]}</div><div class="v">${k[1]}<small>${k[2]}</small></div><div class="d${k[4]?' s':''}">${k[3]}</div></div>`).join('')}</div>
+  <div class="band"><div class="sh"><span class="st">Send pyramid</span><span class="legend"><span><i style="background:var(--data)"></i>flashed</span><span><i style="background:var(--worked)"></i>worked</span></span></div>
+    <div class="micro" style="margin:-6px 0 12px">Numbered gyms · offset adjusted</div>
+    <div class="pyr">${pyr.map(([g,c,f]) => `<div class="r"><span class="g">${g}</span><div class="bar"><div class="w" style="width:${c/22*100}%"><div class="f" style="width:${f/c*100}%"></div></div></div><span class="c">${c}</span></div>`).join('')}</div>
+    <div class="read"><b>Read:</b> Base is wide through 8–10. Four 12s, one flashed. Consistency at 11 comes before chasing 13.</div></div>
+  <div class="band"><div class="sh"><span class="st">Camp5 · colour tags</span><span class="note">Ranked, not numbered</span></div>
+    <div class="tally">${tal.map(([t,c]) => `<div class="t"><span style="${c?'':'color:var(--faint)'}">${c}</span><i style="height:${c?Math.max(6,c/8*66):3}px;background:${c?HOLD[t]:'var(--worked)'}"></i><em>${CODE[t]}</em></div>`).join('')}</div>
+    <div class="read">1 purple tag this range. RED is still untouched. That is the Camp5 milestone to chase.</div></div>
+  <div class="band"><div class="sh"><span class="st">Board grades</span><span class="note">Tracked separately</span></div>
+    <div class="card bcard"><div class="bcode">KB</div><div style="flex:1"><div style="font:500 14px/1.2 var(--sans)">KilterBoard · 40°</div><div class="monot mutedt" style="font-size:11px;margin-top:5px">18 sends · 1.2 sessions/wk</div></div><div style="text-align:right"><div class="serif" style="font-size:24px">V6</div><div class="monot" style="font-size:10.5px;margin-top:3px">▲ V5→V6</div></div></div>
+    <div class="card bcard"><div class="bcode">TB</div><div style="flex:1"><div style="font:500 14px/1.2 var(--sans)">TensionBoard 2 · 40°</div><div class="monot mutedt" style="font-size:11px;margin-top:5px">7 sends · 0.5 sessions/wk</div></div><div style="text-align:right"><div class="serif" style="font-size:24px">V5</div><div class="monot mutedt" style="font-size:10.5px;margin-top:3px">— flat this range</div></div></div></div>
+  <div class="band"><div class="sh"><span class="st">Injury watch</span><span class="note warnt">Rehab · wk 3</span></div>
+    <div class="inj"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font:500 14px/1.2 var(--sans)">Left ring finger · A2 pulley strain</span>${ic('chev','xs')}</div>
+    <div class="spark">${[5,4,4,3,3,2,2].map((v,i,a) => `<i style="height:${v*10}%;background:${i===a.length-1?'var(--warn)':i===a.length-2?'var(--warn-mid)':'var(--warn-soft)'}"></i>`).join('')}</div>
+    <div class="monot mutedt" style="display:flex;justify-content:space-between;font-size:11px"><span>pain 5/10 → 2/10</span><span>9-day rehab streak</span></div></div>
+    <div class="card" style="margin-top:8px;padding:12px 14px;font:400 13px/1.5 var(--sans);color:var(--muted)"><b class="warnt">Load flag · </b>Crimpy sessions · max 2 per week while L ring finger is above 1/10. Used 2 of 2 this week. Swap to slopers?</div></div>
+  <div class="band"><div class="micro" style="margin-bottom:14px;color:var(--ink)">Comp readiness · 6 weeks out</div>
+    ${ready.map(([l,v,w]) => `<div class="rr${w?' w':''}"><span class="l">${l}</span>${meter(v,w)}<span class="n">${v}</span></div>`).join('')}</div>
+  <div class="band"><div class="sh"><span class="st">Where you send</span><span class="note">Send rate % · 2 gaps</span></div>
+    <div class="heat"><span></span>${['6–7','8–9','10–11','12–13','14–15'].map(b => `<span class="hb">${b}</span>`).join('')}
+    ${heat.map(([s,cells,w]) => `<span class="hl${w?' w':''}">${s}</span>${cells.map(p => p===null ? `<span class="c na">—</span>` : (w && p<=20) ? `<span class="c gap" style="background:${p===0?'var(--warn-bg)':'var(--warn-soft)'};${p?'color:var(--ink)':''}">${p}</span>` : `<span class="c" style="background:color-mix(in srgb,var(--data) ${alpha(p)*100}%,transparent);color:${alpha(p)>=.5?'var(--paper)':'var(--ink)'}">${p}</span>`).join('')}`).join('')}</div>
+    <div class="read" style="color:var(--warn)"><b style="color:var(--warn)">Compression</b> falls off after 9. <b style="color:var(--warn)">Slab</b> has nothing sent at 12+.</div>
+    <div class="read"><b>Comp prep:</b> KL Open setters favour compression. Two sessions on the main wall roof before week 4 close the biggest gap.</div></div>
+  <div class="band" style="padding-bottom:8px"><div class="sh"><span class="st">Recent sessions</span><span class="note">86 logged</span></div>${ledgerRows(recent)}</div>`;
+}
+const recent = [
+  ['25','Fri','Batuu','Max strength · KilterBoard',9,['n',[12,11,11]],7.4],
+  ['23','Wed','Camp5 Eco City','Comp sim',11,['t',['purple','green','green']],6.1],
+  ['21','Mon','Bump PBJ','Power endurance',14,['n',[10,10,9]],7.9],
+  ['19','Sat','BHUB','Chill maintenance',12,['n',[9,9,8]],null],
+  ['18','Fri','Batuu','Coordination',8,['n',[11,10,10]],6.8]];
+function ledgerRows(rows) {
+  return `<div class="ledger">${rows.map(([d,w,g,it,s,top,f]) => `<div class="row"><div class="dt"><b>${d}</b>${w.toUpperCase()}</div>
+  <div class="mid"><div class="gym">${g}</div><div class="it">${it}</div><div class="tg">${top[0]==='t' ? top[1].map(t => hsw(t,14)).join('') + `<span class="monot mutedt" style="font-size:10.5px;margin-left:3px">${top[1].map(t=>CODE[t]).join(' · ')}</span>` : top[1].map((v,i) => `<span class="gchip${i===0?' top':''}">${v}</span>`).join('')}</div></div>
+  <div class="rt"><span class="serif" style="font-size:17px">${s} <span class="monot mutedt" style="font-size:10px">SENDS</span></span>${f===null?`<span class="monot faintt" style="font-size:10px">NOT RATED</span>`:`<span class="felt">${meter(f*10)}${f.toFixed(1)}</span>`}</div>
+  <span class="faintt">${ic('chev','xs')}</span></div>`).join('')}</div>`;
+}
+
+/* ── Plan ──────────────────────────────────────────────────────────────── */
+function planContent(taper = false) {
+  const seg = `<div class="pad" style="margin-bottom:16px"><div class="seg"><span class="on">Today</span><span>Season</span></div></div>`;
+  if (taper) return `${navLarge('Plan','Taper · wk 1 of 2 · 12 days to KL Open')}${seg}
+  <div class="pad" style="padding-bottom:16px"><div class="micro">Tue 27 Oct · Batuu</div><div class="serif" style="font-size:27px;line-height:1.1;margin-top:10px">Today is a comp sim day</div></div>
+  <div class="pad" style="margin-bottom:4px"><div class="card" style="border:2px solid var(--ink);padding:13px 14px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="micro" style="color:var(--ink)">Taper · 70% volume</span><span class="monot mutedt" style="font-size:10.5px">KL OPEN · SUN 8 NOV</span></div>
+    <div style="font:400 13px/1.5 var(--sans);color:var(--muted);margin-top:8px">Blocks were shortened from 105 to 75 min. The 4×4s block was dropped. Keep the intensity: full-effort attempts, long rests.</div>
+    <div class="loadbar"><i style="width:70%"></i><em style="left:100%"></em></div>
+    <div class="monot mutedt" style="display:flex;justify-content:space-between;font-size:10px;margin-top:7px"><span>THIS WEEK 220 MIN PLANNED</span><span>8-WK AVG 315</span></div></div></div>
+  <div class="band" style="border-top:0"><div class="micro" style="margin-bottom:12px">Session intent · taper picks</div><div class="intent">${['Max strength','Power endurance','Coordination','Comp sim','Slab / technique','Chill maintenance'].map(x => `<span class="${x==='Comp sim'?'on':''}" style="${['Max strength','Power endurance'].includes(x)?'color:var(--faint);text-decoration:line-through':''}">${x}</span>`).join('')}</div>
+    <div class="read" style="font-size:12.5px">Max strength and power endurance are struck through until the comp. A new limit block this close costs more recovery than it gives.</div></div>
+  <div class="band"><div class="sh"><span class="st">Blocks</span><span class="note">75 min · was 105</span></div>
+    <div class="blocks">
+      <div class="b"><span class="m">15 min</span><span class="ds">Warm-up, then no previews</span><span class="tg">easy 6–7</span></div>
+      <div class="b em"><span class="m" style="color:var(--ink)">35 min</span><span class="ds">4 boulders · 4 min on, 4 min off</span><span class="tg" style="color:var(--ink)">grade 9–12 · was 5 × 50 min</span></div>
+      <div class="b"><span class="m">15 min</span><span class="ds">Cool-down + notes while it is fresh</span><span class="tg">—</span></div>
+      <div class="b"><span class="m">10 min</span><span class="ds">L ring finger rehab · no-hang half crimp</span><span class="tg warnt">rehab · kept</span></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px"><div class="btn sec" style="flex:.8">Use full plan</div><div class="btn pri">Start session</div></div></div>
+  <div style="height:150px"></div>`;
+  return `${navLarge('Plan','Build · 6 wk to KL Open')}${seg}
+  <div class="pad" style="padding-bottom:18px"><div class="micro">Sun 27 Sep · Batuu</div><div class="serif" style="font-size:27px;line-height:1.1;margin-top:10px">Today is a max strength day</div></div>
+  <div class="band"><div class="micro" style="margin-bottom:12px">Gym</div><div class="chips nowrap">${chip('Batuu',{sm:1,on:1})}${chip('Camp5 Eco City',{sm:1})}${chip('Bump PBJ',{sm:1})}${chip('Bump J1',{sm:1})}${chip('BHUB',{sm:1})}</div></div>
+  <div class="band"><div class="micro" style="margin-bottom:12px">Session intent</div><div class="intent">${['Max strength','Power endurance','Coordination','Comp sim','Slab / technique','Chill maintenance'].map((x,i) => `<span class="${i===0?'on':''}">${x}</span>`).join('')}</div></div>
+  <div class="band"><div class="sh"><span class="st">Focus styles</span><span class="note">From your weak column</span></div>
+    <div class="chips" style="margin-bottom:14px">${chip('Compression',{on:1})}${chip('Slab',{on:1})}${chip('Crimpy',{blocked:1})}${chip('Slopey')}${chip('Coordination')}</div>
+    <div class="warnp"><b>Crimpy removed · </b>Left ring finger caps crimpy sessions at 2/wk while L ring finger is above 1/10, and you have used both. Compression keeps the comp gap closing without loading it.</div></div>
+  <div class="band"><div class="sh"><span class="st">Blocks</span><span class="note">105 min total</span></div>
+    <div class="blocks">
+      <div class="b"><span class="m">20 min</span><span class="ds">Warm-up + footwork drill</span><span class="tg">easy 5–7</span></div>
+      <div class="b em"><span class="m" style="color:var(--ink)">45 min</span><span class="ds">Kilter 40° · limit boulders, long rests</span><span class="tg" style="color:var(--ink)">V5–V7 · 4 tries max</span></div>
+      <div class="b"><span class="m">30 min</span><span class="ds">Project block · main wall roof</span><span class="tg">grade 11–12</span></div>
+      <div class="b"><span class="m">10 min</span><span class="ds">L ring finger rehab · no-hang half crimp</span><span class="tg warnt">rehab</span></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px"><div class="btn sec" style="flex:.8">Save as template</div><div class="btn pri">Start session</div></div>
+    <div class="micro" style="margin-top:16px">Next comp · KL Open · Bouldering · 6 weeks out · taper starts Mon 26 Oct</div></div>
+  <div style="height:150px"></div>`;
+}
+function calMonth(title, startDow, days, marks) {
+  // marks: {day: {cls:[], dot:'done'|'plan', label}}
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push(`<div class="d out"></div>`);
+  for (let d = 1; d <= days; d++) {
+    const m = marks[d] || {};
+    cells.push(`<div class="d ${(m.cls||[]).join(' ')}"><span class="num">${d}</span>${m.dot?`<i class="${m.dot==='plan'?'pl':''}"></i>`:''}${m.flag?`<span style="position:absolute;bottom:3px;font:600 7.5px/1 var(--mono);letter-spacing:.04em;color:var(--accent)">${m.flag}</span>`:''}</div>`);
+  }
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0 12px"><span class="serif" style="font-size:20px">${title}</span></div>
+  <div class="cal">${['M','T','W','T','F','S','S'].map(x => `<span class="dow">${x}</span>`).join('')}${cells.join('')}</div>`;
+}
+function seasonContent() {
+  // Sep 2026 starts Tue (1 Sep); Oct starts Thu; Nov starts Sun. Mon-first offsets: Sep 1, Oct 3, Nov 6.
+  const sep = {}; [1,3,5,7,9,11,12,14,16,18,19,21,23,25].forEach(d => sep[d] = {dot:'done'}); sep[27] = {cls:['today','sel'],dot:'done'}; sep[29] = {dot:'plan'};
+  const oct = {}; [1,3,6,8,10,13,15,17].forEach(d => oct[d] = {dot:'plan'});
+  oct[17] = {dot:'plan', flag:'LEAGUE'};
+  for (let d = 19; d <= 25; d++) oct[d] = Object.assign(oct[d]||{}, {cls:['peak']});
+  [20,22,24].forEach(d => oct[d].dot = 'plan');
+  for (let d = 26; d <= 31; d++) oct[d] = {cls:['taper'], dot:[27,29,31].includes(d)?'plan':undefined};
+  const nov = {}; for (let d = 1; d <= 7; d++) nov[d] = {cls: d === 1 ? ['taper'] : ['cw'], dot:[2,4].includes(d)?'plan':undefined};
+  nov[8] = {cls:['comp'], flag:'KL OPEN'};
+  const week = (wk, ph, body, pct) => `<div class="tw"><div class="wk"><b>${ph}</b>${wk}</div><div class="bd">${body}${pct!==undefined?`<div class="loadbar"><i style="width:${pct}%"></i><em style="left:100%"></em></div>`:''}</div></div>`;
+  return `${navLarge('Plan','Build · 6 wk to KL Open',['<div class="gtext glass">Add comp</div>'])}
+  <div class="pad" style="margin-bottom:16px"><div class="seg"><span>Today</span><span class="on">Season</span></div></div>
+  <div class="pad"><div style="border:2px solid var(--ink);padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="micro" style="color:var(--ink)">Next comp · A priority</span><span class="monot mutedt" style="font-size:10.5px">42 DAYS</span></div>
+    <div class="serif" style="font-size:26px;line-height:1.1;margin-top:10px">KL Open · Bouldering</div>
+    <div style="font:400 13px/1.45 var(--sans);color:var(--muted);margin-top:6px">Sun 8 Nov · Bukit Jalil, Kuala Lumpur · Open · qualifiers → final</div>
+    <div class="phasebar" style="margin-top:16px"><span class="now" style="flex:4">BUILD · NOW</span><span style="flex:1">PEAK</span><span class="tp" style="flex:1">TAPER</span><span class="tp" style="flex:1">COMP WK</span><span class="cp" style="flex:.45">⚑</span></div>
+    <div class="monot mutedt" style="display:flex;justify-content:space-between;font-size:9.5px;margin-top:6px"><span>21 SEP</span><span>19 OCT</span><span>26 OCT</span><span>2 NOV</span><span>8</span></div>
+  </div></div>
+  <div class="band" style="border-top:0">${calMonth('September 2026',1,30,sep)}<div style="height:18px"></div>${calMonth('October 2026',3,31,oct)}<div style="height:18px"></div>${calMonth('November 2026',6,8,nov)}
+    <div class="legend" style="margin-top:14px;flex-wrap:wrap;gap:10px 14px"><span><i style="background:var(--data)"></i>logged</span><span><i style="border:1px solid var(--data)"></i>planned</span><span><i style="background:var(--track)"></i>peak</span><span><i style="background:repeating-linear-gradient(135deg,var(--worked) 0 2px,transparent 2px 4px)"></i>taper</span><span><i style="background:var(--accent)"></i>comp</span></div></div>
+  <div class="band"><div class="card" style="padding:14px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 14px/1.2 var(--sans)">Sun 27 Sep · today</span><span class="monot mutedt" style="font-size:10.5px">BUILD · WK −6</span></div>
+    <div style="font:400 13px/1.5 var(--sans);color:var(--muted);margin-top:6px">Live session at Batuu, max strength. Tap any date to plan a session or add a comp on it.</div>
+    <div style="display:flex;gap:8px;margin-top:12px"><div class="btn sec" style="height:42px;font-size:14px">Plan a session</div><div class="btn sec" style="height:42px;font-size:14px">Add comp</div></div></div></div>
+  <div class="band"><div class="sh"><span class="st">Taper plan</span><span class="note">KL Open · A · from your 8-wk avg</span></div>
+    ${week('21 SEP<br>–18 OCT','BUILD','<strong>Now.</strong> 3–4 sessions a week at full volume. Two compression sessions a week close the KL Open gap (Compression 42).',100)}
+    ${week('19–25 OCT','PEAK','<strong>3 comp sims.</strong> 4 min on, 4 min off, no previews. Full intensity. Volume holds at 90%.',90)}
+    ${week('26 OCT<br>–1 NOV','TAPER','<strong>3 sessions, 75 min max.</strong> Volume 70% (about 220 min). Keep one limit session. Drop the 4×4s and new max-strength blocks.',70)}
+    ${week('2–7 NOV','COMP WK','<strong>2 short sessions.</strong> Volume 50%. Last hard session Wed 4 Nov. No Kilter limit board after Mon. Rest Sat 7 Nov.',50)}
+    ${week('8 NOV','COMP','<strong>KL Open.</strong> Warm-up plan and notes go in the comp detail.')}
+    <div class="warnp" style="margin-top:14px"><b>Injury check · </b>If L ring finger is still above 1/10 on Mon 19 Oct, peak-week comp sims skip crimpy boulders. The Crimpy cap stays in force through the taper.</div></div>
+  <div class="band"><div class="sh"><span class="st">Upcoming comps</span><span class="note">3 this season</span></div>
+    ${[['17','OCT','Bump Bouldering League · rd 3','Bump PBJ · League · C · train through, rest the day before'],['8','NOV','KL Open · Bouldering','Bukit Jalil · Open · A · full 2-week taper'],['12','DEC','National Championships','Venue TBC · Open · A · planned']].map(([d,m,n,sub]) => `<div class="ledger"><div class="row"><div class="dt"><b>${d}</b>${m}</div><div class="mid"><div class="gym">${n}</div><div class="it">${sub}</div></div><span class="faintt">${ic('chev','xs')}</span></div></div>`).join('')}
+    <div class="field" style="justify-content:space-between;margin-top:16px"><label>SESSIONS / WEEK TARGET</label><span style="display:flex;align-items:center;gap:14px"><span class="serif" style="font-size:20px">4</span><span class="sseg" style="flex:none;width:96px"><span>−</span><span>+</span></span></span></div>
+    <div class="read" style="font-size:12px;margin-top:8px">Also drives the Lock Screen gauge. Taper weeks scale it down automatically.</div></div>
+  <div style="height:150px"></div>`;
+}
+function addCompSheet() {
+  const nov = {}; nov[8] = {cls:['sel']};
+  return `${status()}<div class="under" style="background:var(--paper)"><div style="height:54px"></div>${seasonContent()}</div><div class="dimmed"></div><div class="sheet"><div class="grabber"></div>
+  ${sheetNav('New comp','',closeBtn,doneBtn)}
+  <div class="pad">
+    <div class="field" style="margin-bottom:8px"><label>NAME</label><span>KL Open · Bouldering</span></div>
+    <div class="card" style="padding:12px 14px 6px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center"><span class="monot mutedt" style="font-size:11px;letter-spacing:.06em">DATE</span><span style="font:500 14px/1 var(--sans)">Sun 8 Nov 2026</span></div>
+      <div style="margin-top:10px">${calMonth('November 2026',6,30,nov).replace('font-size:20px','font-size:17px')}</div></div>
+    <div class="field" style="justify-content:space-between;margin-bottom:8px"><label>MULTI-DAY</label><span class="toggle"></span></div>
+    <div class="field" style="margin-bottom:14px"><label>WHERE</label><span>Bukit Jalil, Kuala Lumpur</span></div>
+    <div class="micro" style="margin-bottom:9px">Category</div><div class="chips" style="margin-bottom:14px">${['Open','Youth','Masters','Para','League','Local jam'].map((x,i) => chip(x,{sm:1,on:i===0})).join('')}</div>
+    <div class="micro" style="margin-bottom:9px">Format</div><div class="chips" style="margin-bottom:14px">${['Onsight rounds','Flash','Redpoint / jam'].map((x,i) => chip(x,{sm:1,on:i===0})).join('')}</div>
+    <div class="micro" style="margin-bottom:9px">Rounds</div><div class="chips" style="margin-bottom:14px">${['Qualifiers','Semi-final','Final'].map((x,i) => chip(x,{sm:1,on:i!==1})).join('')}</div>
+    <div class="micro" style="margin-bottom:9px">Priority · sets the taper</div><div class="seg" style="margin-bottom:8px"><span class="on">A · peak</span><span>B · mini taper</span><span>C · train through</span></div>
+    <div class="read" style="font-size:12px;margin-top:6px">A gets a full two-week taper. B gets one lighter week. C only gets a rest day before.</div>
+    <div style="border:1px dashed var(--rule-strong);padding:12px 14px;margin-top:12px;font:400 13.5px/1.5 var(--sans);color:var(--muted)">Notes: registration, category cut-offs, warm-up wall…</div>
+  </div><div style="height:140px"></div>
+  <div class="stick"><div class="btn pri">Add comp</div></div></div><div class="homebar" style="z-index:120"></div>`;
+}
+
+/* ── History + session detail ──────────────────────────────────────────── */
+function trendPanel() {
+  const rows = [['Sloppy feet',[1,0,1,1,0,1,1,0,1,1,0,1]],['Good tension',[0,1,1,0,1,0,1,1,0,0,1,0]],['Fatigued early',[1,0,0,1,0,1,0,0,1,0,0,1]],['Locked in',[0,1,0,0,1,0,0,1,0,1,0,0]],['Hesitant',[0,0,1,0,0,1,0,0,1,0,1,0]],['Missed the timing',[1,0,0,0,1,0,0,0,0,1,0,0]]];
+  return `<div class="sh"><span class="st">What keeps coming up</span><span class="note">Last 12 sessions</span></div>
+  <div class="trend">${rows.map(([l,c]) => `<div class="tr"><span class="tl">${l}</span><div class="cells">${c.map(x => `<i class="${x?'on':''}"></i>`).join('')}</div><span class="tc">${c.filter(Boolean).length}×</span></div>`).join('')}</div>
+  <div class="read" style="border-top:1px solid var(--rule);padding-top:12px;display:flex;gap:8px"><b style="white-space:nowrap">Pattern:</b><span>Sloppy feet shows up in 5 of your last 6 comp sims. It tracks with fatigue, not with grade.</span></div>`;
+}
+function historyContent() {
+  const more = [['16','Wed','Camp5 Eco City','Coordination',10,['t',['purple','orange','green']],7.0],['14','Mon','Batuu','Power endurance · TensionBoard 2',13,['n',[11,10,10]],6.4],['12','Sat','Bump J1','Slab / technique',9,['n',[10,9,9]],5.9]];
+  return `${navLarge('History','86 sessions · newest first',['filter'])}
+  <div class="band" style="border-top:0">${trendPanel()}</div>
+  <div class="band"><div class="micro" style="margin-bottom:4px">September 2026</div>${ledgerRows(recent.concat(more))}</div>
+  <div style="height:150px"></div>`;
+}
+function sessionDetail() {
+  const climbs = [['12','blue','Crimpy + Power · 3 tries · cave','20:11'],['11','purple','Compression · 2 tries · main wall roof','19:58'],['11','green','flash','19:44'],['10','yellow','Slopey · flash · slab corner','19:31'],['10','pink','flash','19:25'],['9','orange','flash','19:14']];
+  return `${status()}<div class="nav"><div class="nav-tools">${backBtn}<div class="gtext glass">Edit review</div></div>
+  <div class="micro" style="margin-top:8px">Batuu · Max strength · 1h 48m</div><h1 class="lt" style="font-size:32px;margin-top:10px">Fri 25 Sep</h1></div>
+  <div class="kpis"><div class="kpi"><div class="micro">Sends</div><div class="v">9<small>3 flashed</small></div></div><div class="kpi"><div class="micro">Felt</div><div class="v">7.4<small>avg 6.8</small></div></div></div>
+  <div class="band"><div class="micro" style="margin-bottom:10px">Review</div><div class="chips">${chip('Felt strong',{sm:1,on:1})}${chip('Locked in',{sm:1,on:1})}${chip('Sloppy feet',{sm:1,on:1})}${chip('L ring finger · 2/10',{sm:1,pain:1,on:1})}</div>
+  <div class="read" style="font-style:italic;font-family:var(--serif);font-size:16px;color:var(--ink)">“Cave 12 went third go once I kept the heel on. Finger fine on open-hand.”</div></div>
+  <div class="band"><div class="sh"><span class="st">Gym climbs</span><span class="note">Swipe to delete</span></div>${climbs.map(([g,c,d,t]) => `<div class="logrow"><span class="g">${g}</span>${hsw(c)}<span class="d">${d}</span><span class="tm">${t}</span></div>`).join('')}</div>
+  <div class="band"><div class="sh"><span class="st">Board climbs</span><span class="note">KilterBoard</span></div>
+  ${[['V6','shrimp cocktail · 40° · 2 tries','20:32'],['V5','the pleasure of your company · 40° · flash','20:25'],['V5','bumblebee · 40° · 2 tries','20:18']].map(([g,d,t]) => `<div class="logrow"><span class="g">${g}</span><span class="d">${d}</span><span class="tm">${t}</span></div>`).join('')}</div>
+  <div class="band"><div class="sh"><span class="st">Plan</span><span class="note">105 min · followed</span></div><div class="read" style="margin-top:0">Warm-up · Kilter 40° limit boulders · Project block · L ring finger rehab</div></div>
+  <div style="height:120px"></div>`;
+}
+
+/* ── Body ──────────────────────────────────────────────────────────────── */
+function bodyMap() {
+  const p = (cls, st) => `<div class="bp ${cls}" style="${st}"></div>`;
+  return `<div class="body-map">${p('','width:42px;height:42px;border-radius:50%')}
+  <div style="display:flex;gap:6px;align-items:flex-start"><div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:6px">${p('','width:15px;height:15px;border-radius:50%')}${p('w','width:13px;height:74px;border-radius:8px')}${p('a','width:22px;height:22px;border-radius:6px')}</div>
+  ${p('','width:78px;height:118px;border-radius:12px')}
+  <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:6px">${p('w','width:15px;height:15px;border-radius:50%')}${p('','width:13px;height:74px;border-radius:8px')}${p('','width:22px;height:22px;border-radius:6px')}</div></div>
+  <div style="display:flex;gap:8px;margin-top:2px">${p('','width:26px;height:96px;border-radius:10px')}${p('','width:26px;height:96px;border-radius:10px')}</div></div>`;
+}
+function bodyContent() {
+  const pain = [6,6,5,5,4,4,4,3,3,3,2,2];
+  return `${navLarge('Body','1 active · 2 watching',['<div class="gtext glass">Log new</div>'])}
+  <div class="pad" style="display:flex;gap:10px;align-items:flex-start;padding-bottom:6px">
+    <div style="width:150px;flex:none">${bodyMap()}</div>
+    <div style="flex:1;padding-top:12px;display:flex;flex-direction:column;gap:10px;font:400 13px/1.4 var(--sans)">
+      <div class="micro">Tap an area to filter</div>
+      <div style="display:flex;gap:8px"><i style="width:11px;height:11px;border-radius:3px;background:var(--warn);flex:none;margin-top:4px"></i><span><b>Active</b> · L ring finger</span></div>
+      <div style="display:flex;gap:8px"><i style="width:11px;height:11px;border-radius:3px;background:var(--watch);flex:none;margin-top:4px"></i><span><b>Watching</b> · R shoulder, L elbow</span></div>
+    </div></div>
+  <div class="pad"><div style="border:1px solid var(--rule-strong);padding:16px">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div class="serif" style="font-size:22px;line-height:1.15">Left ring finger · A2 pulley strain</div><div class="gbtn glass" style="width:36px;height:36px;flex:none">${ic('more','s')}</div></div>
+    <div style="font:400 12.5px/1.4 var(--sans);color:var(--muted);margin-top:7px">Onset 2 Sep · grade 1 · physio confirmed</div>
+    <div class="monot warnt" style="font-size:10.5px;letter-spacing:.1em;margin-top:8px">REHAB WK 3</div>
+    <div class="micro" style="margin:18px 0 10px">Pain 0–10 · by session</div>
+    <div style="display:flex;align-items:flex-end;gap:4px;height:70px;border-bottom:1px solid var(--rule-strong)">${pain.map((v,i,a) => `<i style="flex:1;display:block;height:${v*10}%;background:${i>=a.length-2?'var(--warn)':i===a.length-3?'var(--warn-mid)':'var(--warn-soft)'}"></i>`).join('')}</div>
+    <div class="monot mutedt" style="display:flex;justify-content:space-between;font-size:10.5px;margin-top:7px"><span>3 Sep · 6/10</span><span>NOW · 2/10</span></div>
+    <div class="micro" style="margin:14px 0 8px">Log today</div>
+    <div class="painrow">${[0,1,2,3,4,5,6,7,8,9,10].map(n => `<span class="${n===2?'last':''}">${n}</span>`).join('')}</div>
+    <div class="micro" style="margin:20px 0 6px">Adherence</div>
+    <div class="serif" style="font-size:34px;line-height:1">9<span style="font-size:15px;color:var(--muted)"> day streak</span></div>
+    <div class="adh">${[1,1,0,1,1,1,1,1,1,1,1,1].map(x => `<i class="${x?'on':''}"></i>`).join('')}</div>
+    <div style="font:400 11.5px/1.4 var(--sans);color:var(--muted);margin-top:8px">11 of 12 days · missed Thu 17 Sep</div>
+  </div></div>
+  <div class="band" style="border-top:0"><div class="sh"><span class="st">Rehab protocol</span><span class="note">Tap to tick today</span></div>
+    <div class="rx"><span class="box"></span><div class="nm">No-hang half crimp<div>5 × 10 S @ 60% · DAILY</div></div><span class="stt due">DUE</span></div>
+    <div class="rx"><span class="box on">${ic('tick','xs')}</span><div class="nm">Finger extensor band<div>3 × 15 · DAILY</div></div><span class="stt">DONE</span></div>
+    <div class="rx"><span class="box on">${ic('tick','xs')}</span><div class="nm">Tendon glides<div>2 × 10 · MORNING &amp; NIGHT</div></div><span class="stt">DONE</span></div>
+    <div class="rx"><span class="box"></span><div class="nm">Progressive edge loading<div>20 MM · 3 × 7 S · 3/WK</div></div><span class="stt">1 OF 3</span></div>
+    <div class="link" style="margin-top:10px">+ Add exercise</div></div>
+  <div class="band"><div class="sh"><span class="st">Load rules &amp; notes</span></div>
+    <div class="rule"><div class="h"><span>Crimpy sessions · max 2 per week</span><span class="faintt">×</span></div><div class="pips"><i class="on"></i><i class="on"></i><i></i></div><div style="font:400 12.5px/1.45 var(--sans);color:var(--muted)">Used 2 of 2 this week while L ring finger is above 1/10. Planning a crimpy day will warn you.</div></div>
+    <div class="rule plain"><div class="h"><span>No campus board</span><span class="faintt">×</span></div><div style="font:400 12.5px/1.45 var(--sans);color:var(--muted);margin-top:6px">In force until pain is 0/10 for two weeks.</div></div>
+    <div class="link" style="margin:6px 0 14px">+ Add load rule</div>
+    <div class="physio"><div class="micro" style="margin-bottom:8px">Physio · next Fri 2 Oct</div>“Keep crimps open-hand. Start the 20 mm edge at bodyweight minus 10 kg in week 4.”</div></div>
+  <div class="band"><div class="micro" style="margin-bottom:10px">Watching</div>
+    ${['Right shoulder · impingement niggle','Left elbow · medial tendinopathy'].map(n => `<div class="card" style="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:6px"><i style="width:11px;height:11px;border-radius:3px;background:var(--watch)"></i><span style="flex:1;font:500 13.5px/1.3 var(--sans)">${n}</span><span class="link">Escalate</span></div>`).join('')}</div>
+  <div style="height:150px"></div>`;
+}
+
+/* ── Sheets ────────────────────────────────────────────────────────────── */
+const underToday = (live) => `<div class="under" style="background:var(--paper)"><div style="height:54px"></div>${todayContent(live)}</div>`;
+function selector(live) {
+  const t = (icon, title, sub, o = {}) => `<div class="tile${o.hero?' hero':''}"><span class="ico${o.w?' w':''}">${ic(icon,'s')}</span><div><div class="tt">${title}</div><div class="ts${o.w?' w':''}" style="margin-top:4px">${sub}</div></div></div>`;
+  const head = live
+    ? `<div style="display:flex;align-items:center;gap:10px;padding:14px 22px 12px"><i class="live-dot"></i><div style="flex:1"><div style="font:600 15px/1.2 var(--sans)">Batuu · 1h 12m</div><div class="monot mutedt" style="font-size:10.5px;margin-top:3px">7 SENDS · HIGH 12 · 3 FLASHED</div></div>${closeBtn}</div>`
+    : `<div style="display:flex;align-items:center;gap:10px;padding:14px 22px 12px"><div style="flex:1"><div style="font:600 15px/1.2 var(--sans)">Quick add</div><div class="monot mutedt" style="font-size:10.5px;margin-top:3px">NO SESSION · PLAN: MAX STRENGTH AT BATUU</div></div>${closeBtn}</div>`;
+  const tiles = live
+    ? t('hold','Gym send','BATUU · 1–15',{hero:1}) + t('board','Board send','KILTER 40°') + t('pulse','Pain check-in','L RING · LAST 2/10',{w:1}) + t('check','Rehab done','1 DUE TODAY',{w:1}) + t('flag','End & rate','REVIEW TONIGHT') + t('plan','Plan','TOMORROW')
+    : t('play','Start session','BATUU · MAX STRENGTH',{hero:1}) + t('hold','Gym send','STARTS A SESSION') + t('board','Board send','STARTS A SESSION') + t('plan','Plan today','WK 3 OF 6 · BUILD') + t('pulse','Pain check-in','L RING · LAST 2/10',{w:1}) + t('check','Rehab done','1 DUE TODAY',{w:1});
+  return `${status()}${underToday(live)}<div class="dimmed" style="background:transparent"></div>
+    <div class="sheet float glass" style="height:452px;background:var(--glass)">${head}<div class="tiles">${tiles}</div><div style="height:22px"></div></div>
+    <div class="homebar" style="z-index:120"></div>`;
+}
+function startSheet() {
+  return `${status()}${underToday(false)}<div class="dimmed"></div><div class="sheet"><div class="grabber"></div>
+    ${sheetNav('Start session','Sun 27 Sep',closeBtn,'')}
+    <div class="pad"><div class="card" style="padding:13px 14px;font:400 13px/1.5 var(--sans);color:var(--muted)"><b style="color:var(--ink)">Plan for today · </b>Max strength at Batuu. <span class="link">Open plan</span></div>
+    <div class="micro" style="margin:22px 0 10px">Gym</div><div class="chips">${chip('Batuu',{sm:1,on:1})}${chip('Camp5 Eco City',{sm:1})}${chip('Bump PBJ',{sm:1})}${chip('Bump J1',{sm:1})}${chip('Bump SSQ',{sm:1})}${chip('BHUB',{sm:1})}</div>
+    <div class="micro" style="margin:22px 0 10px">Intent — optional</div><div class="chips">${['Max strength','Power endurance','Coordination','Comp sim','Slab / technique','Chill maintenance'].map((x,i) => chip(x,{sm:1,on:i===0})).join('')}</div>
+    <div class="micro" style="margin:22px 0 10px">Focus from plan</div><div class="chips">${chip('Compression',{sm:1,on:1})}${chip('Slab',{sm:1,on:1})}</div>
+    </div><div class="stick"><div class="btn pri">Start session</div><div class="read" style="text-align:center;margin-top:10px;font-size:12px">Starts the clock and opens Log a send.</div></div></div><div class="homebar" style="z-index:120"></div>`;
+}
+const logRows = (fresh) => `${fresh?`<div class="logrow new"><span class="g">12</span>${hsw('blue')}<span class="d">Crimpy + Power · 3 tries · cave</span><span class="tm">20:14</span></div>`:''}
+  <div class="logrow"><span class="g">11</span>${hsw('purple')}<span class="d">Compression · 2 tries · main wall roof</span><span class="tm">19:58</span></div>
+  <div class="logrow"><span class="g">11</span>${hsw('green')}<span class="d">flash</span><span class="tm">19:44</span></div>
+  <div class="logrow"><span class="g">10</span>${hsw('yellow')}<span class="d">Slopey · flash · slab corner</span><span class="tm">19:31</span></div>
+  <div class="logrow"><span class="g">10</span>${hsw('pink')}<span class="d">flash</span><span class="tm">19:25</span></div>`;
+function logSheet(state) {
+  const picking = state === 'picking';
+  return `${status()}${underToday(true)}<div class="dimmed"></div><div class="sheet"><div class="grabber"></div>
+  ${sheetNav('Log a send','BATUU · 1–15 · 1H 12M',closeBtn,`<div class="gtext glass" style="font-size:14px;padding:0 12px">Batuu ▾</div>`)}
+  <div class="pad" style="margin-bottom:14px"><div class="seg"><span class="on">Gym</span><span>Board</span></div></div>
+  <div class="pad">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><span class="micro">1 · Grade</span><span class="link">Show 1–15</span></div>
+    <div class="grid5" style="margin-bottom:18px">${[6,7,8,9,10,11,12,13,14,15].map(g => `<span class="gb${picking&&g===12?' on':''}">${g}</span>`).join('')}</div>
+    <div class="micro" style="margin-bottom:10px">2 · Hold colour</div>
+    <div class="holds" style="margin-bottom:18px">${Object.keys(HOLD).map(c => `<i class="${picking&&c==='blue'?'on':''}" style="background:${HOLD[c]};${c==='white'?'box-shadow:inset 0 0 0 1px var(--rule-strong)':''}${c==='black'?';box-shadow:inset 0 0 0 1px var(--rule-strong)':''}"></i>`).join('')}</div>
+    ${picking ? `<div class="warnp" style="margin-bottom:14px"><b>Load flag · </b>Crimpy sessions · max 2 per week. Used 2 of 2 this week. You are at the cap.</div>` : ''}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span class="micro">Optional — kept from last climb</span><span class="link">Clear</span></div>
+    <div class="chips" style="margin-bottom:8px">${chip('Flash',{sm:1})}${chip('2nd go',{sm:1})}${chip('Project',{sm:1,on:1})}${chip('Attempt only',{sm:1})}</div>
+    <div class="chips" style="margin-bottom:10px">${chip('Crimpy',{sm:1,on:1})}${chip('Compression',{sm:1})}${chip('Slopey',{sm:1})}${chip('Slab',{sm:1})}${chip('Coordination',{sm:1})}${chip('Power',{sm:1,on:1})}</div>
+    <div class="field"><label>WHERE</label><span>cave</span></div>
+  </div>
+  <div class="band" style="margin-top:18px"><div class="sh"><span class="st" style="font-size:18px">This session · ${picking?7:8} sends</span><span class="note">High 12 · 3 flashed</span></div>${logRows(!picking)}</div>
+  <div class="stick">${picking
+    ? `<div class="confirm"><span class="gv">12</span>${hsw('blue',24)}<div style="flex:1;min-width:0"><div style="font:500 14px/1.2 var(--sans)">Grade 12 · blue</div><div class="monot mutedt" style="font-size:10.5px;margin-top:4px">tap send to save</div></div><div class="btn pri sendb">Send</div></div>`
+    : `<div class="confirm idle"><span class="gv faintt">—</span><i class="hsw" style="width:24px;height:24px;background:var(--track);outline:1px solid var(--rule-strong)"></i><div style="flex:1"><div style="font:500 14px/1.2 var(--sans)">Pick a grade and a colour</div><div class="monot mutedt" style="font-size:10.5px;margin-top:4px">two taps, then send</div></div><div class="btn dis sendb">Send</div></div>`}
+    <div style="display:flex;justify-content:center;margin-top:10px"><span class="link">End &amp; rate</span></div></div>
+  ${picking ? '' : `<div class="toast glass" style="bottom:150px">${ic('tick','s')}<span><b>Sent</b> · 12 blue · 3 tries</span><span class="u">Undo</span></div>`}
+  </div><div class="homebar" style="z-index:120"></div>`;
+}
+function tallySheet() {
+  const tags = [['yellow',2],['pink',3],['blue',1],['orange',1],['green',0],['purple',0],['red',0],['black',0]];
+  return `${status()}${underToday(true)}<div class="dimmed"></div><div class="sheet"><div class="grabber"></div>
+  ${sheetNav('Tally','CAMP5 COLOUR TAGS · YELLOW → BLACK',closeBtn,`<div class="gtext glass" style="font-size:14px;padding:0 12px">Camp5 ▾</div>`)}
+  <div class="pad" style="margin-bottom:14px"><div class="seg"><span class="on">Gym</span><span>Board</span></div></div>
+  <div class="pad">${tags.map(([t,c],i) => `<div class="tagrow${c?' on':''}"><i class="sq" style="background:${HOLD[t]};${t==='black'?'outline:1px solid var(--rule-strong)':''}"></i><div class="nm">${t[0].toUpperCase()+t.slice(1)}<div>TAG ${i+1} OF 8${i===0?' · EASIEST':i===7?' · HARDEST':''}</div></div><span class="ct" style="${c?'':'color:var(--faint)'}">${c}</span><span class="add">+</span></div>`).join('')}
+  <div class="read" style="font-size:12.5px;margin-top:8px">Set style, tick type or location below and it sticks to every tag you add. Otherwise it just counts.</div>
+  <div class="micro" style="margin:18px 0 10px">Optional — kept from last climb</div><div class="chips">${chip('Flash',{sm:1,on:1})}${chip('2nd go',{sm:1})}${chip('Project',{sm:1})}${chip('Attempt only',{sm:1})}</div></div>
+  <div style="height:120px"></div></div><div class="homebar" style="z-index:120"></div>`;
+}
+function boardSheet() {
+  const bars = [2,5,9,12,8,3,0,0,0,0];
+  return `${status()}${underToday(true)}<div class="dimmed"></div><div class="sheet"><div class="grabber"></div>
+  ${sheetNav('Board session','BATUU · 1H 12M',closeBtn,'')}
+  <div class="pad" style="margin-bottom:14px"><div class="seg"><span>Gym</span><span class="on">Board</span></div></div>
+  <div class="pad">
+    <div style="display:flex;gap:6px;margin-bottom:12px"><span class="chip on" style="flex:1;justify-content:center">KilterBoard</span><span class="chip" style="flex:1;justify-content:center">TensionBoard 2</span></div>
+    <div class="field" style="justify-content:space-between;margin-bottom:16px"><label>ANGLE</label><div style="display:flex;gap:4px">${[25,30,40,45].map(a => `<span class="gb${a===40?' on':''}" style="height:36px;width:50px;font-size:13px">${a}°</span>`).join('')}</div></div>
+    <div class="micro" style="margin-bottom:10px">Grade sent</div>
+    <div class="grid5" style="margin-bottom:14px">${bars.map((_,i) => `<span class="gb${i===5?' on':''}" style="font-size:15px;height:48px">V${i+1}</span>`).join('')}</div>
+    <div class="field" style="margin-bottom:10px"><label>CLIMB</label><span>shrimp cocktail</span></div>
+    <div class="chips" style="margin-bottom:8px">${['Crimpy','Compression','Slopey','Slab','Coordination','Power','Tension'].map(s => chip(s,{sm:1,on:s==='Power'||s==='Tension'})).join('')}</div>
+    <div class="chips" style="margin-bottom:14px">${chip('Flash',{sm:1})}${chip('2nd go',{sm:1,on:1})}${chip('Project',{sm:1})}${chip('Attempt only',{sm:1})}</div>
+    <div class="btn pri">Log V6 · KilterBoard 40°</div>
+    <div style="margin-top:12px"><div class="logrow"><span class="g">V5</span><span class="d">bumblebee · 40° · 2 tries</span><span class="link" style="font-size:12px">Undo</span></div></div>
+  </div>
+  <div class="band" style="margin-top:14px"><div class="sh"><span class="st" style="font-size:18px">Kilter 40° · all time</span><span class="note" style="color:var(--ink)">Max V6</span></div>
+    <div class="hist">${bars.map((c,i) => `<div><i style="height:${c?Math.max(6,c/12*48):3}px;background:${c===0?'var(--track)':i===5?'var(--data)':'var(--worked)'}"></i><span style="${i===5?'color:var(--ink)':''}">V${i+1}</span></div>`).join('')}</div></div>
+  <div style="height:60px"></div></div><div class="homebar" style="z-index:120"></div>`;
+}
+function reviewSheet(saved) {
+  const g = (name, list, on) => `<div class="micro" style="margin:18px 0 9px">${name}</div><div class="chips">${list.map(c => chip(c,{sm:1,on:on.includes(c)})).join('')}</div>`;
+  return `${status()}${underToday(true)}<div class="dimmed"></div><div class="sheet"><div class="grabber"></div>
+  ${sheetNav('','',backBtn,saved?doneBtn:'')}
+  ${saved ? `<div class="pad"><div class="micro">Saved · Batuu · Max strength</div><div class="serif" style="font-size:28px;line-height:1.1;margin-top:10px">7.4, above your 6.8 average</div></div>
+    <div class="band" style="margin-top:14px">${trendPanel()}</div>
+    <div class="pad" style="display:flex;gap:8px;margin-top:6px"><div class="btn sec">Body log</div><div class="btn sec">Dashboard</div></div>
+    <div class="pad" style="margin-top:10px"><div class="btn sec" style="border-style:dashed">Update review</div></div>`
+  : `<div class="pad"><div class="serif" style="font-size:28px;line-height:1">How did that feel?</div><div style="font:400 13px/1.4 var(--sans);color:var(--muted);margin-top:8px">Tap what applies. Nothing is required. 8 sends logged.</div>
+    ${g('Body',['Felt strong','Felt weak','Fatigued early','Good tension','Poor recovery'],['Felt strong'])}
+    ${g('Head',['Locked in','Distracted','Hesitant','Confident first go','Scared of the fall'],['Locked in'])}
+    ${g('Execution',['Coordination dialled','Missed the timing','Sloppy feet','Read beta wrong','Good beta reading'],['Sloppy feet'])}
+    <div class="micro" style="margin:18px 0 9px">Pain</div><div class="chips">${chip('No pain',{sm:1})}${chip('L ring finger · 2/10',{sm:1,pain:1,on:1})}${chip('+ new pain',{sm:1,dashed:1})}</div>
+    <div class="card" style="margin-top:18px;padding:16px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px"><span class="micro">Overall session</span><span class="serif" style="font-size:32px">7.4</span></div>
+      <div style="height:6px;background:var(--track);position:relative;border-radius:3px"><div style="position:absolute;left:0;top:0;bottom:0;width:74%;background:var(--accent);border-radius:3px"></div><div style="position:absolute;left:74%;top:50%;width:38px;height:24px;border-radius:12px;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.25);transform:translate(-50%,-50%)"></div></div>
+      <div class="monot mutedt" style="display:flex;justify-content:space-between;font-size:10.5px;margin-top:12px"><span>ROUGH</span><span>AVG 6.8</span><span>BEST</span></div></div>
+    <div style="border:1px dashed var(--rule-strong);padding:13px 14px;margin-top:10px;min-height:64px;font:400 13.5px/1.5 var(--sans);color:var(--muted)">Anything worth remembering about tonight…</div>
+  </div>
+  <div class="stick"><div class="btn pri">Save review</div></div>`}
+  </div><div class="homebar" style="z-index:120"></div>`;
+}
+function painSheet() {
+  return `${status()}${underToday(true)}<div class="dimmed"></div><div class="sheet" style="top:auto;height:520px"><div class="grabber"></div>
+  ${sheetNav('Pain check-in','SUN 27 SEP · NOT TIED TO A SESSION',closeBtn,'')}
+  <div class="pad"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 15px/1.3 var(--sans)">Left ring finger · A2 pulley</span><span class="monot warnt" style="font-size:10.5px">LAST 2/10</span></div>
+  <div class="painrow" style="margin:10px 0 6px">${[0,1,2,3,4,5,6,7,8,9,10].map(n => `<span class="${n===1?'on':''}">${n}</span>`).join('')}</div>
+  <div class="monot mutedt" style="font-size:10.5px">▼ 1 SINCE FRIDAY · RULES LIFT AT 1/10</div>
+  <div class="micro" style="margin:22px 0 10px">Also watching</div>
+  <div class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:6px"><i style="width:11px;height:11px;border-radius:3px;background:var(--watch)"></i><span style="flex:1;font:500 13.5px/1.3 var(--sans)">R shoulder · impingement</span><span class="monot mutedt" style="font-size:11px">— /10 ▸</span></div>
+  <div class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px"><i style="width:11px;height:11px;border-radius:3px;background:var(--watch)"></i><span style="flex:1;font:500 13.5px/1.3 var(--sans)">L elbow · medial</span><span class="monot mutedt" style="font-size:11px">— /10 ▸</span></div>
+  <div style="margin-top:14px"><span class="link">+ New pain</span></div></div>
+  <div class="stick"><div class="btn pri">Save check-in</div></div></div><div class="homebar" style="z-index:120"></div>`;
+}
+function rehabSheet() {
+  return `${status()}${underToday(true)}<div class="dimmed"></div><div class="sheet" style="top:auto;height:500px"><div class="grabber"></div>
+  ${sheetNav('Rehab today','L RING FINGER · WK 3 · 9-DAY STREAK',closeBtn,doneBtn)}
+  <div class="pad">
+    <div class="rx"><span class="box on">${ic('tick','xs')}</span><div class="nm">No-hang half crimp<div>5 × 10 S @ 60% · DAILY</div></div><span class="stt">DONE</span></div>
+    <div class="rx"><span class="box on">${ic('tick','xs')}</span><div class="nm">Finger extensor band<div>3 × 15 · DAILY</div></div><span class="stt">DONE</span></div>
+    <div class="rx"><span class="box on">${ic('tick','xs')}</span><div class="nm">Tendon glides<div>2 × 10 · MORNING &amp; NIGHT</div></div><span class="stt">DONE</span></div>
+    <div class="rx"><span class="box"></span><div class="nm">Progressive edge loading<div>20 MM · 3 × 7 S · 3/WK</div></div><span class="stt">1 OF 3</span></div>
+    <div class="adh" style="margin-top:16px">${[1,1,0,1,1,1,1,1,1,1,1,1].map(x => `<i class="${x?'on':''}"></i>`).join('')}</div>
+    <div style="font:400 12px/1.4 var(--sans);color:var(--muted);margin-top:8px">Saved as you tap. 12 of 12 days once today counts.</div>
+  </div></div>
+  <div class="toast glass" style="bottom:540px;z-index:130">${ic('tick','s')}<span><b>No-hang half crimp</b> · done</span></div><div class="homebar" style="z-index:120"></div>`;
+}
+
+/* ── Settings ──────────────────────────────────────────────────────────── */
+const cell = (l, v = '', o = {}) => `<div class="cell">${o.icon?`<span style="color:${o.ic||'var(--ink)'}">${ic(o.icon,'s')}</span>`:''}<span class="grow" style="${o.col?`color:${o.col}`:''}">${l}</span>${v?`<span class="val">${v}</span>`:''}${o.toggle!==undefined?`<span class="toggle${o.toggle?' on':''}${o.dis?' dis':''}"></span>`:''}${o.chev?`<span class="chev">${ic('chev','xs')}</span>`:''}</div>`;
+function settingsContent(o = {}) {
+  const sw = [['#17150f','Ink'],['#4a6b3a','Moss'],['#2c55c7','Cobalt'],['#b07a12','Ochre'],['#7a3f73','Plum']];
+  const cur = o.cur ?? 0;
+  return `<div class="grp"><div class="grp-h">Appearance</div><div class="grp-b"><div class="cell"><div class="sseg"><span class="on">System</span><span>Light</span><span>Dark</span></div></div></div></div>
+  <div class="grp"><div class="grp-h">Accent</div><div class="grp-b">
+    <div class="dots">${sw.map(([h],i) => `<i class="${i===cur?'on':''}" style="background:${h}"></i>`).join('')}<i class="rainbow${cur===5?' on':''}"></i><span style="flex:1"></span><span class="monot mutedt" style="font-size:11px">${o.curName||'INK'}</span></div>
+    <div class="preview"><span style="display:flex;align-items:flex-end;gap:3px;height:30px;flex:1">${[40,70,100,55,85].map(h => `<i style="width:12px;height:${h}%;background:var(--accent);display:block"></i>`).join('')}</span><span class="gbtn" style="width:34px;height:34px;background:var(--accent);color:var(--on-accent);border-radius:50%">${ic('plus','s')}</span><span style="width:62px;height:30px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:600 13px/1 var(--sans)">Send</span></div>
+  </div>${o.nearRed ? `<div class="grp-f" style="color:var(--warn)">This colour is close to the injury red. Charts will use it too, so pain bars and load flags may be harder to tell apart.</div>` : `<div class="grp-f">Used for the tab bar, the + button, primary buttons and every chart. Injury red and hold colours never change.</div>`}</div>
+  <div class="grp"><div class="grp-h">Privacy</div><div class="grp-b">
+    ${cell('Face ID lock','',{icon:'faceid',toggle:true})}${cell('Require Face ID','Immediately',{chev:1})}
+  </div><div class="grp-f">Asks for Face ID when you open Ascent and hides the app in the app switcher. While the lock is on and your iPhone is locked, widgets and the live session show only session counts, your streak and weeks to the next comp.</div></div>
+  <div class="grp"><div class="grp-h">Climbing</div><div class="grp-b">
+    ${cell('Gyms &amp; boards','5 gyms · 2 boards',{chev:1})}${cell('Dashboard range','8 weeks',{chev:1})}
+  </div><div class="grp-f">Competitions, the season calendar and your weekly target live in Plan → Season.</div></div>
+  <div class="grp"><div class="grp-h">Data</div><div class="grp-b">
+    ${cell('Export backup','JSON',{icon:'share',ic:'var(--accent)',col:'var(--accent)'})}${cell('Import backup','',{icon:'import',ic:'var(--accent)',col:'var(--accent)'})}${cell('Reset to demo data…','',{icon:'reset'})}
+  </div><div class="grp-f"><b style="color:var(--ink)">Stored only on this iPhone.</b> No account, no iCloud. Nothing leaves this phone unless you export it. Export a backup before you delete the app.</div></div>
+  <div class="grp"><div class="grp-h">About</div><div class="grp-b">${cell('Version','1.0 (1)')}${cell('Climbs logged','1,284')}</div></div>
+  <div style="height:40px"></div>`;
+}
+const settingsTab = (o = {}) => `${status()}<div class="scroll" style="background:var(--grouped);min-height:852px"><div class="nav"><div class="nav-tools"></div><h1 class="lt" style="margin:0 0 20px">Settings</h1></div>${settingsContent(o)}<div style="height:130px"></div></div>${chromeTabs('settings',{live:o.live})}`;
+function colorPickerSheet() {
+  const hues = ['#ffffff','#e0e0e0','#bdbdbd','#9e9e9e','#757575','#424242','#000000'];
+  const rows = [['#0b3d91','#0d47a1','#1565c0','#1e88e5','#42a5f5','#90caf9','#e3f2fd'],['#1b5e20','#2e7d32','#43a047','#66bb6a','#a5d6a7','#c8e6c9','#e8f5e9'],['#e65100','#ef6c00','#fb8c00','#ffa726','#ffcc80','#ffe0b2','#fff3e0'],['#b71c1c','#c62828','#e53935','#ef5350','#ef9a9a','#ffcdd2','#ffebee'],['#4a148c','#6a1b9a','#8e24aa','#ab47bc','#ce93d8','#e1bee7','#f3e5f5']];
+  return `${status()}<div class="under" style="background:var(--grouped)">${settingsContent({cur:5,curName:'CUSTOM'})}</div><div class="dimmed"></div>
+  <div class="sheet" style="top:auto;height:560px;background:var(--grouped-row)"><div class="grabber"></div>
+  ${sheetNav('Colours','SYSTEM COLORPICKER',closeBtn,'')}
+  <div class="pad"><div class="sseg" style="margin-bottom:16px"><span class="on">Grid</span><span>Spectrum</span><span>Sliders</span></div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;border-radius:10px;overflow:hidden">${[hues].concat(rows).flat().map(h => `<i style="display:block;height:38px;background:${h};${h==='#1e88e5'?'outline:3px solid #fff;outline-offset:-3px;position:relative;z-index:2':''}"></i>`).join('')}</div>
+  <div style="display:flex;align-items:center;gap:12px;margin-top:18px"><i style="width:56px;height:56px;border-radius:12px;background:#1e88e5;display:block"></i><div style="flex:1;font:400 13px/1.4 var(--sys);color:var(--muted)">Opacity is off: <code class="mono-s">supportsOpacity: false</code>. The chosen colour saves as hex to App Group defaults.</div></div></div></div>
+  <div class="homebar" style="z-index:120"></div>`;
+}
+function gymsContent() {
+  const numRow = (name, meta, max, sent, sends, soft) => `<div style="padding:14px 0;border-bottom:1px solid var(--rule)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><div><div style="font:600 14.5px/1.2 var(--sans)">${name}</div><div class="monot mutedt" style="font-size:10.5px;margin-top:5px;letter-spacing:.06em">${meta}</div></div><span class="serif" style="font-size:20px">${sends}</span></div>
+    <div style="display:flex;gap:2px;margin-top:10px">${Array.from({length:max},(_,i) => `<span style="flex:1;text-align:center;font:500 10px/1 var(--mono);padding:7px 0;${sent.includes(i+1)?'background:var(--ink);color:var(--paper)':'background:var(--card);border:1px solid var(--rule)'}">${i+1}</span>`).join('')}${max<15?`<span style="flex:${15-max};border:1px dashed var(--rule-strong);font:400 8.5px/1 var(--mono);color:var(--faint);display:grid;place-items:center;letter-spacing:.04em;white-space:nowrap;overflow:hidden">NO ${max+1}–15${soft?' · SOFT':''}</span>`:''}</div></div>`;
+  return `${numRow('Batuu','NUMBERS · MAX 15 · REFERENCE',15,[5,6,7,8,9,10,11,12,13],214)}
+  <div style="padding:14px 0;border-bottom:1px solid var(--rule)"><div style="display:flex;justify-content:space-between;align-items:baseline"><div><div style="font:600 14.5px/1.2 var(--sans)">Camp5 Eco City</div><div class="monot mutedt" style="font-size:10.5px;margin-top:5px;letter-spacing:.06em">COLOUR TAGS ONLY</div></div><span class="serif" style="font-size:20px">96</span></div>
+    <div style="display:flex;gap:4px;margin-top:10px;align-items:center"><span class="monot mutedt" style="font-size:9px">EASY</span>${['yellow','pink','blue','orange','green','purple','red','black'].map(t => `<span style="flex:1;display:flex;flex-direction:column;gap:4px"><i style="height:16px;display:block;background:${HOLD[t]};${t==='black'?'outline:1px solid var(--rule-strong)':''}"></i><em class="monot" style="font-size:8.5px;font-style:normal;text-align:center;color:${['red','black'].includes(t)?'var(--muted)':'var(--ink)'}">${CODE[t]}</em></span>`).join('')}<span class="monot mutedt" style="font-size:9px">HARD</span></div></div>
+  ${numRow('Bump PBJ · J1 · SSQ','NUMBERS · MAX 12 · ONE SHARED SCALE',12,[4,5,6,7,8,9,10,11],132)}
+  ${numRow('BHUB','NUMBERS · MAX 10 · OFFSET −0.5',10,[5,6,7,8,9],58,1)}
+  <div style="padding:14px 0"><div style="display:flex;justify-content:space-between;align-items:baseline"><div><div style="font:600 14.5px/1.2 var(--sans)">Boards</div><div class="monot mutedt" style="font-size:10.5px;margin-top:5px;letter-spacing:.06em">V-SCALE · NEVER MERGED</div></div><span class="serif" style="font-size:20px">87</span></div>
+    <div class="chips" style="margin-top:10px">${chip('KilterBoard · 25/30/40/45°',{sm:1})}${chip('TensionBoard 2 · 25/40°',{sm:1})}</div></div>
+  <div class="card" style="padding:14px;font:400 13px/1.5 var(--sans);color:var(--muted);margin-top:6px"><b style="color:var(--ink)">Two kinds of scale · </b>Numbered gyms share the 1–15 spine with a soft/hard offset, so BHUB 10 and Batuu 10 are not counted as the same climb. Camp5 is ranked, not numbered: its tags stay tags, ordered yellow → black, and chart in their own column.</div>`;
+}
+const gymsScreen = () => `${status()}<div class="nav"><div class="nav-tools">${backBtn}<div class="gtext glass">Add gym</div></div><h1 class="lt">Gyms &amp; boards</h1><div class="lt-sub">5 gyms · 2 boards · 1,284 climbs</div></div><div class="pad">${gymsContent()}</div><div style="height:130px"></div>${chromeTabs('settings',{live:'ring'})}`;
+function addGymSheet() {
+  return `${status()}<div class="under" style="background:var(--paper)"><div class="nav"><h1 class="lt" style="margin-top:60px">Gyms &amp; boards</h1></div><div class="pad">${gymsContent()}</div></div><div class="dimmed"></div>
+  <div class="sheet" style="top:auto;height:540px"><div class="grabber"></div>${sheetNav('New gym','',closeBtn,doneBtn)}
+  <div class="pad"><div class="field" style="margin-bottom:14px"><label>NAME</label><span>Camp5 KL Gateway</span></div>
+  <div class="micro" style="margin-bottom:10px">Grades</div><div class="seg" style="margin-bottom:16px"><span class="on">Numbers</span><span>Colour tags</span></div>
+  <div class="field" style="justify-content:space-between;margin-bottom:8px"><label>MAX GRADE</label><span style="display:flex;align-items:center;gap:14px"><span class="serif" style="font-size:20px">12</span><span class="sseg" style="flex:none;width:96px"><span>−</span><span>+</span></span></span></div>
+  <div class="field" style="justify-content:space-between;margin-bottom:10px"><label>OFFSET VS BATUU</label><span style="display:flex;align-items:center;gap:14px"><span class="serif" style="font-size:20px">−0.5</span><span class="sseg" style="flex:none;width:96px"><span>−</span><span>+</span></span></span></div>
+  <div class="read" style="font-size:12.5px">Offset is the soft/hard correction against Batuu, −1 to +1 in steps of 0.5. A soft gym gets a negative offset so its 10 does not count as a Batuu 10 in aggregate charts.</div></div></div><div class="homebar" style="z-index:120"></div>`;
+}
+function resetDialog() {
+  return `${status()}<div class="under" style="background:var(--grouped);transform:none;border-radius:0;opacity:1"><div style="height:54px"></div><div class="nav"><div class="nav-tools"></div><h1 class="lt" style="margin:0 0 20px">Settings</h1></div>${settingsContent()}</div><div class="dimmed"></div>
+  <div style="position:absolute;left:8px;right:8px;bottom:34px;z-index:130;display:flex;flex-direction:column;gap:8px">
+    <div class="glass" style="border-radius:26px;overflow:hidden;background:var(--glass)"><div style="padding:16px 20px;text-align:center;font:400 13px/1.4 var(--sys);color:var(--muted)">Replace everything with the demo dataset? This deletes 1,284 climbs. Export a backup first if you care about this log.</div>
+    <div style="border-top:.5px solid var(--rule);height:56px;display:grid;place-items:center;font:500 18px/1 var(--sys);color:var(--sysblue)">Export backup first</div>
+    <div style="border-top:.5px solid var(--rule);height:56px;display:grid;place-items:center;font:500 18px/1 var(--sys);color:var(--sysred)">Reset to demo data</div></div>
+    <div class="glass" style="border-radius:26px;height:58px;display:grid;place-items:center;font:600 18px/1 var(--sys);color:var(--sysblue);background:var(--glass)">Cancel</div></div>`;
+}
+
+/* ── Face ID ───────────────────────────────────────────────────────────── */
+function lockScreenApp(o = {}) {
+  return `${status()}<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 40px;text-align:center">
+    <div style="font:600 15px/1 var(--sans);letter-spacing:.24em">ASCENT</div>
+    <div class="serif" style="font-size:30px;line-height:1.15;margin-top:6px">${o.title||'Your log is locked'}</div>
+    <div class="micro">${o.sub||'Stored only on this iPhone'}</div></div>
+    <div style="position:absolute;left:0;right:0;bottom:70px;display:flex;flex-direction:column;align-items:center;gap:16px;z-index:5">
+      <div class="gtext glass" style="height:54px;border-radius:27px;padding:0 24px;font-size:16px;background:color-mix(in srgb,var(--accent) 86%,transparent);color:var(--on-accent)">${ic('faceid','s')}Unlock with Face ID</div>
+      <span class="link" style="font-size:14px">Use passcode</span></div>
+    ${o.hud||''}${o.alert||''}<div class="homebar"></div>`;
+}
+const hudScan = `<div class="hud">${ic('faceid')}<div>Face ID</div></div>`;
+const alertFail = `<div class="dimmed" style="z-index:125;background:rgba(0,0,0,.2)"></div><div class="alert glass" style="background:var(--glass)"><div class="ab"><b>Face Not Recognised</b><p>Try again or use your iPhone passcode.</p></div><div class="aa"><span class="p">Try Face ID Again</span><span>Enter Passcode</span><span>Cancel</span></div></div>`;
+function passcode() {
+  const k = [['1',''],['2','ABC'],['3','DEF'],['4','GHI'],['5','JKL'],['6','MNO'],['7','PQRS'],['8','TUV'],['9','WXYZ'],['',''],['0',''],['','']];
+  return `<div style="position:absolute;inset:0;background:linear-gradient(180deg,#2e2b26,#151411);"></div>${status().replace('class="status"','class="status" style="color:#fff"')}
+  <div style="position:absolute;top:120px;left:0;right:0;text-align:center;color:#fff;font:400 18px/1.3 var(--sys)">Enter iPhone Passcode<br><span style="font-size:14px;opacity:.75">for “Ascent”</span>
+  <div style="display:flex;gap:18px;justify-content:center;margin-top:24px">${[1,1,0,0,0,0].map(x => `<i style="width:13px;height:13px;border-radius:50%;border:1.5px solid #fff;${x?'background:#fff':''}"></i>`).join('')}</div></div>
+  <div style="position:absolute;top:290px;left:0;right:0"><div class="keys">${k.map(([n,l]) => n?`<span><span style="display:flex;flex-direction:column;align-items:center;gap:0">${n}<small>${l}</small></span></span>`:'<span class="blank"></span>').join('')}</div></div>
+  <div style="position:absolute;bottom:40px;left:44px;right:44px;display:flex;justify-content:space-between;color:#fff;font:400 16px/1 var(--sys)"><span>Emergency</span><span>Cancel</span></div><div class="homebar" style="background:#fff"></div>`;
+}
+function appSwitcher() {
+  return `<div style="position:absolute;inset:0;background:linear-gradient(170deg,#3c4549,#4e463b 55%,#1e1f1c)"></div>
+  <div style="position:absolute;top:118px;left:-150px;width:260px;height:560px;border-radius:38px;background:#e9edf2;opacity:.9;overflow:hidden"><div style="height:60px;background:#d1d6de"></div></div>
+  <div style="position:absolute;top:92px;left:62px;display:flex;align-items:center;gap:8px;color:#fff;font:600 15px/1 var(--sys)"><i style="width:28px;height:28px;border-radius:7px;background:#17150f;display:grid;place-items:center;color:#f5f2ea;font:600 11px/1 var(--sans);letter-spacing:.06em;font-style:normal">A</i>Ascent</div>
+  <div style="position:absolute;top:130px;left:62px;width:270px;height:586px;border-radius:38px;overflow:hidden;background:var(--paper)">
+    <div style="position:absolute;inset:0;filter:blur(14px);transform:scale(.69);transform-origin:top left;width:393px">${status()}${todayContent(true)}</div>
+    <div style="position:absolute;inset:0;background:color-mix(in srgb,var(--paper) 55%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">${ic('lock')}<div style="font:600 13px/1 var(--sans);letter-spacing:.24em">ASCENT</div></div></div>
+  <div style="position:absolute;top:130px;left:350px;width:270px;height:586px;border-radius:38px;background:#f3efe6;opacity:.9"></div>`;
+}
+
+/* ── Widgets ───────────────────────────────────────────────────────────── */
+const R = (w) => `<span class="red" style="width:${w}px"></span>`;
+const wk = (on) => `<div class="wk">${['M','T','W','T','F','S','S'].map((d,i) => `<span><i class="${on[i]?'on':''}"></i>${d}</span>`).join('')}</div>`;
+const WEEK = [1,0,1,0,1,0,0];
+function wSmall(locked) {
+  return locked
+  ? `<div class="wd sm"><div class="wl">This week</div><div class="serif" style="font-size:52px;line-height:1;margin-top:12px">3</div><div style="font:500 12px/1.2 var(--sans);margin-top:2px">sessions</div><div style="margin-top:12px">${wk(WEEK)}</div><div style="position:absolute;bottom:12px;left:14px;font:400 10px/1 var(--mono);color:var(--muted)">5-WEEK STREAK</div></div>`
+  : `<div class="wd sm"><div class="wl">This week · top</div><div class="serif" style="font-size:52px;line-height:1;margin-top:12px">12</div><div style="font:500 12px/1.2 var(--sans);margin-top:2px">Batuu · ▲ +1</div><div class="monot mutedt" style="font-size:10px;margin-top:10px">3 SESSIONS · 21 SENDS</div><div style="position:absolute;bottom:12px;left:14px;right:14px;font:500 10px/1 var(--mono);color:var(--warn);display:flex;justify-content:space-between"><span>REHAB DUE</span><span>2/10</span></div></div>`;
+}
+function wMedium(locked) {
+  const pyr = [[13,1,0],[12,4,1],[11,9,3],[10,14,5],[9,19,8]];
+  const right = locked
+    ? `<div style="flex:1;display:flex;flex-direction:column;gap:10px;justify-content:center">${R(140)}${R(110)}${R(128)}<div style="font:400 10.5px/1.35 var(--sans);color:var(--muted)">Unlock to see grades and the body log</div></div>`
+    : `<div style="flex:1;display:flex;flex-direction:column;gap:4px;justify-content:center">${pyr.map(([g,c,f]) => `<div style="display:flex;align-items:center;gap:6px"><span class="serif" style="width:16px;text-align:right;font-size:12px">${g}</span><div style="flex:1;height:11px;background:var(--track);display:flex"><div style="width:${c/19*100}%;background:var(--worked);display:flex"><div style="width:${f/c*100}%;background:var(--data)"></div></div></div></div>`).join('')}<div style="font:500 10px/1 var(--mono);color:var(--warn);margin-top:6px">L RING 2/10 · 9-DAY REHAB</div></div>`;
+  const left = locked
+    ? `<div style="width:140px;flex:none"><div class="wl">This week</div><div class="serif" style="font-size:44px;line-height:1;margin-top:10px">3 <span style="font-size:14px;color:var(--muted)">sessions</span></div><div style="margin-top:12px">${wk(WEEK)}</div><div class="monot mutedt" style="font-size:9.5px;margin-top:10px">5-WEEK STREAK · COMP IN 6 WK</div></div>`
+    : `<div style="width:140px;flex:none"><div class="wl">8 weeks</div><div style="display:flex;gap:14px;margin-top:10px"><div><div class="serif" style="font-size:38px;line-height:1">12</div><div class="monot mutedt" style="font-size:9px;margin-top:4px">TOP ▲+1</div></div><div><div class="serif" style="font-size:38px;line-height:1">34<span style="font-size:18px">%</span></div><div class="monot mutedt" style="font-size:9px;margin-top:4px">FLASH</div></div></div><div style="margin-top:12px">${wk(WEEK)}</div></div>`;
+  return `<div class="wd md" style="display:flex;gap:16px">${left}${right}</div>`;
+}
+function wLarge(locked) {
+  const pyr = [[13,1,0],[12,4,1],[11,9,3],[10,14,5],[9,19,8],[8,22,11]];
+  const tal = [['yellow',6],['pink',8],['blue',7],['orange',5],['green',3],['purple',1],['red',0],['black',0]];
+  if (locked) return `<div class="wd lg"><div class="wl">This week · 21–27 Sep</div>
+    <div style="display:flex;gap:20px;align-items:flex-end;margin-top:12px"><div class="serif" style="font-size:56px;line-height:1">3</div><div style="padding-bottom:8px;font:500 13px/1.3 var(--sans)">sessions<br><span class="mutedt" style="font-weight:400">5-week streak</span></div></div>
+    <div style="margin-top:14px">${wk(WEEK)}</div>
+    <div style="margin-top:22px;display:flex;flex-direction:column;gap:10px">${R(300)}${R(240)}${R(280)}${R(200)}</div>
+    <div style="position:absolute;left:14px;right:14px;bottom:14px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--rule);padding-top:10px"><span class="monot mutedt" style="font-size:10px">NEXT COMP · 6 WEEKS OUT</span><span style="display:flex;gap:5px;align-items:center;font:400 10.5px/1 var(--sans);color:var(--muted)">${ic('lock','xs')}Unlock for details</span></div></div>`;
+  return `<div class="wd lg"><div style="display:flex;justify-content:space-between"><div class="wl">8 weeks · 21–27 Sep</div><div class="wl">3 sessions</div></div>
+    <div style="display:flex;gap:18px;margin-top:10px">${[['12','TOP ▲+1'],['34%','FLASH 8+'],['3.4','ATT/SEND']].map(([v,l]) => `<div><div class="serif" style="font-size:32px;line-height:1">${v}</div><div class="monot mutedt" style="font-size:9px;margin-top:4px">${l}</div></div>`).join('')}</div>
+    <div style="display:flex;flex-direction:column;gap:4px;margin-top:14px">${pyr.map(([g,c,f]) => `<div style="display:flex;align-items:center;gap:6px"><span class="serif" style="width:16px;text-align:right;font-size:12px">${g}</span><div style="flex:1;height:11px;background:var(--track);display:flex"><div style="width:${c/22*100}%;background:var(--worked);display:flex"><div style="width:${f/c*100}%;background:var(--data)"></div></div></div><span class="monot mutedt" style="width:16px;font-size:9.5px">${c}</span></div>`).join('')}</div>
+    <div style="display:flex;gap:3px;margin-top:12px;align-items:flex-end;height:30px">${tal.map(([t,c]) => `<i style="flex:1;display:block;height:${c?Math.max(4,c/8*28):2}px;background:${c?HOLD[t]:'var(--worked)'}"></i>`).join('')}</div>
+    <div style="position:absolute;left:14px;right:14px;bottom:14px;border-top:1px solid var(--rule);padding-top:10px;display:flex;justify-content:space-between;align-items:center"><div><div style="font:500 12px/1.2 var(--sans)">L ring finger · 2/10</div><div class="monot" style="font-size:9.5px;color:var(--warn);margin-top:3px">REHAB DUE · 9-DAY STREAK</div></div><div style="text-align:right"><div style="font:500 12px/1.2 var(--sans)">KL Open</div><div class="monot mutedt" style="font-size:9.5px;margin-top:3px">6 WK · COMPRESSION 42</div></div></div></div>`;
+}
+function accCircular(locked) {
+  const ring = (p) => `<svg width="72" height="72" viewBox="0 0 72 72" style="position:absolute;inset:0"><circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="5"/><circle cx="36" cy="36" r="30" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="${p*188.5} 188.5" transform="rotate(-90 36 36)"/></svg>`;
+  return `<div class="acc acc-c">${ring(.75)}<div style="text-align:center;position:relative"><div style="font:700 24px/1 var(--sys)">${locked?'3':'12'}</div><div style="font:600 8px/1 var(--sys);letter-spacing:.08em;margin-top:2px;opacity:.8">${locked?'OF 4':'TOP'}</div></div></div>`;
+}
+function accRect(locked) {
+  return locked
+  ? `<div class="acc acc-r"><div style="font:600 12px/1 var(--sys);opacity:.75">ASCENT</div><div style="font:600 15px/1.15 var(--sys)">3 sessions this week</div><div style="display:flex;gap:6px;align-items:center"><span style="font:500 12px/1 var(--sys);opacity:.85">5-wk streak</span><span class="redw" style="width:52px"></span></div></div>`
+  : `<div class="acc acc-r"><div style="font:600 12px/1 var(--sys);opacity:.75">ASCENT · BATUU</div><div style="font:600 15px/1.15 var(--sys)">Top 12 · 21 sends</div><div style="font:500 12px/1 var(--sys);opacity:.85">Rehab due · L ring 2/10</div></div>`;
+}
+const accInline = (locked) => `<div class="acc acc-i">${ic('hold','xs')}${locked?'3 sessions this week':'Top 12 · 3 sessions · rehab due'}</div>`;
+function lockPhone(locked) {
+  return `${status('20:14').replace('<span>20:14</span>','<span></span>')}
+  <div style="position:absolute;top:64px;left:0;right:0;display:flex;justify-content:center;color:#fff">${ic(locked?'lock':'unlock','s')}</div>
+  <div style="position:absolute;top:98px;left:0;right:0;text-align:center;color:#fff">
+    <div style="display:flex;justify-content:center;gap:8px;font:600 17px/1 var(--sys);opacity:.92">Sunday 27 September · ${accInline(locked).replace('class="acc acc-i"','class="acc acc-i" style="display:inline-flex;font-size:17px"')}</div>
+    <div style="font:700 96px/1 var(--sys);letter-spacing:-.02em;margin-top:6px">20:14</div>
+    <div style="display:flex;justify-content:center;gap:10px;margin-top:14px">${accCircular(locked)}${accRect(locked)}</div></div>
+  <div style="position:absolute;bottom:52px;left:48px;right:48px;display:flex;justify-content:space-between"><span class="gbtn" style="background:rgba(255,255,255,.18);color:#fff;width:50px;height:50px">${ic('pulse','s')}</span><span class="gbtn" style="background:rgba(255,255,255,.18);color:#fff;width:50px;height:50px">${ic('hold','s')}</span></div>
+  <div style="position:absolute;bottom:22px;left:0;right:0;text-align:center;color:#fff;font:500 13px/1 var(--sys);opacity:.8">${locked?'Swipe up to open':'Unlocked with Face ID'}</div><div class="homebar"></div>`;
+}
+
+/* ── Live Activity ─────────────────────────────────────────────────────── */
+function homeScreen() {
+  const apps = Array.from({length:24},(_,i) => `<i style="width:62px;height:62px;border-radius:15px;display:block;background:rgba(255,255,255,${.1+.12*((i*7)%5)/4})"></i>`).join('');
+  return `<div style="position:absolute;inset:0;background:linear-gradient(170deg,#56666d 0%,#7d6f5c 48%,#2b2d29 100%)"></div>
+  <div style="position:absolute;top:112px;left:26px;right:26px;display:grid;grid-template-columns:repeat(4,62px);justify-content:space-between;row-gap:30px">${apps}</div>
+  <div class="glass" style="position:absolute;left:14px;right:14px;bottom:14px;height:92px;border-radius:36px;background:rgba(255,255,255,.18)"></div>`;
+}
+const laTimer = (sz) => `<span style="font:600 ${sz}px/1 var(--sys);font-variant-numeric:tabular-nums;color:var(--accent)">1:12:05</span>`;
+function diCompact() {
+  return `${homeScreen()}<div class="status" style="color:#fff;position:absolute;top:0;left:0;right:0;padding:6px 26px 0 36px"><span>20:14</span>${statusIcons}</div>
+  <div class="di compact"><span style="display:flex;align-items:center;gap:6px;color:var(--accent)">${ic('hold','s')}<b style="font:700 15px/1 var(--sys);color:#fff">12</b></span>${laTimer(15)}</div><div class="homebar" style="background:#fff"></div>`;
+}
+function diExpanded() {
+  return `${homeScreen()}<div class="di expanded">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div><div style="display:flex;align-items:center;gap:6px;font:600 13px/1 var(--sys);color:var(--accent)">${ic('hold','xs')}LIVE · BATUU</div><div style="font:400 13px/1.3 var(--sys);opacity:.7;margin-top:6px">Max strength</div></div>
+      <div style="text-align:right">${laTimer(30)}<div style="font:400 12px/1 var(--sys);opacity:.6;margin-top:5px">since 19:02</div></div></div>
+    <div style="display:flex;gap:22px;margin:14px 0 14px">${[['7','sends'],['12','high'],['3','flashed']].map(([v,l]) => `<div><div style="font:700 22px/1 var(--sys)">${v}</div><div style="font:500 11px/1 var(--sys);opacity:.6;margin-top:4px">${l}</div></div>`).join('')}</div>
+    <div style="display:flex;gap:8px"><span style="flex:1;height:44px;border-radius:22px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:600 15px/1 var(--sys)">Log a send</span><span style="flex:1;height:44px;border-radius:22px;background:rgba(255,255,255,.16);display:grid;place-items:center;font:600 15px/1 var(--sys)">End &amp; rate</span></div>
+  </div><div class="homebar" style="background:#fff"></div>`;
+}
+function laLock(locked) {
+  return `${status('20:14').replace('<span>20:14</span>','<span></span>')}
+  <div style="position:absolute;top:64px;left:0;right:0;display:flex;justify-content:center;color:#fff">${ic(locked?'lock':'unlock','s')}</div>
+  <div style="position:absolute;top:98px;left:0;right:0;text-align:center;color:#fff"><div style="font:600 17px/1 var(--sys);opacity:.92">Sunday 27 September</div><div style="font:700 96px/1 var(--sys);letter-spacing:-.02em;margin-top:6px">20:14</div></div>
+  <div class="la" style="position:absolute;left:12px;right:12px;bottom:118px">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span class="micro" style="color:var(--ink);display:flex;align-items:center;gap:6px"><i class="live-dot"></i>${locked?'Live session':'Live · Batuu · max strength'}</span><span class="serif" style="font-size:28px;line-height:1;font-variant-numeric:tabular-nums;color:var(--accent)">1:12:05</span></div>
+    <div style="display:flex;gap:18px;margin-top:10px;align-items:baseline"><span style="font:400 13px/1 var(--sans)"><b class="serif" style="font-size:20px;font-weight:400">7</b> sends</span>${locked?`<span class="red" style="width:70px"></span><span class="red" style="width:54px"></span>`:`<span style="font:400 13px/1 var(--sans)"><b class="serif" style="font-size:20px;font-weight:400">12</b> high</span><span style="font:400 13px/1 var(--sans)"><b class="serif" style="font-size:20px;font-weight:400">3</b> flashed</span>`}</div>
+    <div style="display:flex;gap:8px;margin-top:12px"><span class="btn pri" style="height:40px;font-size:14px;border-radius:20px">Log a send</span><span class="btn sec" style="height:40px;font-size:14px;border-radius:20px">End &amp; rate</span></div></div>
+  <div style="position:absolute;bottom:22px;left:0;right:0;text-align:center;color:#fff;font:500 13px/1 var(--sys);opacity:.8">${locked?'Swipe up to open':'Unlocked with Face ID'}</div><div class="homebar"></div>`;
+}
+
+/* ── Frame registry ────────────────────────────────────────────────────── */
+const FRAMES = [
+ {g:'nav',id:'1.1',name:'Today · at rest',html:()=>`${status()}${todayContent(true)}${chromeTabs('today',{live:'ring'})}`,notes:['Five tabs in the iOS 26 floating glass tab bar: Today, Plan, History, Body, Settings. The selected tab takes the accent.','No toolbar button on tab roots. Settings and appearance live only in the Settings tab.','The + is a separate 58 pt glass circle, tinted with the accent, centred 10 pt above the bar.','This is a Dynamic Island phone, so a live session shows as an accent ring around the +. The timer is in the Live Activity (1.7–1.9).']},
+ {g:'nav',id:'1.2',name:'Today · scrolling',html:()=>`${status()}<div style="transform:translateY(-640px)">${todayContent(true)}</div><div class="inline-nav"><div class="t">Today</div></div>${chromeTabs('today',{min:1,live:'ring'})}`,notes:['<code>.tabBarMinimizeBehavior(.onScrollDown)</code> collapses the bar to the current tab at the bottom-leading corner.','The + drops into the freed bottom row at 48 pt, still centred. Scrolling up restores both.','The large serif title becomes an inline title under the soft scroll-edge effect.']},
+ {g:'nav',id:'1.3',name:'Quick add · no session',html:()=>selector(false),notes:['Tapping + zooms a floating glass sheet out of the button: <code>.matchedTransitionSource</code> + <code>.navigationTransition(.zoom)</code>, detent <code>.height(452)</code>.','Tiles sit on glass, so they use solid fills and concentric radii. No glass is stacked on glass.','The hero tile is the likeliest next action: Start session with today\'s plan pre-filled.']},
+ {g:'nav',id:'1.4',name:'Quick add · session live',html:()=>selector(true),notes:['The header shows the live session. Gym send becomes the hero tile and Start session becomes End & rate.','Pain and Rehab tiles read live status from the body log and use injury red.','Plan switches to the Plan tab. The user chose it, so the tab switch is allowed.']},
+ {g:'nav',id:'1.5',name:'No Dynamic Island · timer above +',html:()=>`${status('20:14',true)}${todayContent(true)}${chromeTabs('today',{live:'badge'})}`,notes:['On phones without a Dynamic Island, a glass capsule <code>● 1:12:05</code> floats 8 pt above the +. It no longer touches the button.','It uses <code>Text(timerInterval:)</code> and ticks live. Tapping it opens the logging sheet.','Detection: top safe-area inset < 51 pt means no Dynamic Island.']},
+ {g:'nav',id:'1.6',name:'No Dynamic Island · scrolling',html:()=>`${status('20:14',true)}<div style="transform:translateY(-640px)">${todayContent(true)}</div><div class="inline-nav"><div class="t">Today</div></div>${chromeTabs('today',{min:1,live:'badge'})}`,notes:['When minimised, the capsule rides 6 pt above the 48 pt +.']},
+ {g:'nav',id:'1.7',name:'Dynamic Island · compact',html:()=>diCompact(),lock:1,notes:['Starting a session starts a Live Activity (ActivityKit). iOS shows it in the island once you leave Ascent, never while Ascent is open.','Compact: leading hold glyph + top grade tonight. Trailing: elapsed timer in the accent.','Minimal (when another app also has an activity): the timer only.']},
+ {g:'nav',id:'1.8',name:'Dynamic Island · expanded',html:()=>diExpanded(),lock:1,notes:['A long press expands it: gym, intent, timer, sends / high / flashed.','"Log a send" deep-links to the logging sheet. "End & rate" opens Review. Both are <code>LiveActivityIntent</code>s that open the app.']},
+ {g:'nav',id:'1.9',name:'Lock Screen · live session',html:()=>laLock(true),lock:1,notes:['Both phone types show this on the Lock Screen. On phones without a Dynamic Island it is also the banner.','With the Face ID lock on and the phone locked, the gym, high grade and flashed count are redacted. Timer and sends stay, the same rule as the widgets.','It ends when the session ends, or after 8 h with a "Still climbing?" prompt.']},
+ {g:'flows',id:'2.1',name:'Start session',html:()=>startSheet(),notes:['The web SessionStarter as a large sheet. Today\'s plan pre-fills gym, intent and focus.','Start session pushes straight into Log a send inside the same sheet, and starts the Live Activity.']},
+ {g:'flows',id:'2.2',name:'Log a send · picking',html:()=>logSheet('picking'),notes:['Grade grid shows the gym\'s top 10. "Show 1–15" reveals the rest.','Hold colours form a 9-cell strip, 40 × 48 pt each. Black is included.','The confirmation bar is pinned with <code>.safeAreaInset(edge: .bottom)</code>. Send uses the accent.','The load flag appears inline when a capped style is selected. It is never a modal.']},
+ {g:'flows',id:'2.3',name:'Log a send · sent',html:()=>logSheet('sent'),notes:['Send plays a <code>.success</code> haptic, slides the row into This session, and shows a glass toast with Undo for 4 s.','Grade and colour reset. Optional chips stay (kept from last climb).','Swipe a row to delete it. This replaces the web\'s "Undo last" link.']},
+ {g:'flows',id:'2.4',name:'Camp5 tally',html:()=>tallySheet(),notes:['Switches automatically when the session gym is Camp5 Eco City. No numbers appear anywhere.','Each tag row has a 44 pt +. Tagged rows get the 2 pt ink border.']},
+ {g:'flows',id:'2.5',name:'Board send',html:()=>boardSheet(),notes:['Gym and Board are two segments of one sheet, which replaces the web\'s Board log / Gym log buttons.','Angle is required. V1–V10. The histogram covers this board and angle, with the max bar in the accent.']},
+ {g:'flows',id:'2.6',name:'Review',html:()=>reviewSheet(false),notes:['Pushed from End & rate inside the log sheet.','Tapping a pain chip raises it 0→10, and a long press opens a 0–10 menu. It writes a PainEntry against the injury.','The score is a native <code>Slider</code> (0–10, step 0.1) tinted with the accent.']},
+ {g:'flows',id:'2.7',name:'Review · saved',html:()=>reviewSheet(true),notes:['The chip-trend panel appears after saving (web 1g). Saving ends the session and its Live Activity.','Body log and Dashboard dismiss the sheet and select that tab.']},
+ {g:'flows',id:'2.8',name:'Pain check-in',html:()=>painSheet(),notes:['An opaque paper sheet at a custom detent. It shows one 0–10 row per active injury. Watching injuries are listed below and open their own row.','Writes a PainEntry with no session. "+ New pain" opens the new-injury form.']},
+ {g:'flows',id:'2.9',name:'Rehab done',html:()=>rehabSheet(),notes:['Today\'s protocol for every active injury. Each tap toggles today\'s RehabLog and saves immediately.','The streak strip updates live, and a toast confirms each tick.']},
+ {g:'tabs',id:'3.1',name:'Today · full scroll',tall:1,html:()=>`${status()}${todayContent(true)}<div style="height:150px"></div>${chromeTabs('today',{live:'ring'})}`,notes:['Order: live session → range → KPIs (2 × 2) → send pyramid → Camp5 tags → boards → injury watch + load flag → comp readiness → style × grade → recent sessions.','Every chart mark uses the accent, which is ink by default. Try another accent at the top of the page.','Recent rows push Session detail. Injury watch selects Body. Comp readiness opens Plan → Season.']},
+ {g:'tabs',id:'3.2',name:'Plan · Today',tall:1,html:()=>`${status()}${planContent()}${chromeTabs('plan',{live:'ring'})}`,notes:['A square Today | Season switch sits under the title.','Blocked focus chips are struck through, and the warn panel stays inline.','The subtitle carries the season phase. The footer line says when the taper starts.']},
+ {g:'tabs',id:'3.3',name:'Plan · Today in taper week',tall:1,html:()=>`${status()}${planContent(true)}${chromeTabs('plan')}`,notes:['During a taper, the plan shortens itself. Blocks scale to the week\'s volume target, and the high-cost intents are struck through.','The load bar compares this week\'s planned minutes with the 8-week average, shown as the tick.','"Use full plan" overrides the taper for today.']},
+ {g:'tabs',id:'3.4',name:'Plan · Season',tall:1,html:()=>`${status()}${seasonContent()}${chromeTabs('plan',{live:'ring'})}`,notes:['Next comp card with a phase bar: BUILD → PEAK → TAPER → COMP WK.','The calendar is a continuous month scroll. Logged and planned sessions show as dots, peak weeks are tinted, taper weeks hatched, and the comp day filled with the accent.','Tap a date to plan a session or add a comp on it.','Taper plan per week from the next A comp, scaled to your 8-week average. Injury rules carry through.']},
+ {g:'tabs',id:'3.5',name:'Add comp',html:()=>addCompSheet(),notes:['Fields: name, date (graphical calendar), multi-day, where, category, format, rounds, priority, notes.','Priority sets the taper: A = two weeks, B = one lighter week, C = rest day only.','Opened from "Add comp" in the toolbar, a date in the calendar, or an empty-state button.']},
+ {g:'tabs',id:'3.6',name:'History',tall:1,html:()=>`${status()}${historyContent()}${chromeTabs('history',{live:'ring'})}`,notes:['Chip trends first, then the ledger grouped by month.','The filter button opens a Menu: gym, intent, rated only.','Camp5 rows show tag swatches with codes. Numbers never appear for Camp5.']},
+ {g:'tabs',id:'3.7',name:'Session detail',tall:1,html:()=>`${sessionDetail()}${chromeTabs('history',{live:'ring'})}`,notes:['A push from History and Today\'s recent rows.','Edit review pushes the Review screen for that session.','Swipe to delete a climb, with a confirmation.']},
+ {g:'tabs',id:'3.8',name:'Body',tall:1,html:()=>`${status()}${bodyContent()}${chromeTabs('body',{live:'ring'})}`,notes:['The body map sits beside the legend. Tapping a part filters the list.','The ••• menu holds Downgrade / Resolve / Reopen, plus Edit.','The "Log today" row has 11 cells of 30 × 44 pt. Rehab rows are 44 pt+ checkboxes.','"Log new" opens the new-injury sheet (the web\'s + Log something new).']},
+ {g:'settings',id:'4.1',name:'Settings tab',tall:1,html:()=>settingsTab({live:'ring'}),notes:['Settings is the fifth tab, and the only place appearance is set.','Accent: five presets plus a custom colour, which is a <code>ColorPicker</code> drawn as the rainbow swatch. It always colours charts. The chart toggle is gone.','The widget-privacy toggle is gone too. Widgets follow the Face ID lock.','Competitions moved to Plan → Season. Data moved here from the Gyms page.']},
+ {g:'settings',id:'4.2',name:'Custom accent · ColorPicker',html:()=>colorPickerSheet(),notes:['This is the system ColorPicker sheet. We only set <code>supportsOpacity: false</code>.','The pick applies live across the app. Use the Accent control at the top of this page to preview it.']},
+ {g:'settings',id:'4.3',name:'Accent near injury red',html:()=>settingsTab({cur:5,curName:'#C4453A',nearRed:1}),red:1,notes:['If the accent\'s ΔE to injury red is under 20, a red footer warns about it. The colour still applies everywhere, charts included.']},
+ {g:'settings',id:'4.4',name:'Gyms & boards',html:()=>gymsScreen(),notes:['Pushed from Settings → Climbing. It keeps the web layout: grade-label strip per gym, sent grades in ink.','Bump PBJ · J1 · SSQ collapse into one row. Swipe a gym with 0 sends to remove it.']},
+ {g:'settings',id:'4.5',name:'Add gym',html:()=>addGymSheet(),notes:['Steppers replace number inputs. Offset runs −1…+1 in steps of 0.5, max grade runs 1…20.','Colour tags creates the 8 Camp5 tags in order.']},
+ {g:'settings',id:'4.6',name:'Reset · confirmation',html:()=>resetDialog(),notes:['A <code>confirmationDialog</code> with the destructive role. The system red here is platform chrome, not our injury red.','"Export backup first" opens the file exporter, then returns here.']},
+ {g:'faceid',id:'5.1',name:'Locked',html:()=>lockScreenApp(),notes:['Covers the whole app on cold launch, and on resume after the relock interval.','Face ID starts automatically on appear. The button retries.','Nothing from the log shows here.']},
+ {g:'faceid',id:'5.2',name:'Face ID scanning',html:()=>lockScreenApp({hud:hudScan}),notes:['This HUD is system UI. We supply only <code>localizedReason</code>: "Unlock your climbing log".']},
+ {g:'faceid',id:'5.3',name:'Didn\'t match',html:()=>lockScreenApp({alert:alertFail}),notes:['A system alert. <code>.deviceOwnerAuthentication</code> offers the passcode after a failure.','Cancel returns to 5.1. The app stays locked.']},
+ {g:'faceid',id:'5.4',name:'Passcode fallback',html:()=>passcode(),notes:['The system passcode sheet. It is always dark and not ours to style.','Used when Face ID fails, is locked out, or is not enrolled.']},
+ {g:'faceid',id:'5.5',name:'App switcher cover',html:()=>appSwitcher(),notes:['A privacy cover shows whenever <code>scenePhase != .active</code> and the lock is on.','Blurred paper with the ASCENT wordmark, so the snapshot never shows grades or injuries.']},
+ {g:'lock',id:'6.1',name:'Lock Screen · locked',html:()=>lockPhone(true),lock:1,notes:['Inline: "3 sessions this week". Circular: sessions gauge, 3 of the 4-a-week target.','Rectangular: session count and streak. The redacted bar is <code>.privacySensitive()</code>.']},
+ {g:'lock',id:'6.2',name:'Lock Screen · Face ID unlocked',html:()=>lockPhone(false),lock:1,notes:['After Face ID, while still on the Lock Screen, full content appears: top grade, gym, rehab due.','Accessory widgets render monochrome. <code>.widgetAccentable()</code> marks the ring and the top number.']}
+];
+
+/* ── Accent + render ───────────────────────────────────────────────────── */
+const PRESETS = [['ink','Ink'],['#4a6b3a','Moss'],['#2c55c7','Cobalt'],['#b07a12','Ochre'],['#7a3f73','Plum']];
+const state = { mode:'both', accent:'ink' };
+try { const s = JSON.parse(localStorage.getItem('ascent-draft') || '{}'); Object.assign(state, s); } catch (e) {}
+const save = () => { try { localStorage.setItem('ascent-draft', JSON.stringify(state)); } catch (e) {} };
+const hex2rgb = h => [1,3,5].map(i => parseInt(h.slice(i,i+2),16)/255);
+const lum = h => { const [r,g,b] = hex2rgb(h).map(c => c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4)); return .2126*r+.7152*g+.0722*b; };
+const contrast = (a,b) => { const [x,y] = [lum(a),lum(b)].sort((p,q)=>q-p); return (x+.05)/(y+.05); };
+const mix = (h, w, t) => '#' + hex2rgb(h).map((c,i) => Math.round((c*(1-t) + hex2rgb(w)[i]*t)*255).toString(16).padStart(2,'0')).join('');
+function accentFor(mode, a = state.accent) {
+  if (a === 'ink') return mode === 'dark' ? ['#ece6d8','#12110e'] : ['#17150f','#f5f2ea'];
+  let c = a;
+  if (mode === 'dark') { let t = 0; while (contrast(c,'#12110e') < 3.2 && t < .7) { t += .1; c = mix(a,'#ffffff',t); } }
+  else { let t = 0; while (contrast(c,'#f5f2ea') < 3 && t < .7) { t += .1; c = mix(a,'#000000',t); } }
+  return [c, lum(c) > .42 ? '#17150f' : '#ffffff'];
+}
+const tokStyle = (mode, forceRed) => { const [a,on] = forceRed ? ['#c4453a','#ffffff'] : accentFor(mode); return `--accent:${a};--on-accent:${on};--data:${a};`; };
+const modes = () => state.mode === 'both' ? ['light','dark'] : [state.mode];
+
+function renderFrames() {
+  document.querySelectorAll('[data-group]').forEach(el => {
+    el.innerHTML = FRAMES.filter(f => f.g === el.dataset.group).map(f => `
+      <div class="frame"><div class="fcap"><span class="fid">${f.id}</span><span class="fname">${f.name}</span></div>
+      <div class="phones">${modes().map(m => `<div class="phone tok${f.tall?' tall':''}${f.lock?' lockscreen':''}" data-mode="${m}" style="${tokStyle(m,f.red)}" aria-label="${f.name}, ${m} mode">${f.html()}${f.tall?'<div class="fold"><span>FIRST SCREEN</span></div>':''}</div>`).join('')}</div>
+      <ul class="notes">${f.notes.map(n => `<li>${n}</li>`).join('')}</ul></div>`).join('');
+  });
+  const wall = document.getElementById('widgetWall');
+  const block = (title, fn) => `<div class="wgroup"><h4>${title}</h4><div class="wpair">${modes().map(m => `<div class="wallpaper${m==='dark'?' dk':''}"><div class="wpair">${['unlocked','locked'].map(s => `<div class="wcol"><span class="tag" style="color:#fff">${s.toUpperCase()} · ${m.toUpperCase()}</span><div class="tok" data-mode="${m}" style="${tokStyle(m)}">${fn(s==='locked')}</div></div>`).join('')}</div></div>`).join('')}</div></div>`;
+  const accBlock = `<div class="wgroup"><h4>Lock Screen accessories · monochrome, always vibrant</h4><div class="wallpaper"><div class="wpair">${['unlocked','locked'].map(s => `<div class="wcol"><span class="tag" style="color:#fff">${s.toUpperCase()}</span><div style="display:flex;gap:12px;align-items:center">${accCircular(s==='locked')}${accRect(s==='locked')}</div>${accInline(s==='locked')}</div>`).join('')}</div></div></div>`;
+  wall.innerHTML = `<div class="wall">${block('Small · systemSmall (also StandBy)', wSmall)}${block('Medium · systemMedium', wMedium)}${block('Large · systemLarge', wLarge)}${accBlock}</div>`;
+}
+function renderTokens() {
+  const rows = [['paper','#f5f2ea','#12110e','Screen ground'],['card','#ffffff','#1d1b17','Chips, cards, fields'],['ink','#17150f','#ece6d8','Text, data, selection'],['muted','#6f6a5e','#a39c8c','Secondary text'],['faint','#a09a8c','#6e6859','Tertiary, empty'],['rule','rgba(23,21,15,.12)','rgba(236,230,216,.12)','Hairlines'],['warn','#c0392b','#e5594c','Injury / body only'],['watch','#f2c744','#f2c744','Watching injuries'],['accent','user · default Ink','user · lifted to 3:1','Nav + primary action']];
+  const type = [['Large title','Newsreader 36','.largeTitle'],['KPI numeral','Newsreader 40','.largeTitle'],['Screen hero','Newsreader 27–28','.title'],['Section title','Newsreader 21','.title3'],['Body','Archivo 14–15','.subheadline / .body'],['Chip','Archivo Medium 13–14','.subheadline'],['Button','Archivo SemiBold 15','.headline'],['Micro label','Plex Mono 10.5 +12% caps','.caption2'],['Data mono','Plex Mono 11–12','.caption'],['Grade button','Plex Mono Medium 17','.body']];
+  document.getElementById('tokenGrid').innerHTML = `
+  <div class="spec-card"><h3>Colour</h3><table><tr><th>Token</th><th>Light</th><th>Dark</th><th>Use</th></tr>${rows.map(([n,l,d,u]) => `<tr><td class="mono-s">${n}</td><td class="mono-s">${l.startsWith('#')?`<i class="chipv" style="background:${l}"></i>`:''}${l}</td><td class="mono-s">${d.startsWith('#')?`<i class="chipv" style="background:${d}"></i>`:''}${d}</td><td>${u}</td></tr>`).join('')}</table></div>
+  <div class="spec-card"><h3>Type → Dynamic Type</h3><table><tr><th>Role</th><th>Face · pt</th><th>relativeTo</th></tr>${type.map(r => `<tr>${r.map((c,i) => `<td class="${i?'mono-s':''}">${c}</td>`).join('')}</tr>`).join('')}</table></div>
+  <div class="spec-card"><h3>Shape rule</h3><table><tr><th>Layer</th><th>Radius</th><th>Material</th></tr>
+    <tr><td>Paper content: chips, cards, grade buttons, swatches, primary buttons in content</td><td class="mono-s">0</td><td>Solid, hairline, no shadow</td></tr>
+    <tr><td>Glass controls: tab bar, +, toolbar buttons, selector sheet, toasts</td><td class="mono-s">capsule / concentric</td><td><code class="mono-s">.glassEffect(.regular)</code></td></tr>
+    <tr><td>Things on glass: selector tiles</td><td class="mono-s">22 (concentric)</td><td>Solid fill</td></tr>
+    <tr><td>System surfaces: sheets, Form groups, alerts</td><td class="mono-s">system</td><td>System</td></tr>
+    <tr><td>Spacing</td><td colspan="2" class="mono-s">gutter 16 · band 20 · stack 6/8/10/14/18 · tap ≥ 44</td></tr></table></div>`;
+}
+function renderControls() {
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === state.mode));
+  document.getElementById('accentSw').innerHTML = PRESETS.map(([h,n]) => `<button type="button" class="sw${state.accent===h?' on':''}" title="${n}" aria-label="${n}" data-acc="${h}" style="background:${h==='ink'?'#17150f':h}"></button>`).join('');
+}
+function renderAll() { renderControls(); renderFrames(); save(); }
+document.getElementById('modeSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { state.mode = b.dataset.mode; renderAll(); } });
+document.getElementById('accentSw').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { state.accent = b.dataset.acc; renderAll(); } });
+document.getElementById('customAccent').addEventListener('input', e => { state.accent = e.target.value; renderAll(); });
+renderTokens();
+renderAll();
+</script>

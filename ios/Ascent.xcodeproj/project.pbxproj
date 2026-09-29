@@ -1,0 +1,519 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		362E241DB7168CBC3A984E41 /* AscentCore in Frameworks */ = {isa = PBXBuildFile; productRef = B68F1BB424895593733437DD /* AscentCore */; };
+		3BC7C4C8B798E016C7819A1F /* AscentUI in Frameworks */ = {isa = PBXBuildFile; productRef = 0875D14A9D6075507FD5C446 /* AscentUI */; };
+		4F23FDC235F2282CA7255BF1 /* AscentCore in Frameworks */ = {isa = PBXBuildFile; productRef = 1A30748E885848D32084349B /* AscentCore */; };
+		7A2668A8494F95D5DE756FB7 /* AscentUI in Frameworks */ = {isa = PBXBuildFile; productRef = 416C87E0E3245BD215616320 /* AscentUI */; };
+		9354847250299992A140A3BB /* AscentWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9891A9622BF0B27388FB78B /* AscentWidgets.swift */; };
+		B2F78468E925028EAF9E4395 /* AscentWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B1C6A31156B90B13A432F58D /* AscentWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D832F5D8AEB3F7D2F3C6AAAB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AFC3013CC9A77E766A06380B /* Assets.xcassets */; };
+		DC137CFF79FE3F15E6169AD8 /* AscentWidgetsUI in Frameworks */ = {isa = PBXBuildFile; productRef = D5BA7163A505749F1DA32855 /* AscentWidgetsUI */; };
+		DC897E39B498556027F90BE3 /* AscentApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3D8C42083239A73AB284D26 /* AscentApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		56E2D2915BB1F7E3AF7F42AA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 96CFA1805523C80D166A5062 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 774EFCFFB879EDDC9B4283B5;
+			remoteInfo = AscentWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		F6AF361FAC48D2300115A335 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B2F78468E925028EAF9E4395 /* AscentWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		1A130CFB88A46EEFDC96D0BD /* AscentKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AscentKit; path = AscentKit; sourceTree = SOURCE_ROOT; };
+		237D47B7C523CEDF55209133 /* Ascent.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ascent.entitlements; sourceTree = "<group>"; };
+		7DA77967F2495AD4FA3E5D89 /* AscentWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AscentWidgets.entitlements; sourceTree = "<group>"; };
+		9EEE84C0AE732F3D95A91AC9 /* Ascent.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Ascent.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A74CE70EC1C37CAA4DD3B82E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		AFC3013CC9A77E766A06380B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B1C6A31156B90B13A432F58D /* AscentWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = AscentWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D9891A9622BF0B27388FB78B /* AscentWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AscentWidgets.swift; sourceTree = "<group>"; };
+		E3D8C42083239A73AB284D26 /* AscentApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AscentApp.swift; sourceTree = "<group>"; };
+		FE99B0A110E9C763CEA6FF00 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9415BF65A81ACFA4AE2CC913 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				362E241DB7168CBC3A984E41 /* AscentCore in Frameworks */,
+				7A2668A8494F95D5DE756FB7 /* AscentUI in Frameworks */,
+				DC137CFF79FE3F15E6169AD8 /* AscentWidgetsUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E6E8371C51B571F15A8B29C0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4F23FDC235F2282CA7255BF1 /* AscentCore in Frameworks */,
+				3BC7C4C8B798E016C7819A1F /* AscentUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1CFFA48FA671736C5CE532EF = {
+			isa = PBXGroup;
+			children = (
+				48DA94C64D380A2B2B615119 /* Ascent */,
+				85815C504FE80F34D6DB6DC0 /* AscentWidgets */,
+				CC4BDBF6B7CE2FF8F11D7F13 /* Packages */,
+				5E7E3B8C0BBAC479802DD1F9 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		48DA94C64D380A2B2B615119 /* Ascent */ = {
+			isa = PBXGroup;
+			children = (
+				237D47B7C523CEDF55209133 /* Ascent.entitlements */,
+				E3D8C42083239A73AB284D26 /* AscentApp.swift */,
+				AFC3013CC9A77E766A06380B /* Assets.xcassets */,
+				A74CE70EC1C37CAA4DD3B82E /* Info.plist */,
+			);
+			path = Ascent;
+			sourceTree = "<group>";
+		};
+		5E7E3B8C0BBAC479802DD1F9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9EEE84C0AE732F3D95A91AC9 /* Ascent.app */,
+				B1C6A31156B90B13A432F58D /* AscentWidgets.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		85815C504FE80F34D6DB6DC0 /* AscentWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				7DA77967F2495AD4FA3E5D89 /* AscentWidgets.entitlements */,
+				D9891A9622BF0B27388FB78B /* AscentWidgets.swift */,
+				FE99B0A110E9C763CEA6FF00 /* Info.plist */,
+			);
+			path = AscentWidgets;
+			sourceTree = "<group>";
+		};
+		CC4BDBF6B7CE2FF8F11D7F13 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				1A130CFB88A46EEFDC96D0BD /* AscentKit */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		774EFCFFB879EDDC9B4283B5 /* AscentWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 978407801D64BD2EE5F8582A /* Build configuration list for PBXNativeTarget "AscentWidgets" */;
+			buildPhases = (
+				59E4789E4CB58D8FB9B067FD /* Sources */,
+				9415BF65A81ACFA4AE2CC913 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AscentWidgets;
+			packageProductDependencies = (
+				B68F1BB424895593733437DD /* AscentCore */,
+				416C87E0E3245BD215616320 /* AscentUI */,
+				D5BA7163A505749F1DA32855 /* AscentWidgetsUI */,
+			);
+			productName = AscentWidgets;
+			productReference = B1C6A31156B90B13A432F58D /* AscentWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		C110FDF3352D8E86F5AC5865 /* Ascent */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C43B6B8FCBEB0865AEC71289 /* Build configuration list for PBXNativeTarget "Ascent" */;
+			buildPhases = (
+				001BDC00523989A434ABB75D /* Sources */,
+				E255BCA88FB23CBF6B701DB7 /* Resources */,
+				E6E8371C51B571F15A8B29C0 /* Frameworks */,
+				F6AF361FAC48D2300115A335 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F02A33A0C50AFC14063ABE4F /* PBXTargetDependency */,
+			);
+			name = Ascent;
+			packageProductDependencies = (
+				1A30748E885848D32084349B /* AscentCore */,
+				0875D14A9D6075507FD5C446 /* AscentUI */,
+			);
+			productName = Ascent;
+			productReference = 9EEE84C0AE732F3D95A91AC9 /* Ascent.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		96CFA1805523C80D166A5062 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					774EFCFFB879EDDC9B4283B5 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					C110FDF3352D8E86F5AC5865 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = C553A5313D8FC2A61BC50DB7 /* Build configuration list for PBXProject "Ascent" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 1CFFA48FA671736C5CE532EF;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5DBC9F03D2610409F2A53898 /* XCLocalSwiftPackageReference "AscentKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 5E7E3B8C0BBAC479802DD1F9 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C110FDF3352D8E86F5AC5865 /* Ascent */,
+				774EFCFFB879EDDC9B4283B5 /* AscentWidgets */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E255BCA88FB23CBF6B701DB7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D832F5D8AEB3F7D2F3C6AAAB /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		001BDC00523989A434ABB75D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DC897E39B498556027F90BE3 /* AscentApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		59E4789E4CB58D8FB9B067FD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9354847250299992A140A3BB /* AscentWidgets.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F02A33A0C50AFC14063ABE4F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 774EFCFFB879EDDC9B4283B5 /* AscentWidgets */;
+			targetProxy = 56E2D2915BB1F7E3AF7F42AA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		00060EBFA6FBBA3B578F3854 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		09DD2010854976B4697D61BB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Ascent/Ascent.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Ascent/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ivancyx.ascent;
+				SDKROOT = iphoneos;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		25A7DB36B21130450A62FE59 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AscentWidgets/AscentWidgets.entitlements;
+				INFOPLIST_FILE = AscentWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ivancyx.ascent.widgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		7D3A6DD795CA89247ACBB1A5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		A1EE6446EA257BABD7C9F2D6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Ascent/Ascent.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Ascent/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ivancyx.ascent;
+				SDKROOT = iphoneos;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		C514435B9C1AEC873C81DD5B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AscentWidgets/AscentWidgets.entitlements;
+				INFOPLIST_FILE = AscentWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ivancyx.ascent.widgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		978407801D64BD2EE5F8582A /* Build configuration list for PBXNativeTarget "AscentWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				25A7DB36B21130450A62FE59 /* Debug */,
+				C514435B9C1AEC873C81DD5B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C43B6B8FCBEB0865AEC71289 /* Build configuration list for PBXNativeTarget "Ascent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1EE6446EA257BABD7C9F2D6 /* Debug */,
+				09DD2010854976B4697D61BB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C553A5313D8FC2A61BC50DB7 /* Build configuration list for PBXProject "Ascent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00060EBFA6FBBA3B578F3854 /* Debug */,
+				7D3A6DD795CA89247ACBB1A5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		5DBC9F03D2610409F2A53898 /* XCLocalSwiftPackageReference "AscentKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = AscentKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0875D14A9D6075507FD5C446 /* AscentUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AscentUI;
+		};
+		1A30748E885848D32084349B /* AscentCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AscentCore;
+		};
+		416C87E0E3245BD215616320 /* AscentUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AscentUI;
+		};
+		B68F1BB424895593733437DD /* AscentCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AscentCore;
+		};
+		D5BA7163A505749F1DA32855 /* AscentWidgetsUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AscentWidgetsUI;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 96CFA1805523C80D166A5062 /* Project object */;
+}
