@@ -1,94 +1,140 @@
 # Ascent
 
-A single-user bouldering progress tracker for several Malaysian gyms that each grade
-differently, plus KilterBoard and TensionBoard 2 on the V-scale. It answers one question —
-**am I actually improving?** — and supports comp prep by exposing style-specific weaknesses,
-session intent, session feel, and an injury/rehab log that feeds load limits back into planning.
+A single-user bouldering progress tracker for your iPhone. It answers one question: **am I actually
+improving?** It also supports comp prep: it exposes style-specific weaknesses, tracks session intent
+and how each session felt, and keeps an injury and rehab log whose load limits feed back into planning.
 
-Runs on localhost. No auth, no accounts, no server.
+It covers several Malaysian gyms that each grade differently, plus KilterBoard and TensionBoard 2 on
+the V-scale.
 
-## Run it
+**Mobile first, local only.** Ascent is a native SwiftUI app for iOS 26. It stores everything on the
+phone: no account, no server, no iCloud. The original React web app is still in `src/`, and it
+reads and writes the same backup format.
+
+## The iOS app
+
+| Tab | What it is |
+|---|---|
+| **Today** | Dashboard: KPIs, send pyramid, Camp5 colour tally, board grades, injury watch, comp readiness, style × grade heatmap, recent sessions |
+| **Plan** | *Today*: session intent picks the blocks, load rules strike out blocked focus styles, and the plan shortens automatically in a taper. *Season*: calendar, competitions, the taper plan and the weekly session target |
+| **History** | Chip trends over the last 12 sessions, plus the full session ledger with session detail |
+| **Body** | Injury and rehab: body map, pain trend, adherence, rehab protocol, load rules |
+| **Settings** | Appearance, accent colour, Face ID lock, gyms and boards, backup export and import |
+
+**Quick add.** A floating `+` above the Liquid Glass tab bar opens a selector for the next action:
+start a session, log a gym or board send, end and rate the session, check in pain, tick off rehab, or
+open the plan. Logging a send, the Camp5 tally, board climbs and the review all live in one sheet.
+
+**On the phone:**
+- A Live Activity runs during a session, in the Dynamic Island and on the Lock Screen.
+- Home Screen and Lock Screen widgets show your week at a glance.
+- The optional Face ID lock also hides details in the widgets and Live Activity while the phone is
+  locked, leaving only counts, your streak and weeks to the next comp.
+- You pick one accent colour, and it colours the tab bar, primary buttons and every chart.
+
+### Build and run
+
+You need Xcode 26 or later and an iOS 26 Simulator runtime.
+
+```bash
+cd ios && xcodegen generate
+```
+
+```bash
+open ios/Ascent.xcodeproj
+```
+
+Pick an iPhone simulator and Run. To run on a real iPhone, set your Team under Signing for the
+`Ascent` and `AscentWidgets` targets. The App Group `group.com.ivancyx.ascent` is created
+automatically.
+
+The domain and snapshot tests run without Xcode:
+
+```bash
+cd ios/AscentKit && ./test.sh
+```
+
+### Layout
+
+| Path | What |
+|---|---|
+| `ios/AscentKit/Sources/AscentCore` | Models, vocab, dates, metrics, taper engine, demo seed, store. A line-for-line port of `src/domain`, with tests that check it matches the web app's numbers. |
+| `ios/AscentKit/Sources/AscentUI` | Theme, components, every screen, the Face ID lock, Live Activity sync |
+| `ios/AscentKit/Sources/AscentWidgetsUI` | Widget views and the Live Activity views |
+| `ios/Ascent`, `ios/AscentWidgets` | The app target and the widget extension |
+| `ios/project.yml` | XcodeGen spec; `xcodegen generate` rebuilds `Ascent.xcodeproj` |
+| `design/` | The approved iOS design spec (`DESIGN.md`) and the HTML draft of every screen |
+
+**Storage.** One JSON file lives in the App Group container, so the widgets read the same log as the
+app. It uses the same format as the web app's backup, so `Settings → Import backup` accepts a file
+exported from the web app.
+
+**Status.** The app builds and runs on the iOS 26 Simulator. Face ID, the widgets and the Live
+Activity views still need a check on a real device. `HANDOFF.md` lists what's done and what's open.
+
+## The web app
+
+The original version runs in the browser. It's a React 18 + Vite + TypeScript app that stores its
+data in IndexedDB through Dexie.
 
 ```bash
 npm install && npm run dev
 ```
 
-Open <http://localhost:5173>.
-
-```bash
-npm run build && npm run preview
-```
-
-## Stack
-
-React 18 + Vite + TypeScript, with **Dexie (IndexedDB)** for storage — the zero-backend option
-the handoff allowed. Everything is one process and one command; data survives restarts, and
-`Gyms → Data` has JSON export/import so the log is portable and backup-able. If you later want a
-file on disk, `src/db/store.ts` is the only module that talks to the database.
-
-There is no CSS framework. The paper palette lives in `src/styles/global.css` as CSS custom
-properties; everything else is plain CSS and inline style objects that mirror the design tokens.
-
-## Screens
-
-| Route | Design id | What it is |
-|---|---|---|
-| `/` | `2a` | Dashboard — KPIs, send pyramid, Camp5 colour tally, board grades, injury watch, comp readiness, style × grade heatmap, recent sessions |
-| `/plan` | `3d` | Session plan — intent picks the blocks, load rules strike out blocked focus styles |
-| `/log` | `3a` + `1d` | Quick log — grade → colour → Send; switches to the Camp5 tally mode automatically |
-| `/board` | `3b` | Board log — board, angle, V-grade, plus the all-time histogram for that board and angle |
-| `/review` | `3c` + `1g` | Session review — chip groups, pain chips, one score; the chip-trend panel appears after saving |
-| `/history` | `1g` | Chip trends over the last 12 sessions plus the full session ledger |
-| `/gyms` | `3e` | Gyms & grade systems, and the data export/import |
-| `/body` | `1k` | Injury & rehab — body map, pain trend, adherence, rehab protocol, load rules |
+Open <http://localhost:5173>. `Gyms → Data` exports and imports the log as JSON.
 
 ## The domain rules that matter
 
-- **Numbered gyms share a 1–15 spine.** Batuu 1–15, Bump PBJ/J1/SSQ 1–12 (one scale across the
-  three), BHUB 1–10. Each gym carries a soft/hard offset (BHUB is −0.5) so BHUB 10 and Batuu 10
-  are not the same climb in aggregate — see `adjustedGrade` in `src/domain/metrics.ts`.
-- **Camp5 Eco City is ranked, not numbered.** Eight colour tags, yellow → black. No number ever
-  appears for Camp5 — not in logging, tables, charts or export. Sorting uses the tag ordinal.
-- **Boards never merge into the gym pyramid.** They have their own panel, their own max-grade
+Both apps follow these rules.
+
+- **Numbered gyms share a 1–15 spine.** Batuu runs 1–15, Bump PBJ/J1/SSQ run 1–12 on one scale across
+  the three gyms, and BHUB runs 1–10. Each gym carries a soft/hard offset (BHUB is −0.5), so BHUB 10
+  and Batuu 10 are not treated as the same climb in aggregate.
+- **Camp5 Eco City is ranked, not numbered.** It has eight colour tags, from yellow to black. No
+  number ever appears for Camp5: not in logging, tables, charts or export. Sorting uses the tag's
+  position in that order.
+- **Boards never merge into the gym pyramid.** They have their own panel and their own max-grade
   metric, and an angle is required.
-- **Load rules** are evaluated when planning a session *and* when logging a climb whose style
-  matches a rule. Usage is counted per ISO week over *sessions*, not climbs — one crimpy session
-  is one use. The warn panel is always inline, never a modal.
-- **Pain chips in the review write `PainEntry` rows** against the injury; the dashboard sparkline
-  and the body log chart both read from them.
+- **Load rules** are checked both when planning a session and when logging a climb whose style
+  matches a rule. Usage is counted per ISO week over *sessions*, not climbs, so one crimpy session
+  counts as one use. The warning is always shown inline, never as a pop-up.
+- **Pain chips in the review write pain entries** against the injury. The dashboard sparkline and the
+  body log chart both read from them.
+- **Competitions drive a taper.**
+  - An A comp gets PEAK (90%), TAPER (70%) and COMP WK (50%) weeks.
+  - A B comp gets one 70% week.
+  - A C comp is trained through.
+  - Plans scale block times by the week's factor, but rehab blocks are never scaled.
 
 ## Derived metrics
 
-All in `src/domain/metrics.ts`, all recomputed from the log — nothing is stored pre-aggregated.
+Everything is recomputed from the log; nothing is stored pre-aggregated. The dashboard range
+(8 weeks / 6 months / Season) refilters every panel.
 
-- **Max grade sent** — highest grade with ≥1 send in range, offset adjusted.
-- **Flash rate** — flashed ÷ total sends, grade 8+.
-- **Attempts per send** — mean attempts over sends at grade 10+.
-- **Volume at 10+** — sends at grade ≥10 in range.
-- **Style send rate** — sends ÷ (sends + attempt-only) per style × grade band; `—` when nothing
-  was attempted in that cell.
-- **Comp readiness (0–100)** — per style, `0.5 × send rate at your top two occupied bands`
-  (normalised against 75%) + `0.25 × recency of exposure` + `0.25 × review-chip signal`.
-  Below 55 is flagged and feeds the plan screen's focus list.
-- **Rehab adherence** — exercise-days completed ÷ days prescribed over the last 12 days.
-
-The dashboard range switch (8 weeks / 6 months / Season) refilters every panel.
+- **Max grade sent**: highest grade with at least one send in range, offset adjusted.
+- **Flash rate**: flashed ÷ total sends, grade 8+.
+- **Attempts per send**: mean attempts over sends at grade 10+.
+- **Volume at 10+**: sends at grade 10 or above in range.
+- **Style send rate**: sends ÷ (sends + attempt-only) per style × grade band. A `—` means nothing was
+  attempted in that cell.
+- **Comp readiness (0–100)**: per style, `0.5 × send rate at your top two occupied bands` (normalised
+  against 75%), plus `0.25 × how recently you trained that style`, plus `0.25 × signal from review chips`.
+  Scores below 55 are flagged and feed the plan's focus list.
+- **Rehab adherence**: exercise-days completed ÷ days prescribed over the last 12 days.
 
 ## Demo data
 
-First run seeds ~26 weeks of realistic sessions plus a live session in progress, so every panel
-has something to show. It is generated from a fixed seed, so it is the same every time.
-`Gyms → Data → Reset to demo data` regenerates it; export first if you have logged anything real.
+The first launch seeds about 26 weeks of realistic sessions, plus a live session in progress, so
+every panel has something to show. The data comes from a fixed seed, so it's the same every time.
 
-## Notes on fidelity
+- **iOS:** `Settings → Reset to demo data` regenerates it, and `Settings → Clear everything` starts an
+  empty log.
+- **Web:** `Gyms → Data → Reset to demo data`.
 
-Two deliberate departures from the mockups, both to make the app work rather than just look right:
+Export a backup first if you've logged anything real.
 
-1. The `3a` hold-colour row renders all **nine** token colours; the mockup drew eight and omitted
-   black. Black holds exist, and black is in the token list.
-2. Review pain chips are generated for **active** injuries only, per the handoff's wording.
-   Injuries being watched live on `/body` and can be escalated there.
+## Design
 
-Everything else — palette, type scale, zero border radius, no shadows, hairline rules, copy — is
-as specified. Ink is the only data colour; `#c0392b` is the only accent and is reserved for the
-body; saturated colour appears only as hold and tag colours.
+Content is paper and ink: square corners, hairline rules, no shadows, and the Newsreader, Archivo
+and IBM Plex Mono typefaces. On iOS, controls and navigation use Liquid Glass. `#c0392b` is reserved
+for injury and body, and hold and tag colours never change. See `design/DESIGN.md` for the full spec.
