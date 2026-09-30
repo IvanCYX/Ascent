@@ -110,7 +110,7 @@ public enum Vocab {
 
     /* ── Competitions (iOS r2) ─────────────────────────────────────────── */
 
-    public static let compCategories = ["Open", "Youth", "Masters", "Para", "League", "Local jam"]
+    public static let compCategories = ["Novice", "Intermediate", "Open", "Youth", "Masters", "Para"]
     public static let compFormats = ["Onsight rounds", "Flash", "Redpoint / jam"]
     public static let compRounds = ["Qualifiers", "Semi-final", "Final"]
 }

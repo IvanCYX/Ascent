@@ -114,7 +114,7 @@ struct BoardCard: View {
             Spacer()
             VStack(alignment: .trailing, spacing: 3) {
                 Text("V\(b.maxV ?? 0)").font(.serif(24)).foregroundStyle(Palette.ink)
-                Text(up ? "▲ V\(b.prevMaxV!)→V\(b.maxV!)" : "— flat this range").font(.mono(10.5))
+                Text(up ? "▲ V\(b.prevMaxV!)→V\(b.maxV!)" : "— no change").font(.mono(10.5))
                     .foregroundStyle(up ? Palette.ink : Palette.muted)
             }
         }

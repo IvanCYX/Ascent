@@ -79,12 +79,12 @@ struct CompEditorSheet: View {
                         }
                     }
 
-                    Text("Priority · sets the taper").micro().padding(.bottom, 9)
-                    SquareSegment(options: [(CompPriority.a, "A · peak"), (.b, "B · mini taper"), (.c, "C · train through")], selection: $priority)
-                    Text("A gets a full two-week taper. B gets one lighter week. C only gets a rest day before.")
+                    Text("Priority").micro().padding(.bottom, 9)
+                    SquareSegment(options: [(CompPriority.a, "A"), (.b, "B"), (.c, "C")], selection: $priority)
+                    Text(priority == .a ? "2-week taper." : priority == .b ? "1 lighter week." : "No taper. Rest the day before.")
                         .font(.sans(12)).foregroundStyle(Palette.muted).padding(.top, 8).padding(.bottom, 12)
 
-                    NoteBox(placeholder: "Notes: registration, category cut-offs, warm-up wall…", text: $notes)
+                    NoteBox(placeholder: "Notes", text: $notes)
                 }
                 .padding(.horizontal, 16).padding(.bottom, 120)
             }
@@ -121,7 +121,7 @@ struct CompEditorSheet: View {
         if let id = compId, let c = store.db.competitions.first(where: { $0.id == id }) {
             name = c.name; date = Day.date(c.date); multiDay = c.endDate != nil
             endDate = Day.date(c.endDate ?? c.date); location = c.location ?? ""; gymId = c.gymId
-            category = c.category ?? "Open"; format = c.format ?? "Onsight rounds"; rounds = c.rounds ?? []
+            category = c.category.flatMap { Vocab.compCategories.contains($0) ? $0 : nil } ?? "Open"; format = c.format ?? "Onsight rounds"; rounds = c.rounds ?? []
             priority = c.effectivePriority; notes = c.notes ?? ""
         } else if let presetDate {
             date = Day.date(presetDate); endDate = date
@@ -158,7 +158,7 @@ struct CompDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("\(comp.effectivePriority.rawValue) PRIORITY · \(Taper.phase(of: comp, on: today)?.rawValue ?? "DONE")").micro()
+                        Text("\(comp.effectivePriority.rawValue) · \(Taper.phase(of: comp, on: today)?.rawValue ?? "DONE")").micro()
                         Text(comp.name).font(.serif(32, relativeTo: .largeTitle)).fixedSize(horizontal: false, vertical: true)
                         Text(Day.long(comp.date) + (comp.endDate.map { " – \(Day.long($0))" } ?? "")).font(.sans(14)).foregroundStyle(Palette.muted)
                     }
@@ -176,8 +176,8 @@ struct CompDetailView: View {
                     }
 
                     Band {
-                        SectionHead("Warm-up & notes")
-                        NoteBox(placeholder: "Warm-up plan, what to eat, who's driving…", text: $notes)
+                        SectionHead("Notes")
+                        NoteBox(placeholder: "Warm-up, food, travel…", text: $notes)
                             .onChange(of: notes) { _, v in store.saveCompetition(with(comp) { $0.notes = v.isEmpty ? nil : v }) }
                     }
 
@@ -209,7 +209,7 @@ struct CompDetailView: View {
             .confirmationDialog("Delete \(comp.name)?", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("Delete comp", role: .destructive) { dismiss(); store.deleteCompetition(comp.id) }
             } message: {
-                Text("The taper plan built around it goes too.")
+                Text("Its taper plan is removed too.")
             }
         } else {
             Text("This comp was deleted.").font(.sans(14)).foregroundStyle(Palette.muted).frame(maxWidth: .infinity, maxHeight: .infinity)

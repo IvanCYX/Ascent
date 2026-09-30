@@ -26,21 +26,21 @@ struct TodayView: View {
 
                 Band {
                     SectionHead(title: "Send pyramid") { PyramidLegend() }
-                    Text("Numbered gyms · offset adjusted").micro().padding(.top, -6).padding(.bottom, 12)
+                    Text("Numbered gyms").micro().padding(.top, -6).padding(.bottom, 12)
                     PyramidView(rows: m.pyramid)
                     reads(label: "Read:", Metrics.pyramidRead(m.pyramid))
                 }
 
                 Band {
-                    SectionHead("Camp5 · colour tags", note: "RANKED, NOT NUMBERED")
+                    SectionHead("Camp5 colours")
                     TallyView(bars: m.tally)
                     Insight(label: nil, text: Metrics.camp5Read(m.tally))
                 }
 
                 Band {
-                    SectionHead("Board grades", note: "TRACKED SEPARATELY")
+                    SectionHead("Boards")
                     if m.boards.isEmpty {
-                        Text("No board sends in this range.").font(.sans(13)).foregroundStyle(Palette.muted)
+                        Text("No board sends.").font(.sans(13)).foregroundStyle(Palette.muted)
                     }
                     VStack(spacing: 8) { ForEach(m.boards, id: \.boardId) { BoardCard(b: $0) } }
                 }
@@ -52,7 +52,7 @@ struct TodayView: View {
                 Band {
                     Button { router.planSegment = .season; router.select(.plan) } label: {
                         VStack(alignment: .leading, spacing: 14) {
-                            Text("COMP READINESS\(m.compWeeks.map { " · \($0) WEEKS OUT" } ?? "")").micro(Palette.ink)
+                            Text("COMP READINESS\(m.compWeeks.map { " · \($0) WK" } ?? "")").micro(Palette.ink)
                             ReadinessRows(rows: m.readiness)
                         }
                         .contentShape(Rectangle())
@@ -62,20 +62,21 @@ struct TodayView: View {
                 }
 
                 Band {
-                    SectionHead("Where you send", note: "SEND RATE % · \(m.heat.filter(\.weak).count) GAPS")
+                    SectionHead("Where you send", note: "SEND % · \(m.heat.filter(\.weak).count) GAPS")
                     HeatmapView(rows: m.heat)
                     let weak = m.heat.filter(\.weak)
                     if !weak.isEmpty {
-                        Insight(label: nil, text: weak.map { "\($0.style) \($0.comment.replacingOccurrences(of: "gap — ", with: "has "))." }
+                        Insight(label: nil, text: Dictionary(grouping: weak, by: \.comment).sorted { $0.key < $1.key }
+                            .map { "\($0.value.map(\.style).joined(separator: ", ")): \($0.key.replacingOccurrences(of: "gap: ", with: ""))." }
                             .joined(separator: " "), color: Palette.warn)
                     }
-                    reads(label: "Comp prep:", Metrics.heatmapRead(m.heat, compName: m.comp?.name))
+                    reads(label: "Comp prep:", Metrics.heatmapRead(m.heat, compName: m.comp?.displayName))
                 }
 
                 Band(bottomPadding: 8) {
-                    SectionHead("Recent sessions", note: "\(db.sessions.filter { $0.status == .done }.count) LOGGED")
+                    SectionHead("Recent", note: "\(db.sessions.filter { $0.status == .done }.count) TOTAL")
                     if m.recent.isEmpty {
-                        Text("No sessions in this range.").font(.sans(13)).foregroundStyle(Palette.muted)
+                        Text("No sessions.").font(.sans(13)).foregroundStyle(Palette.muted)
                     }
                     ForEach(m.recent) { s in
                         NavigationLink(value: Route.session(s.id)) { LedgerRow(session: s, db: db) }.buttonStyle(.plain)
@@ -205,14 +206,14 @@ struct InjuryWatch: View {
                         Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.muted)
                     }
                     if pain.isEmpty {
-                        Text("no pain entries yet").font(.sans(12)).foregroundStyle(Palette.muted).padding(.vertical, 12)
+                        Text("No pain logged").font(.sans(12)).foregroundStyle(Palette.muted).padding(.vertical, 12)
                     } else {
                         PainBars(levels: pain.map(\.level)).padding(.top, 12).padding(.bottom, 8)
                     }
                     HStack {
-                        Text(pain.isEmpty ? "no pain logged" : "pain \(pain.first!.level)/10 → \(pain.last!.level)/10")
+                        Text(pain.isEmpty ? "pain —" : "pain \(pain.first!.level) → \(pain.last!.level)/10")
                         Spacer()
-                        Text("\(adherence.streak)-day rehab streak")
+                        Text("rehab streak \(adherence.streak)d")
                     }
                     .font(.mono(11)).foregroundStyle(Palette.muted)
                 }
@@ -225,7 +226,7 @@ struct InjuryWatch: View {
             .accessibilityHint("Opens the body log")
 
             if let hot {
-                Text("\(Text("Load flag · ").foregroundStyle(Palette.warn).font(.sans(13, .semibold)))\(hot.headline) \(hot.condition). Used \(hot.used) of \(hot.cap ?? 0) this week\(hot.blocked ? " — swap to slopers?" : ".")")
+                Text("\(Text("Load · ").foregroundStyle(Palette.warn).font(.sans(13, .semibold)))\(hot.headline): \(hot.used)/\(hot.cap ?? 0) this week\(hot.blocked ? ". Limit reached." : ".")")
                     .font(.sans(13)).foregroundStyle(Palette.muted)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)

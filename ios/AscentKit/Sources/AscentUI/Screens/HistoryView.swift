@@ -47,7 +47,7 @@ struct HistoryView: View {
         }
         .background(Palette.paper)
         .navigationTitle("History")
-        .navigationSubtitle("\(sessions.count) SESSIONS · NEWEST FIRST")
+        .navigationSubtitle("\(sessions.count) SESSIONS")
         .largeTitle()
         .toolbar {
             ToolbarItem(placement: .trailing) {
@@ -126,7 +126,7 @@ struct SessionDetailView: View {
                 .plainRow()
 
                 if !gymClimbs.isEmpty {
-                    sectionHead("Gym climbs", note: "SWIPE TO DELETE")
+                    sectionHead("Gym climbs", note: nil)
                     ForEach(gymClimbs) { c in
                         ClimbRow(climb: c).plainRow(horizontal: 16)
                             .swipeActions { Button("Delete", role: .destructive) { pendingDelete = c } }
@@ -174,7 +174,7 @@ struct SessionDetailView: View {
             .confirmationDialog("Delete this session?", isPresented: $confirmSessionDelete, titleVisibility: .visible) {
                 Button("Delete session", role: .destructive) { dismiss(); store.deleteSession(s.id) }
             } message: {
-                Text("Its climbs, review and pain entries go too.")
+                Text("Its climbs, review and pain entries are deleted too.")
             }
         } else {
             Text("This session was deleted.").font(.sans(14)).foregroundStyle(Palette.muted)
@@ -192,7 +192,7 @@ struct SessionDetailView: View {
         ]
     }
 
-    func sectionHead(_ title: String, note: String) -> some View {
+    func sectionHead(_ title: String, note: String?) -> some View {
         SectionHead(title, note: note)
             .padding(.horizontal, 16).padding(.top, 20)
             .overlay(alignment: .top) { Hairline() }

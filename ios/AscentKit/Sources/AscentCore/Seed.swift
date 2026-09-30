@@ -292,8 +292,8 @@ public enum Seed {
 
         /* Competitions — the web's one comp, plus the r2 season around it */
         db.competitions = [
-            Competition(name: "Bump Bouldering League · rd 3", date: Day.add(today, 20), location: "Bump PBJ", gymId: "bump-pbj",
-                        category: "League", format: "Redpoint / jam", rounds: ["Final"], priority: .c),
+            Competition(name: "Bump Bouldering Series · rd 3", date: Day.add(today, 20), location: "Bump PBJ", gymId: "bump-pbj",
+                        category: "Intermediate", format: "Redpoint / jam", rounds: ["Final"], priority: .c),
             Competition(name: "KL Open · Bouldering", date: Day.add(today, 42), location: "Bukit Jalil, Kuala Lumpur",
                         category: "Open", format: "Onsight rounds", rounds: ["Qualifiers", "Final"], priority: .a,
                         notes: "Registration closes two weeks out. Warm-up wall is small — bring a band."),

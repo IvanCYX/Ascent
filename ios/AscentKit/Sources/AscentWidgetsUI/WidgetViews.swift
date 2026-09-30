@@ -192,7 +192,7 @@ struct MediumWidget: View {
                 if locked {
                     Spacer(minLength: 0)
                     RedactBars(widths: [140, 110, 128])
-                    Text("Unlock to see grades and the body log").font(.sans(10.5)).foregroundStyle(Palette.muted)
+                    Text("Unlock for details").font(.sans(10.5)).foregroundStyle(Palette.muted)
                     Spacer(minLength: 0)
                 } else {
                     Spacer(minLength: 0)

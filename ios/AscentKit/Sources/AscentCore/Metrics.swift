@@ -87,24 +87,24 @@ public enum Metrics {
         let vol = volumeAtHard(cur)
 
         let maxDeltaText: String = {
-            guard let d = maxDelta else { return "— no prior window" }
+            guard let d = maxDelta else { return "— no earlier data" }
             if d > 0 { return "▲ +\(d) vs previous \(rangeLabel)" }
             if d < 0 { return "▼ \(d) vs previous \(rangeLabel)" }
-            return "— level vs previous \(rangeLabel)"
+            return "— same as previous \(rangeLabel)"
         }()
 
         let frDeltaText: String = {
-            guard let fr, let frPrev else { return "— no prior window" }
+            guard let fr, let frPrev else { return "— no earlier data" }
             let diff = Int(abs(fr - frPrev).rounded())
-            if diff == 0 { return "— level vs previous" }
+            if diff == 0 { return "— no change" }
             return "\(fr >= frPrev ? "▲ +" : "▼ ")\(diff) pts"
         }()
 
         let apsDeltaText: String = {
-            guard let aps, let apsPrev else { return "— no prior window" }
+            guard let aps, let apsPrev else { return "— no earlier data" }
             if aps < apsPrev { return "▼ \(fixed1(apsPrev)) → \(fixed1(aps)) (better)" }
             if aps > apsPrev { return "▲ \(fixed1(apsPrev)) → \(fixed1(aps))" }
-            return "— flat at \(fixed1(aps))"
+            return "— no change"
         }()
 
         return [
@@ -165,20 +165,18 @@ public enum Metrics {
 
     public static func pyramidRead(_ rows: [PyramidRow]) -> String {
         let nonEmpty = rows.filter { $0.count > 0 }
-        guard nonEmpty.count >= 2 else { return "Not enough sends in this range to read a shape yet." }
+        guard nonEmpty.count >= 2 else { return "Not enough sends yet." }
         let widest = nonEmpty.dropFirst().reduce(nonEmpty[0]) { $1.count > $0.count ? $1 : $0 }
         let top = nonEmpty[0]
         let consolidating = nonEmpty.first { $0.grade < top.grade && $0.count >= 5 }
-        var parts = ["Base is widest at \(widest.grade)"]
+        var parts = ["Most sends at \(widest.grade)."]
         if let c = consolidating {
-            parts.append(c.flashed > 0
-                ? "the \(c.grade)s are consolidating (\(c.count) sends, \(c.flashed) flashed)"
-                : "the \(c.grade)s are going but none first go yet (\(c.count) sends)")
+            parts.append("\(c.grade)s: \(c.count) sends, \(c.flashed > 0 ? "\(c.flashed)" : "none") flashed.")
         }
         parts.append(top.count <= 2
-            ? "only \(top.count) send\(top.count == 1 ? "" : "s") at \(top.grade) — that is the projecting edge"
-            : "\(top.grade) is established at \(top.count) sends")
-        return parts.joined(separator: " and ") + "."
+            ? "Only \(top.count) at \(top.grade)."
+            : "\(top.count) sends at \(top.grade).")
+        return parts.joined(separator: " ")
     }
 
     /* ── Camp5 colour tally ──────────────────────────────────────────── */
@@ -202,12 +200,12 @@ public enum Metrics {
 
     public static func camp5Read(_ bars: [TagBar]) -> String {
         let untouched = bars.filter { $0.count == 0 }.sorted { $0.ordinal < $1.ordinal }
-        guard let hardest = bars.filter({ $0.count > 0 }).last else { return "No Camp5 sends in this range yet." }
+        guard let hardest = bars.filter({ $0.count > 0 }).last else { return "No Camp5 sends yet." }
         let name = Vocab.colourCode(hardest.tagId)
         if let chase = untouched.first(where: { $0.ordinal > hardest.ordinal }) {
-            return "\(hardest.count) \(name.lowercased()) tag\(hardest.count == 1 ? "" : "s") this range. \(Vocab.colourCode(chase.tagId)) is still untouched — that is the Camp5 milestone to chase."
+            return "\(hardest.count) \(name.lowercased()) tag\(hardest.count == 1 ? "" : "s"). Next up: \(Vocab.colourCode(chase.tagId))."
         }
-        return "Everything up to \(name.lowercased()) has gone this range."
+        return "Every colour sent up to \(name.lowercased())."
     }
 
     /* ── Style × grade heatmap ───────────────────────────────────────── */
@@ -280,9 +278,9 @@ public enum Metrics {
         return rows.map { r in
             var comment = "steady"
             if r.weak {
-                comment = "gap — nothing above \(Vocab.gradeBands[Swift.max(0, r.zeroIdx - 1)].max)"
+                comment = "gap: nothing above \(Vocab.gradeBands[Swift.max(0, r.zeroIdx - 1)].max)"
             } else if strongest?.style == r.style {
-                comment = "strength — carries the pyramid"
+                comment = "strongest"
             } else if (r.cells[1].pct ?? 0) >= 75 {
                 comment = "comp-ready"
             }
@@ -294,10 +292,11 @@ public enum Metrics {
         let strong = rows.filter { !$0.weak }.map { $0.style.lowercased() }
         let weak = rows.filter(\.weak).map { $0.style.lowercased() }
         guard !weak.isEmpty else {
-            return "No style is capping you inside this range — every row still has sends at its top band."
+            return "No gaps. Every style has sends at its top grades."
         }
-        let target = compName.map { "the \($0)" } ?? "your next comp"
-        return "Your ceiling is style-specific, not physical — the hard grades go down on \(strong.prefix(2).joined(separator: " and ")), nothing at the top band that is \(weak.joined(separator: " or ")). Two \(weak[0]) blocks a week for four weeks would move that row before \(target)."
+        let target = compName.map { " before \($0)" } ?? ""
+        let lead = strong.isEmpty ? "" : "Hard grades go on \(strong.prefix(2).joined(separator: " and ")). "
+        return "\(lead)Add 2 \(weak[0]) blocks a week\(target)."
     }
 
     /* ── Board panel ─────────────────────────────────────────────────── */
@@ -467,10 +466,10 @@ public enum Metrics {
     public static func chipPattern(_ rows: [ChipTrendRow], window: Int = 12) -> String? {
         let threshold = Int((Double(window) / 3).rounded(.up))
         if let watch = rows.first(where: { watchChips.contains($0.chip) && $0.count >= threshold }) {
-            return "“\(watch.chip)” shows up in \(watch.count) of the last \(window) sessions. That is a habit, not a bad night — worth a dedicated block in the warm-up."
+            return "“\(watch.chip)” in \(watch.count) of the last \(window) sessions. Worth a warm-up block."
         }
         guard let top = rows.first(where: { $0.count >= Int((Double(window) / 2).rounded(.up)) }) else { return nil }
-        return "“\(top.chip)” shows up in \(top.count) of the last \(window) sessions and nothing negative recurs as often. Whatever you changed, keep doing it."
+        return "“\(top.chip)” in \(top.count) of the last \(window) sessions. Keep it up."
     }
 
     /* ── Rehab adherence ─────────────────────────────────────────────── */
@@ -519,7 +518,7 @@ public enum Metrics {
         return rules.map { rule in
             let inWeek = climbs.filter { $0.day >= weekStart && $0.day <= weekEnd && $0.styles.contains(rule.styleOrType) }
             let used = Set(inWeek.map(\.sessionId)).count
-            return LoadRuleUsage(ruleId: rule.id, headline: rule.headline, used: used, cap: rule.maxPerWeek,
+            return LoadRuleUsage(ruleId: rule.id, headline: rule.styleOrType, used: used, cap: rule.maxPerWeek,
                                  condition: rule.condition,
                                  blocked: rule.maxPerWeek.map { used >= $0 } ?? true,
                                  nearing: rule.maxPerWeek.map { used == $0 - 1 } ?? false)

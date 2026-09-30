@@ -20,7 +20,7 @@ struct SeasonView: View {
                 NextCompCard(comp: next, today: today)
                     .padding(.horizontal, 16)
             } else {
-                Text("No comps planned. Add one to get a taper plan.").font(.sans(13)).foregroundStyle(Palette.muted)
+                Text("No comps yet.").font(.sans(13)).foregroundStyle(Palette.muted)
                     .padding(.horizontal, 16)
             }
 
@@ -35,19 +35,19 @@ struct SeasonView: View {
 
             if let comp = governing ?? comps.first {
                 Band {
-                    SectionHead("Taper plan", note: "\(comp.shortName) · \(comp.effectivePriority.rawValue) · FROM YOUR 8-WK AVG")
+                    SectionHead("Taper plan", note: "\(comp.shortName) · \(comp.effectivePriority.rawValue)")
                     let weakest = Metrics.compReadiness(Metrics.climbsInRange(db.climbs, from: Day.add(today, -55), to: today),
                                                         reviews: db.reviews, today: today).last
                     ForEach(Taper.planRows(db, comp: comp, today: today, weakest: weakest)) { row in TaperRow(row: row) }
                     if let check = injuryCheck(db, comp: comp) {
-                        WarnPanel(lead: "Injury check", text: check).padding(.top, 14)
+                        WarnPanel(lead: "Injury", text: check).padding(.top, 14)
                     }
                 }
             }
 
             Band {
-                SectionHead("Upcoming comps", note: "\(comps.count) THIS SEASON")
-                if comps.isEmpty { Text("Nothing on the calendar.").font(.sans(13)).foregroundStyle(Palette.muted) }
+                SectionHead("Upcoming", note: "\(comps.count)")
+                if comps.isEmpty { Text("None yet.").font(.sans(13)).foregroundStyle(Palette.muted) }
                 ForEach(comps) { c in
                     NavigationLink(value: Route.comp(c.id)) {
                         HStack(spacing: 12) {
@@ -71,14 +71,14 @@ struct SeasonView: View {
                     }
                     .buttonStyle(.plain)
                 }
-                FieldRow(label: "SESSIONS / WEEK TARGET") {
+                FieldRow(label: "SESSIONS PER WEEK") {
                     Spacer()
                     SquareStepper(value: "\(db.settings.weeklyTarget)",
                                   decrement: { store.setWeeklyTarget(db.settings.weeklyTarget - 1) },
                                   increment: { store.setWeeklyTarget(db.settings.weeklyTarget + 1) })
                 }
                 .padding(.top, 16)
-                Text("Also drives the Lock Screen gauge. Taper weeks scale it down automatically.")
+                Text("Lower in taper weeks.")
                     .font(.sans(12)).foregroundStyle(Palette.muted).padding(.top, 8)
             }
             .padding(.bottom, 80)
@@ -90,7 +90,7 @@ struct SeasonView: View {
               let rule = db.loadRules.first(where: { $0.injuryId == injury.id && $0.maxPerWeek != nil }) else { return nil }
         let when = Taper.peakStart(comp) ?? Taper.taperStart(comp) ?? comp.date
         let w = Day.weekday(when)
-        return "If \(shortInjury(injury.name)) is still above 1/10 on \(w.prefix(1))\(w.dropFirst().lowercased()) \(Day.pretty(when)), \(comp.effectivePriority == .a ? "peak-week" : "taper") comp sims skip \(rule.styleOrType.lowercased()) boulders. The \(rule.styleOrType) cap stays in force through the taper."
+        return "\(shortInjury(injury.name)) above 1/10 on \(w.prefix(1))\(w.dropFirst().lowercased()) \(Day.pretty(when))? Skip \(rule.styleOrType.lowercased()) in comp sims."
     }
 }
 
@@ -104,7 +104,7 @@ struct NextCompCard: View {
         Button { router.paths[.plan, default: NavigationPath()].append(Route.comp(comp.id)) } label: {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("NEXT COMP · \(comp.effectivePriority.rawValue) PRIORITY").micro(Palette.ink)
+                    Text("NEXT COMP").micro(Palette.ink)
                     Spacer()
                     Text("\(days) DAY\(days == 1 ? "" : "S")").font(.mono(10.5)).foregroundStyle(Palette.muted)
                 }
@@ -122,7 +122,7 @@ struct NextCompCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityHint("Opens the comp detail")
+        .accessibilityHint("Opens the comp")
     }
 }
 
@@ -508,19 +508,18 @@ struct DayCard: View {
     }
 
     func describe(sessions: [Session], comps: [Competition]) -> String {
-        var parts: [String] = comps.map { "\($0.name) · \($0.effectivePriority.rawValue) priority." }
+        var parts: [String] = comps.map { "\($0.name) (\($0.effectivePriority.rawValue))." }
         for s in sessions {
             let gym = db.gym(s.gymId)?.name ?? "no gym"
             switch s.status {
-            case .active: parts.append("Live session at \(gym)\(s.intent.map { ", \($0.lowercased())" } ?? "").")
-            case .planned: parts.append("Planned: \(s.intent ?? "session") at \(gym).")
+            case .active: parts.append("Live at \(gym)\(s.intent.map { ", \($0.lowercased())" } ?? "").")
+            case .planned: parts.append("Planned: \(s.intent ?? "session"), \(gym).")
             case .done:
                 let sends = Metrics.sessionSends(db.climbs, sessionId: s.id).count
-                parts.append("\(s.intent ?? "Session") at \(gym) · \(sends) sends.")
+                parts.append("\(s.intent ?? "Session"), \(gym) · \(sends) sends.")
             }
         }
-        if parts.isEmpty { parts.append("Nothing on this day.") }
-        if day >= today { parts.append("Tap any date to plan a session or add a comp on it.") }
+        if parts.isEmpty { parts.append("Nothing planned.") }
         return parts.joined(separator: " ")
     }
 }

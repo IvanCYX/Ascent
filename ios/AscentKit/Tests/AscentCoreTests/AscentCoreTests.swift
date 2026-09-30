@@ -51,7 +51,7 @@ let demoNow: Date = {
         #expect(db.sessions.filter { $0.status == .done }.count > 60)
         // Camp5 climbs never carry a number outside the tag ordinal
         #expect(db.climbs.filter { $0.gymId == "camp5" }.allSatisfy { $0.gradeKind == .tag && $0.tagId != nil })
-        #expect(db.nextComp(from: "2026-09-27")?.name == "Bump Bouldering League · rd 3")
+        #expect(db.nextComp(from: "2026-09-27")?.name == "Bump Bouldering Series · rd 3")
     }
 }
 
@@ -142,9 +142,9 @@ let demoNow: Date = {
     }
 
     @Test func aWinsOverC() {
-        let c = Competition(name: "League", date: "2026-10-28", priority: .c)
+        let c = Competition(name: "Series", date: "2026-10-28", priority: .c)
         #expect(Taper.dayPhase([c, klOpen], on: "2026-10-27")?.comp.name == klOpen.name)
-        #expect(Taper.summary(c, all: [c, klOpen]).contains("the A plan wins"))
+        #expect(Taper.summary(c, all: [c, klOpen]).contains("during KL Open taper"))
     }
 
     @Test func scalingRoundsToFiveAndKeepsRehab() {
@@ -152,7 +152,7 @@ let demoNow: Date = {
         let scaled = Taper.scale(blocks, factor: 0.7)
         #expect(scaled.blocks.map(\.durationMin) == [15, 15, 10]) // 4×4s dropped, rehab kept at 10
         #expect(scaled.dropped.count == 1)
-        #expect(scaled.explanation.hasPrefix("Blocks were shortened from 80 to 30 min. The 4×4s block was dropped."))
+        #expect(scaled.explanation.hasPrefix("80 → 30 min. 4×4s dropped."))
         let comp = Taper.scale(PlanTemplates.blocks["Comp sim"]!, factor: 0.7)
         #expect(comp.blocks[1].target == "grade 9–12 · was 50 min")
         #expect(comp.blocks.map(\.durationMin) == [15, 35, 10])

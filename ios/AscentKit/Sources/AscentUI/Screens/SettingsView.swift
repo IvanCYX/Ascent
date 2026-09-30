@@ -36,10 +36,10 @@ struct SettingsView: View {
                 AccentPreview()
             } header: { header("Accent") } footer: {
                 if settings.accent.isNearInjuryRed {
-                    Text("This colour is close to the injury red. Charts will use it too, so pain bars and load flags may be harder to tell apart.")
+                    Text("Close to injury red. Pain bars may be harder to spot.")
                         .foregroundStyle(Palette.warn)
                 } else {
-                    Text("Used for the tab bar, the + button, primary buttons and every chart. Injury red and hold colours never change.")
+                    Text("Tab bar, buttons and charts.")
                 }
             }
 
@@ -57,9 +57,9 @@ struct SettingsView: View {
                 .disabled(!settings.faceIDLock)
             } header: { header("Privacy") } footer: {
                 if lock.kind == .unavailable {
-                    Text("Set up a passcode in iOS Settings to use the lock.")
+                    Text("Needs a device passcode.")
                 } else {
-                    Text("Asks for Face ID when you open Ascent and hides the app in the app switcher. While the lock is on and your iPhone is locked, widgets and the live session show only session counts, your streak and weeks to the next comp.")
+                    Text("Locks the app. Widgets show counts only while your iPhone is locked.")
                 }
             }
 
@@ -71,7 +71,7 @@ struct SettingsView: View {
                     ForEach(RangeID.allCases) { Text($0.label).tag($0) }
                 }
             } header: { header("Climbing") } footer: {
-                Text("Competitions, the season calendar and your weekly target live in Plan → Season.")
+                Text("Comps and weekly target: Plan → Season.")
             }
 
             Section {
@@ -84,7 +84,7 @@ struct SettingsView: View {
                     .foregroundStyle(Palette.ink)
                 Button(role: .destructive) { confirmClear = true } label: { Label("Clear everything…", systemImage: "trash") }
             } header: { header("Data") } footer: {
-                Text("\(Text("Stored only on this iPhone.").bold().foregroundStyle(Palette.ink)) No account, no iCloud. Nothing leaves this phone unless you export it. Export a backup before you delete the app.")
+                Text("\(Text("Stored only on this iPhone.").bold().foregroundStyle(Palette.ink)) Export a backup before deleting the app.")
             }
 
             Section {
@@ -122,7 +122,7 @@ struct SettingsView: View {
                 pendingImport = nil
             }
         } message: {
-            Text("This deletes the \(db.climbs.count.formatted()) climbs on this iPhone and loads the backup instead.")
+            Text("Deletes \(db.climbs.count.formatted()) climbs on this iPhone.")
         }
         .confirmationDialog("Reset to demo data?", isPresented: $confirmReset, titleVisibility: .visible) {
             Button("Export backup first") {
@@ -130,7 +130,7 @@ struct SettingsView: View {
             }
             Button("Reset to demo data", role: .destructive) { store.resetToDemo() }
         } message: {
-            Text("Replace everything with the demo dataset? This deletes \(db.climbs.count.formatted()) climbs. Export a backup first if you care about this log.")
+            Text("Deletes \(db.climbs.count.formatted()) climbs. Export a backup first.")
         }
         .confirmationDialog("Clear everything?", isPresented: $confirmClear, titleVisibility: .visible) {
             Button("Export backup first") {
@@ -138,7 +138,7 @@ struct SettingsView: View {
             }
             Button("Clear everything", role: .destructive) { store.clearAll() }
         } message: {
-            Text("Keeps your gyms and boards, deletes every session, climb, review and injury.")
+            Text("Deletes all sessions, climbs, reviews and injuries. Gyms and boards stay.")
         }
         .alert("Couldn’t do that", isPresented: Binding(get: { dataError != nil }, set: { if !$0 { dataError = nil } })) {
             Button("OK") { dataError = nil }
@@ -381,7 +381,7 @@ struct AddGymSheet: View {
                 SquareStepper(value: offset == 0 ? "0" : "\(offset > 0 ? "+" : "−")\(abs(offset).formatted())",
                               decrement: { offset = max(-1, offset - 0.5) }, increment: { offset = min(1, offset + 0.5) })
             }
-            Text("Offset is the soft/hard correction against Batuu, −1 to +1 in steps of 0.5. A soft gym gets a negative offset so its 10 does not count as a Batuu 10 in aggregate charts.")
+            Text("Grade correction vs Batuu, −1 to +1. Softer gyms get a negative offset.")
                 .font(.sans(12.5)).foregroundStyle(Palette.muted).padding(.top, 10)
         }
     }

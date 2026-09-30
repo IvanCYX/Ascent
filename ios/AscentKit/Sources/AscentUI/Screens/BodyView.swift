@@ -31,7 +31,7 @@ struct BodyView: View {
                 .padding(.horizontal, 16).padding(.bottom, 6)
 
                 if shown.isEmpty {
-                    Text("Nothing logged for this area. Tap another part, or clear the filter.")
+                    Text("Nothing logged here.")
                         .font(.sans(13)).foregroundStyle(Palette.muted).padding(16)
                 }
 
@@ -307,7 +307,7 @@ struct LoadRuleCard: View {
                 }
             }
             Text(capped && usage != nil
-                 ? "Used \(usage!.used) of \(rule.maxPerWeek!) this week \(rule.condition). Planning a \(rule.styleOrType.lowercased()) day will warn you."
+                 ? "\(usage!.used)/\(rule.maxPerWeek!) this week, \(rule.condition)."
                  : "In force \(rule.condition).")
                 .font(.sans(12.5)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
         }
@@ -367,7 +367,7 @@ struct InjuryEditorSheet: View {
     @State private var loaded = false
 
     var body: some View {
-        SheetScaffold(title: injuryId == nil ? "Log something new" : "Edit", subtitle: "GOES STRAIGHT INTO THE BODY LOG",
+        SheetScaffold(title: injuryId == nil ? "Log something new" : "Edit", subtitle: "BODY LOG",
                       action: injuryId == nil ? "Add" : "Save", actionEnabled: !name.trimmingCharacters(in: .whitespaces).isEmpty, onAction: save) {
             TextFieldRow(label: "WHAT", placeholder: "Left ring finger · A2 pulley strain", text: $name).padding(.bottom, 14)
             Text("Where").micro().padding(.bottom, 9)
@@ -473,7 +473,7 @@ struct AddLoadRuleSheet: View {
                     SquareStepper(value: "\(cap)", decrement: { cap = max(0, cap - 1) }, increment: { cap = min(7, cap + 1) })
                 }
             }
-            Text("Usage counts sessions, not climbs — one crimpy session is one use. Planning and logging a ruled style both warn inline.")
+            Text("Counts sessions, not climbs.")
                 .font(.sans(12.5)).foregroundStyle(Palette.muted).padding(.top, 10)
         }
     }

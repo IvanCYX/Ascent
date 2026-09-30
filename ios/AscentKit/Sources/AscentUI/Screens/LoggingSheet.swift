@@ -114,7 +114,6 @@ struct StartSessionView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(gymId.isEmpty)
-                Text("Starts the clock and opens Log a send.").font(.sans(12)).foregroundStyle(Palette.muted)
             }
             .padding(.horizontal, 16).padding(.vertical, 12)
             .background(Palette.paper)
@@ -213,7 +212,7 @@ struct OptionalBlock: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("Optional — kept from last climb").micro()
+                Text("Optional").micro()
                 Spacer()
                 LinkButton(title: "Clear") { tickType = .flash; styles = []; location = "" }
             }
@@ -277,7 +276,7 @@ struct GymLogView: View {
                 HoldStrip(selection: $colour).padding(.bottom, 18)
 
                 if let t = tripped.first {
-                    WarnPanel(lead: "Load flag", text: "\(t.headline) — used \(t.used) of \(t.cap ?? 0) this week\(t.blocked ? ". You are at the cap." : ". One more and you are over.")")
+                    WarnPanel(lead: "Load", text: "\(t.headline): \(t.used)/\(t.cap ?? 0) this week\(t.blocked ? ". Limit reached." : ". 1 left.")")
                         .padding(.bottom, 14)
                 }
 
@@ -455,10 +454,10 @@ struct TallyLogView: View {
                     .background(Palette.card)
                     .overlay(Rectangle().strokeBorder(count > 0 ? Palette.ink : Palette.rule, lineWidth: count > 0 ? 2 : 1))
                 }
-                Text("Set style, tick type or location below and it sticks to every tag you add. Otherwise it just counts.")
+                Text("Style, tick type and location below apply to every tag.")
                     .font(.sans(12.5)).foregroundStyle(Palette.muted).padding(.top, 2).padding(.bottom, 14)
                 if let t = trippedRules(store.db, styles: styles, today: store.today).first {
-                    WarnPanel(lead: "Load flag", text: "\(t.headline) — used \(t.used) of \(t.cap ?? 0) this week\(t.blocked ? ". You are at the cap." : ". One more and you are over.")")
+                    WarnPanel(lead: "Load", text: "\(t.headline): \(t.used)/\(t.cap ?? 0) this week\(t.blocked ? ". Limit reached." : ". 1 left.")")
                         .padding(.bottom, 14)
                 }
                 OptionalBlock(tickType: $tickType, styles: $styles, location: $location)
@@ -548,9 +547,8 @@ struct BoardLogView: View {
                 }
                 .padding(.bottom, 14)
                 if let t = tripped.first {
-                    WarnPanel(lead: "\(t.headline.components(separatedBy: " ").first ?? "") load flag",
-                              text: t.used == t.cap ? "You are at the cap — \(t.used) of \(t.cap ?? 0) this week \(t.condition)."
-                                                    : "\(ordinal(t.used + 1)) session this week against a cap of \(t.cap ?? 0). One more and you are over.")
+                    WarnPanel(lead: "Load",
+                              text: "\(t.headline): \(t.used)/\(t.cap ?? 0) this week\(t.used == t.cap ? ". Limit reached." : ".")")
                         .padding(.bottom, 14)
                 }
                 Button(v == nil ? "Pick a V-grade" : "Log V\(v!) · \(board?.name ?? "") \(angle)°") { save(board) }
@@ -601,7 +599,6 @@ struct BoardLogView: View {
         name = ""
     }
 
-    func ordinal(_ n: Int) -> String { n == 1 ? "1st" : n == 2 ? "2nd" : n == 3 ? "3rd" : "\(n)th" }
 }
 
 /* ── 2.6 Review ─────────────────────────────────────────────────────────── */
@@ -637,7 +634,7 @@ struct ReviewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("How did that feel?").font(.serif(28, relativeTo: .title))
-                    Text("Tap what applies. Nothing is required. \(sends) send\(sends == 1 ? "" : "s") logged.")
+                    Text("\(sends) send\(sends == 1 ? "" : "s"). Tap any that apply.")
                         .font(.sans(13)).foregroundStyle(Palette.muted).padding(.top, 8)
 
                     if session.intent == nil {
@@ -669,16 +666,16 @@ struct ReviewView: View {
                                 setPain(inj.id, (level + 1) % 11)
                             }
                             .menuIndicator(.hidden)
-                            .accessibilityHint("Tap to raise the level, hold to pick one")
+                            .accessibilityHint("Tap to raise, hold to pick")
                         }
                         Chip(label: "+ new pain", small: true, kind: .dashed) { newPain.toggle() }
                     }
                     if newPain {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("New — goes straight into the body log").micro()
+                            Text("New pain").micro()
                             TextFieldRow(label: "WHAT", placeholder: "R shoulder · front deltoid", text: $newPainName)
                             ChipFlow { ForEach(Vocab.bodyParts, id: \.id) { p in Chip(label: p.label, on: newPainPart == p.id, small: true) { newPainPart = p.id } } }
-                            Button("Add to the log") { addNewPain() }.buttonStyle(PrimaryButtonStyle(height: 44))
+                            Button("Add") { addNewPain() }.buttonStyle(PrimaryButtonStyle(height: 44))
                                 .disabled(newPainName.trimmingCharacters(in: .whitespaces).isEmpty)
                         }
                         .padding(14).background(Palette.card).overlay(Rectangle().strokeBorder(Palette.rule, lineWidth: 1))
@@ -702,7 +699,7 @@ struct ReviewView: View {
                     .padding(16).background(Palette.card).overlay(Rectangle().strokeBorder(Palette.rule, lineWidth: 1))
                     .padding(.top, 18)
 
-                    NoteBox(placeholder: "Anything worth remembering about tonight…", text: $note).padding(.top, 10)
+                    NoteBox(placeholder: "Note", text: $note).padding(.top, 10)
                 }
                 .padding(.horizontal, 16).padding(.bottom, 40)
             }
@@ -716,7 +713,7 @@ struct ReviewView: View {
             .modifier(SheetChrome(title: "", subtitle: [db.gym(session.gymId)?.name, session.intent].compactMap { $0 }.joined(separator: " · ").uppercased()))
             .onAppear { load(session, db: db) }
         } else {
-            Text("Nothing to review yet — start a session first.").font(.sans(14)).foregroundStyle(Palette.muted)
+            Text("No session to review.").font(.sans(14)).foregroundStyle(Palette.muted)
                 .frame(maxWidth: .infinity, maxHeight: .infinity).background(Palette.paper)
                 .modifier(SheetChrome(title: "Review", subtitle: ""))
         }
@@ -826,10 +823,10 @@ struct SavedView: View {
     func headline(_ score: Double?, _ avg: Double?) -> String {
         guard let score else { return "Saved" }
         let s = String(format: "%.1f", score)
-        guard let avg else { return "\(s), your first rated session" }
+        guard let avg else { return "\(s)" }
         let a = String(format: "%.1f", avg)
-        if (score * 10).rounded() == (avg * 10).rounded() { return "\(s), right on your average" }
-        return "\(s), \(score > avg ? "above" : "below") your \(a) average"
+        if (score * 10).rounded() == (avg * 10).rounded() { return "\(s), your average" }
+        return "\(s) · avg \(a)"
     }
 }
 

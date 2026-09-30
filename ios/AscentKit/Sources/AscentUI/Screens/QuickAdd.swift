@@ -57,13 +57,13 @@ struct QuickAddSheet: View {
         if let plan = db.plannedSession(on: today) {
             return "NO SESSION · PLAN: \((plan.intent ?? "SESSION").uppercased()) AT \((db.gym(plan.gymId)?.name ?? "").uppercased())"
         }
-        return "NO SESSION · NOTHING PLANNED"
+        return "NO SESSION"
     }
 
     func tiles(_ db: Database, live: Session?, today: String) -> [Tile] {
         let injury = db.activeInjuries.first
         let lastPain = injury.flatMap { i in db.painEntries.filter { $0.injuryId == i.id }.max { $0.date < $1.date } }
-        let painSub = injury.map { "\(shortInjury($0.name).replacingOccurrences(of: " finger", with: "").uppercased()) · LAST \(lastPain.map { "\($0.level)" } ?? "—")/10" } ?? "HOW'S THE BODY"
+        let painSub = injury.map { "\(shortInjury($0.name).replacingOccurrences(of: " finger", with: "").uppercased()) · LAST \(lastPain.map { "\($0.level)" } ?? "—")/10" } ?? "LOG PAIN"
         let due = dueToday(db, today)
         let pain = Tile(icon: "waveform.path.ecg", title: "Pain check-in", sub: painSub, warn: injury != nil) { go(.painCheckIn) }
         let rehab = Tile(icon: "checkmark.circle", title: "Rehab done", sub: due > 0 ? "\(due) DUE TODAY" : "ALL DONE TODAY", warn: due > 0) { go(.rehabToday) }
@@ -80,7 +80,7 @@ struct QuickAddSheet: View {
                     go(.logging(start: false, step: .log(.board)))
                 },
                 pain, rehab,
-                Tile(icon: "flag.checkered", title: "End & rate", sub: "REVIEW TONIGHT") { go(.logging(start: false, step: .review)) },
+                Tile(icon: "flag.checkered", title: "End & rate", sub: "FINISH SESSION") { go(.logging(start: false, step: .review)) },
                 Tile(icon: "list.bullet.clipboard", title: "Plan", sub: "TOMORROW") { planTab() },
             ]
         }
@@ -155,7 +155,7 @@ struct PainCheckInSheet: View {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(db.activeInjuries) { inj in injuryBlock(inj, db: db).padding(.bottom, 18) }
                     if db.activeInjuries.isEmpty {
-                        Text("No active injuries. Log a pain level against anything you're watching, or add something new.")
+                        Text("No active injuries.")
                             .font(.sans(13)).foregroundStyle(Palette.muted).padding(.bottom, 14)
                     }
                     if !db.watchingInjuries.isEmpty {
@@ -191,7 +191,7 @@ struct PainCheckInSheet: View {
                 Button("Save check-in") { save() }.buttonStyle(PrimaryButtonStyle()).disabled(levels.isEmpty)
                     .padding(.horizontal, 16).padding(.vertical, 12).background(Palette.paper)
             }
-            .modifier(SheetChrome(title: "Pain check-in", subtitle: "\(Day.plan(store.today)) · NOT TIED TO A SESSION"))
+            .modifier(SheetChrome(title: "Pain check-in", subtitle: Day.plan(store.today)))
         }
         .presentationDetents([.height(520), .large])
         .presentationBackground(Palette.paper)
@@ -251,7 +251,7 @@ struct RehabTodaySheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     if exercises.isEmpty {
-                        Text("No rehab protocol yet. Add exercises from the Body tab.").font(.sans(13)).foregroundStyle(Palette.muted)
+                        Text("No exercises yet. Add them in Body.").font(.sans(13)).foregroundStyle(Palette.muted)
                     }
                     ForEach(exercises) { e in
                         RehabRow(exercise: e) { done in
@@ -260,7 +260,7 @@ struct RehabTodaySheet: View {
                     }
                     if !exercises.isEmpty {
                         AdherenceStrip(done: adh.done).padding(.top, 8)
-                        Text("Saved as you tap. \(adh.doneDays + (adh.done.last == true ? 0 : 1)) of \(adh.total) days once today counts.")
+                        Text("Saves as you tap.")
                             .font(.sans(12)).foregroundStyle(Palette.muted).padding(.top, 8)
                     }
                 }

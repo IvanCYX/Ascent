@@ -82,7 +82,7 @@ struct PlanDayEditor: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
                 Text("\(Day.plan(date)) · \(gym?.name ?? "No gym")").micro()
-                Text("Today is a \(intent.lowercased()) day")
+                Text("\(intent.capitalized) Day")
                     .font(.serif(27, relativeTo: .title)).foregroundStyle(Palette.ink)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -105,7 +105,7 @@ struct PlanDayEditor: View {
             }
 
             Band(top: !tapering) {
-                Text(tapering ? "Session intent · taper picks" : "Session intent").micro().padding(.bottom, 12)
+                Text("Session type").micro().padding(.bottom, 12)
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 7), count: 3), spacing: 7) {
                     ForEach(Vocab.sessionIntents, id: \.self) { i in
                         let struck = tapering && Vocab.highCostIntents.contains(i)
@@ -126,12 +126,12 @@ struct PlanDayEditor: View {
                     }
                 }
                 if tapering {
-                    Insight(label: nil, text: "Max strength and power endurance are struck through until the comp. A new limit block this close costs more recovery than it gives.")
+                    Insight(label: nil, text: "Max strength and power endurance are off until the comp.")
                 }
             }
 
             Band {
-                SectionHead("Focus styles", note: "FROM YOUR WEAK COLUMN")
+                SectionHead("Focus", note: "WEAKEST FIRST")
                 ChipFlow(spacing: 7) {
                     ForEach(suggested, id: \.self) { s in
                         Chip(label: s, on: focus.contains(s), blocked: blocked[s] != nil) {
@@ -141,18 +141,18 @@ struct PlanDayEditor: View {
                 }
                 if let (style, info) = blocked.sorted(by: { $0.key < $1.key }).first {
                     let alt = suggested.first { blocked[$0] == nil && weak.contains($0) }
-                    WarnPanel(lead: "\(style) removed",
-                              text: "\(info.injury) caps \(style.lowercased()) sessions at \(info.usage.cap ?? 0)/wk \(info.usage.condition) and you have used \(info.usage.used == info.usage.cap ? "both" : "\(info.usage.used)"). \(alt.map { "\($0) keeps the comp gap closing without loading it." } ?? "Pick a style that does not load it.")")
+                    WarnPanel(lead: "\(style) off",
+                              text: "\(info.usage.used)/\(info.usage.cap ?? 0) this week for \(shortInjury(info.injury)). \(alt.map { "Try \($0.lowercased())." } ?? "Pick another style.")")
                         .padding(.top, 15)
                 }
                 if !activeBlockedFocus.isEmpty {
-                    Text("REMOVE \(activeBlockedFocus.joined(separator: ", ").uppercased()) BEFORE STARTING")
+                    Text("REMOVE \(activeBlockedFocus.joined(separator: ", ").uppercased()) TO START")
                         .font(.mono(10)).foregroundStyle(Palette.warn).padding(.top, 8)
                 }
             }
 
             Band {
-                SectionHead("Blocks", note: scaled.map { "\($0.minutes) MIN · WAS \($0.originalMinutes)" } ?? "\(total) MIN TOTAL")
+                SectionHead("Blocks", note: scaled.map { "\($0.minutes) MIN · WAS \($0.originalMinutes)" } ?? "\(total) MIN")
                 VStack(spacing: 8) {
                     ForEach(Array(shown.enumerated()), id: \.offset) { _, b in BlockRow(block: b, tapering: tapering) }
                 }
@@ -160,7 +160,7 @@ struct PlanDayEditor: View {
                     if tapering {
                         Button("Use full plan") { store.setTaperOverride(date) }.buttonStyle(SecondaryButtonStyle())
                     } else {
-                        Button(savedTemplate ? "Template saved" : "Save as template") {
+                        Button(savedTemplate ? "Saved" : "Save template") {
                             persist(existing: existing, blocks: allBlocks)
                             store.saveTemplate(intent, blocks: blocks)
                             savedTemplate = true
@@ -181,10 +181,10 @@ struct PlanDayEditor: View {
                 }
                 .padding(.top, 16)
                 if isToday && db.activeSession != nil {
-                    Text("A session is already running — end it before starting another.").font(.sans(12)).foregroundStyle(Palette.muted).padding(.top, 8)
+                    Text("A session is already running.").font(.sans(12)).foregroundStyle(Palette.muted).padding(.top, 8)
                 }
                 if db.settings.taperOverrideDay == date, dp?.phase.isTaper == true {
-                    LinkButton(title: "Back to the taper plan") { store.setTaperOverride(nil) }.padding(.top, 8)
+                    LinkButton(title: "Use taper plan") { store.setTaperOverride(nil) }.padding(.top, 8)
                 }
                 if let comp = db.upcomingComps(from: date).first(where: { $0.effectivePriority != .c }) ?? db.nextComp(from: date) {
                     Text(footer(comp, date: date)).micro().padding(.top, 16).fixedSize(horizontal: false, vertical: true)
@@ -264,8 +264,8 @@ struct PlanDayEditor: View {
     }
 
     private func footer(_ comp: Competition, date: String) -> String {
-        var parts = ["NEXT COMP", comp.name.uppercased(), "\(Metrics.weeksOut(today: date, compDate: comp.date)) WEEKS OUT"]
-        if let t = Taper.taperStart(comp), t > date { parts.append("TAPER STARTS \(Day.plan(t))") }
+        var parts = ["NEXT: \(comp.shortName)", "\(Metrics.weeksOut(today: date, compDate: comp.date)) WK"]
+        if let t = Taper.taperStart(comp), t > date { parts.append("TAPER \(Day.plan(t))") }
         return parts.joined(separator: " · ")
     }
 
@@ -320,9 +320,9 @@ struct TaperCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             LoadBar(fill: avg > 0 ? Double(week) / Double(avg) : 0)
             HStack {
-                Text("THIS WEEK \(week) MIN PLANNED")
+                Text("THIS WEEK \(week) MIN")
                 Spacer()
-                Text("8-WK AVG \(avg)")
+                Text("AVG \(avg)")
             }
             .font(.mono(10)).foregroundStyle(Palette.muted).padding(.top, 7)
         }

@@ -146,12 +146,11 @@ public enum Taper {
         }
         let before = blocks.filter { !$0.isRehab }.reduce(0) { $0 + $1.durationMin }
         let after = out.filter { !$0.isRehab }.reduce(0) { $0 + $1.durationMin }
-        var text = "Blocks were shortened from \(before) to \(after) min."
+        var text = "\(before) → \(after) min."
         if !dropped.isEmpty {
-            let names = dropped.map { shortBlockName($0.description) }.joined(separator: " and ")
-            text += " The \(names) block\(dropped.count == 1 ? " was" : "s were") dropped."
+            text += " \(dropped.map { shortBlockName($0.description) }.joined(separator: " and ")) dropped."
         }
-        text += " Keep the intensity: full-effort attempts, long rests."
+        text += " Same intensity, long rests."
         return ScaledPlan(blocks: out, originalMinutes: before + rehabMinutes(blocks), minutes: after + rehabMinutes(out),
                           dropped: dropped, explanation: text)
     }
@@ -183,6 +182,7 @@ public enum Taper {
         let avg = averages(db, today: today)
         func range(_ a: String, _ b: String) -> String {
             let sa = Day.short(a), sb = Day.short(b)
+            if a >= b { return sa }
             if a.prefix(7) == b.prefix(7) { return "\(Day.dayOfMonth(a))–\(sb)" }
             return "\(sa) – \(sb)"
         }
@@ -201,9 +201,9 @@ public enum Taper {
         }
         let buildStart = Day.weekStart(today)
         if buildStart <= buildEnd {
-            var body = "\(max(1, target - 1))–\(target) sessions a week at full volume."
+            var body = "\(max(1, target - 1))–\(target) sessions a week, full volume."
             if let w = weakest, w.warn {
-                body += " Two \((Metrics.readinessStyle[w.label] ?? w.label).lowercased()) sessions a week close the \(comp.displayName) gap (\(w.label) \(w.score))."
+                body += " Add 2 \((Metrics.readinessStyle[w.label] ?? w.label).lowercased()) sessions a week (readiness \(w.score))."
             }
             rows.append(.init(phase: .build, range: range(buildStart, buildEnd), lead: phaseNow == .build ? "Now." : "Build.",
                               body: body, factor: 1, isNow: phaseNow == .build))
@@ -213,26 +213,26 @@ public enum Taper {
         case .a:
             let peak = Day.add(compWeek, -14), taper = Day.add(compWeek, -7)
             rows.append(.init(phase: .peak, range: range(peak, Day.add(peak, 6)), lead: "3 comp sims.",
-                              body: "4 min on, 4 min off, no previews. Full intensity. Volume holds at 90%.",
+                              body: "4 min on, 4 off, no previews. 90% volume.",
                               factor: 0.9, isNow: phaseNow == .peak))
             let n = max(2, Int((Double(target) * 0.7).rounded()))
             rows.append(.init(phase: .taper, range: range(taper, Day.add(taper, 6)), lead: "\(n) sessions, 75 min max.",
-                              body: "Volume 70% (about \(Int(Double(avg.minutesPerWeek) * 0.7)) min). Keep one limit session. Drop the 4×4s and new max-strength blocks.",
+                              body: "70% volume (~\(Int(Double(avg.minutesPerWeek) * 0.7)) min). 1 limit session. No 4×4s or new max strength.",
                               factor: 0.7, isNow: phaseNow == .taper))
             let m = max(2, Int((Double(target) * 0.5).rounded()))
             rows.append(.init(phase: .compWeek, range: range(compWeek, Day.add(comp.date, -1)), lead: "\(m) short sessions.",
-                              body: "Volume 50%. Last hard session \(dayName(Day.add(comp.date, -4))). No limit board after \(Day.weekday(Day.add(comp.date, -6)).prefix(1))\(Day.weekday(Day.add(comp.date, -6)).dropFirst().lowercased()). Rest \(dayName(Day.add(comp.date, -1))).",
+                              body: "50% volume. Last hard session \(dayName(Day.add(comp.date, -4))). No limit board after \(Day.weekday(Day.add(comp.date, -6)).prefix(1))\(Day.weekday(Day.add(comp.date, -6)).dropFirst().lowercased()). Rest \(dayName(Day.add(comp.date, -1))).",
                               factor: 0.5, isNow: phaseNow == .compWeek))
         case .b:
-            rows.append(.init(phase: .taper, range: range(compWeek, Day.add(comp.date, -1)), lead: "One lighter week.",
-                              body: "Volume 70%. Last hard session \(dayName(Day.add(comp.date, -3))). Rest \(dayName(Day.add(comp.date, -1))).",
+            rows.append(.init(phase: .taper, range: range(compWeek, Day.add(comp.date, -1)), lead: "1 lighter week.",
+                              body: "70% volume. Last hard session \(dayName(Day.add(comp.date, -3))). Rest \(dayName(Day.add(comp.date, -1))).",
                               factor: 0.7, isNow: phaseNow == .taper))
         case .c:
             break
         }
         rows.append(.init(phase: .comp, range: comp.endDate.map { range(comp.date, $0) } ?? Day.short(comp.date),
-                          lead: "\(comp.name).",
-                          body: p == .c ? "Train through. Rest \(dayName(Day.add(comp.date, -1)))." : "Warm-up plan and notes go in the comp detail.",
+                          lead: comp.name,
+                          body: p == .c ? "Train through. Rest \(dayName(Day.add(comp.date, -1)))." : "",
                           factor: nil, isNow: phaseNow == .comp))
         return rows
     }
@@ -241,17 +241,17 @@ public enum Taper {
     public static func summary(_ comp: Competition, all: [Competition]) -> String {
         let taper: String
         switch comp.effectivePriority {
-        case .a: taper = "full 2-week taper"
-        case .b: taper = "one lighter week"
+        case .a: taper = "2-week taper"
+        case .b: taper = "1 lighter week"
         case .c:
             let host = all.first { other in
                 guard other.id != comp.id, other.effectivePriority != .c, let ph = phase(of: other, on: comp.date) else { return false }
                 return ph.isTaper || ph == .peak
             }
             if let host {
-                taper = "inside the \(host.displayName) taper — the A plan wins"
+                taper = "during \(host.displayName) taper"
             } else {
-                taper = "train through, rest the day before"
+                taper = "train through"
             }
         }
         return [comp.location, comp.category, comp.effectivePriority.rawValue, taper]
