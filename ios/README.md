@@ -1,14 +1,13 @@
 # Ascent for iOS
 
-A native SwiftUI port of the web app (iOS 26+, Liquid Glass). Everything is stored on the iPhone:
-one JSON log in the App Group container, no account, no iCloud. Backups use the same format as the
-web app's `Gyms → Data → Export`, so either app can read the other's file.
+A native SwiftUI app for iOS 26+. Everything is stored on the iPhone: one JSON log in the App Group
+container, no account, no iCloud. The overview is in the root `README.md`.
 
 ## Layout
 
 | Path | What |
 |---|---|
-| `AscentKit/Sources/AscentCore` | Models, vocab, dates, metrics, taper engine, demo seed, store. A line-for-line port of `src/domain` + `src/db`. |
+| `AscentKit/Sources/AscentCore` | Models, vocab, dates, metrics, taper engine, demo seed, store. |
 | `AscentKit/Sources/AscentUI` | Theme, components, every screen, Face ID lock, Live Activity sync. |
 | `AscentKit/Sources/AscentWidgetsUI` | Home / Lock Screen widget views and the Live Activity. |
 | `Ascent/` | The app target (entry point, icon). |
@@ -20,15 +19,20 @@ web app's `Gyms → Data → Export`, so either app can read the other's file.
 Needs Xcode 26 or later.
 
 ```bash
-open Ascent.xcodeproj          # pick an iPhone simulator, Run
+xcodegen generate && open Ascent.xcodeproj
 ```
 
-On a device, set your Team under Signing for both targets; the App Group
-`group.com.ivancyx.ascent` is created automatically.
+Pick an iPhone simulator and Run. On a device, set your Team under Signing for both targets; the App
+Group `group.com.ivancyx.ascent` is created automatically.
 
 ## Tests (no Xcode needed)
 
 ```bash
-cd AscentKit && ./test.sh                     # domain tests, incl. web-parity fixtures
-SNAPSHOT_DIR=/tmp/snaps ./test.sh --filter Snapshots   # renders every screen to PNG
+cd AscentKit && ./test.sh
 ```
+
+```bash
+cd AscentKit && SNAPSHOT_DIR=/tmp/snaps ./test.sh --filter Snapshots
+```
+
+The second command renders every screen to PNG.

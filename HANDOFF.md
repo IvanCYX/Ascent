@@ -31,7 +31,7 @@ Port this React web app (`src/`) to a native iOS app, with:
 |---|---|
 | `design/DESIGN.md` | **Approved spec (r2).** Screens, tokens, the `+`, Face ID, widgets and the SwiftUI API map. Frame IDs like `3.4` refer to the draft. |
 | `design/draft.html` | Every frame in light and dark. It's also published as a private Artifact: https://claude.ai/artifact/3Zgb5KZejm4UX2H32QzoHZ |
-| `README.md` + `src/domain/*` | Web domain rules and vocabulary. The strings are final; don't paraphrase them. |
+| `README.md` + `ios/AscentKit/Sources/AscentCore` | Domain rules and vocabulary. (The web app in `src/` was removed on 30 Sep 2026; the iOS code is now the only source.) |
 | `ios/README.md` | Short build notes. |
 
 The designer was a separate Claude session named `ascent-designer`, which may no longer be running. If the spec is
@@ -258,3 +258,13 @@ after enrolment; Live Activity starts and updates (seen in logs).
   caused by the bar's own inset, and the rubber-band settle after a fling (see the comment there) — without that the
   bar oscillated at the bottom.
 - Testing note: automated swipes that start on the `+` (y≈745 on iPhone 17) don't scroll the page.
+
+### Session 3 (30 Sep 2026)
+- **Copy pass:** on-screen text is short and direct across every tab, sheet and widget (user preference: "at a glance",
+  like Whoop / Google Health; no long explanatory sentences). E.g. "Max Strength Day", "NEXT COMP", "Upcoming",
+  "Crimpy off · 2/2 this week for L ring finger. Try compression." Keep new copy in that style.
+- **Comp categories:** Novice, Intermediate, Open, Youth, Masters, Para. League / Local jam removed; old comps with a
+  retired category load as Open in the editor.
+- **Load usage** now reports the ruled style (`LoadRuleUsage.headline = rule.styleOrType`), not the full rule sentence.
+- **Web app removed** (`src/`, `package.json`, Vite config, `.claude/launch.json`). `Import backup` still reads old web
+  exports (`readsWebExport` test).

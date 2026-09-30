@@ -7,9 +7,8 @@ and how each session felt, and keeps an injury and rehab log whose load limits f
 It covers several Malaysian gyms that each grade differently, plus KilterBoard and TensionBoard 2 on
 the V-scale.
 
-**Mobile first, local only.** Ascent is a native SwiftUI app for iOS 26. It stores everything on the
-phone: no account, no server, no iCloud. The original React web app is still in `src/`, and it
-reads and writes the same backup format.
+Ascent is a native SwiftUI app for iOS 26. It stores everything on the phone: no account, no server,
+no iCloud.
 
 ## The iOS app
 
@@ -58,7 +57,7 @@ cd ios/AscentKit && ./test.sh
 
 | Path | What |
 |---|---|
-| `ios/AscentKit/Sources/AscentCore` | Models, vocab, dates, metrics, taper engine, demo seed, store. A line-for-line port of `src/domain`, with tests that check it matches the web app's numbers. |
+| `ios/AscentKit/Sources/AscentCore` | Models, vocab, dates, metrics, taper engine, demo seed, store |
 | `ios/AscentKit/Sources/AscentUI` | Theme, components, every screen, the Face ID lock, Live Activity sync |
 | `ios/AscentKit/Sources/AscentWidgetsUI` | Widget views and the Live Activity views |
 | `ios/Ascent`, `ios/AscentWidgets` | The app target and the widget extension |
@@ -66,26 +65,12 @@ cd ios/AscentKit && ./test.sh
 | `design/` | The approved iOS design spec (`DESIGN.md`) and the HTML draft of every screen |
 
 **Storage.** One JSON file lives in the App Group container, so the widgets read the same log as the
-app. It uses the same format as the web app's backup, so `Settings → Import backup` accepts a file
-exported from the web app.
+app. `Settings → Export backup` saves that file, and `Import backup` restores it.
 
 **Status.** The app builds and runs on the iOS 26 Simulator. Face ID, the widgets and the Live
 Activity views still need a check on a real device. `HANDOFF.md` lists what's done and what's open.
 
-## The web app
-
-The original version runs in the browser. It's a React 18 + Vite + TypeScript app that stores its
-data in IndexedDB through Dexie.
-
-```bash
-npm install && npm run dev
-```
-
-Open <http://localhost:5173>. `Gyms → Data` exports and imports the log as JSON.
-
 ## The domain rules that matter
-
-Both apps follow these rules.
 
 - **Numbered gyms share a 1–15 spine.** Batuu runs 1–15, Bump PBJ/J1/SSQ run 1–12 on one scale across
   the three gyms, and BHUB runs 1–10. Each gym carries a soft/hard offset (BHUB is −0.5), so BHUB 10
@@ -127,14 +112,11 @@ Everything is recomputed from the log; nothing is stored pre-aggregated. The das
 The first launch seeds about 26 weeks of realistic sessions, plus a live session in progress, so
 every panel has something to show. The data comes from a fixed seed, so it's the same every time.
 
-- **iOS:** `Settings → Reset to demo data` regenerates it, and `Settings → Clear everything` starts an
-  empty log.
-- **Web:** `Gyms → Data → Reset to demo data`.
-
-Export a backup first if you've logged anything real.
+`Settings → Reset to demo data` regenerates it, and `Settings → Clear everything` starts an empty
+log. Export a backup first if you've logged anything real.
 
 ## Design
 
 Content is paper and ink: square corners, hairline rules, no shadows, and the Newsreader, Archivo
-and IBM Plex Mono typefaces. On iOS, controls and navigation use Liquid Glass. `#c0392b` is reserved
+and IBM Plex Mono typefaces. Controls and navigation use Liquid Glass. `#c0392b` is reserved
 for injury and body, and hold and tag colours never change. See `design/DESIGN.md` for the full spec.
