@@ -1,12 +1,13 @@
 import SwiftUI
 import AscentCore
 
-/// 1.3 / 1.4 — the selector behind the + (glass sheet, 2 × 3 tiles, hero filled with the accent).
+/// 1.3 / 1.4 — the selector behind the + (2 × 3 tiles, hero filled with the accent, sized to its content).
 struct QuickAddSheet: View {
     @Environment(AscentStore.self) private var store
     @Environment(Router.self) private var router
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accent) private var accent
+    @State private var height: CGFloat = 470
 
     struct Tile: Identifiable {
         var id: String { title }
@@ -23,75 +24,77 @@ struct QuickAddSheet: View {
         let today = store.today
         let live = db.activeSession
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 10) {
-                if live != nil { Circle().fill(accent.color).frame(width: 7, height: 7) }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(headTitle(db, live)).font(.sans(15, .semibold)).foregroundStyle(Palette.ink)
-                    Text(headSub(db, live, today)).font(.mono(10.5)).foregroundStyle(Palette.muted).lineLimit(1)
+            HStack(spacing: 12) {
+                if live != nil { Circle().fill(accent.color).frame(width: 8, height: 8) }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(headTitle(db, live)).font(.sans(17, .semibold)).foregroundStyle(Palette.text)
+                    Text(headSub(db, live, today)).font(.sans(13)).foregroundStyle(Palette.secondary).lineLimit(1)
                 }
                 Spacer()
                 GlassIconButton(systemName: "xmark", label: "Close") { dismiss() }
             }
-            .padding(.horizontal, 22).padding(.top, 16).padding(.bottom, 10)
+            .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 16)
 
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                 ForEach(tiles(db, live: live, today: today)) { t in TileView(tile: t) }
             }
             .padding(.horizontal, 16)
-            Spacer(minLength: 0)
+            .padding(.bottom, 16)
         }
-        .presentationDetents([.height(452)])
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+        .presentationDetents([.height(height)])
         .presentationDragIndicator(.hidden)
     }
 
     func headTitle(_ db: Database, _ live: Session?) -> String {
         guard let live else { return "Quick add" }
-        return "\(db.gym(live.gymId)?.name ?? "Session") · \(live.startedAt.map { Day.elapsedLabel(from: $0) } ?? "0m")"
+        return "\(db.gym(live.gymId)?.name ?? "Session"), \(live.startedAt.map { Day.elapsedLabel(from: $0) } ?? "0m")"
     }
 
     func headSub(_ db: Database, _ live: Session?, _ today: String) -> String {
         if let live {
             let sends = Metrics.sessionSends(db.climbs, sessionId: live.id)
-            return "\(sends.count) SENDS · HIGH \(LiveSummary.high(sends, db: db)) · \(sends.filter(Metrics.isFlash).count) FLASHED"
+            return "\(sends.count) sends, high \(LiveSummary.high(sends, db: db)), \(sends.filter(Metrics.isFlash).count) flashed"
         }
         if let plan = db.plannedSession(on: today) {
-            return "NO SESSION · PLAN: \((plan.intent ?? "SESSION").uppercased()) AT \((db.gym(plan.gymId)?.name ?? "").uppercased())"
+            return "No session. Plan: \(plan.intent ?? "session") at \(db.gym(plan.gymId)?.name ?? "the gym")"
         }
-        return "NO SESSION"
+        return "No session running"
     }
 
     func tiles(_ db: Database, live: Session?, today: String) -> [Tile] {
         let injury = db.activeInjuries.first
         let lastPain = injury.flatMap { i in db.painEntries.filter { $0.injuryId == i.id }.max { $0.date < $1.date } }
-        let painSub = injury.map { "\(shortInjury($0.name).replacingOccurrences(of: " finger", with: "").uppercased()) · LAST \(lastPain.map { "\($0.level)" } ?? "—")/10" } ?? "LOG PAIN"
+        let painSub = injury.map { "\(shortInjury($0.name).replacingOccurrences(of: " finger", with: "")), last \(lastPain.map { "\($0.level)" } ?? "–")/10" } ?? "Log pain"
         let due = dueToday(db, today)
         let pain = Tile(icon: "waveform.path.ecg", title: "Pain check-in", sub: painSub, warn: injury != nil) { go(.painCheckIn) }
-        let rehab = Tile(icon: "checkmark.circle", title: "Rehab done", sub: due > 0 ? "\(due) DUE TODAY" : "ALL DONE TODAY", warn: due > 0) { go(.rehabToday) }
+        let rehab = Tile(icon: "checkmark.circle", title: "Rehab done", sub: due > 0 ? "\(due) due today" : "All done today", warn: due > 0) { go(.rehabToday) }
 
         if let live {
             let gym = db.gym(live.gymId)
             let lastBoard = db.climbs.last { $0.boardId != nil }
             return [
                 Tile(icon: "figure.climbing", title: "Gym send",
-                     sub: gym?.isRanked == true ? "\(gym?.shortName.uppercased() ?? "") · TAGS" : "\(gym?.shortName.uppercased() ?? "") · 1–\(gym?.maxGrade ?? 15)",
+                     sub: gym?.isRanked == true ? "\(gym?.shortName ?? ""), tags" : "\(gym?.shortName ?? ""), 1 to \(gym?.maxGrade ?? 15)",
                      hero: true) { go(.logging(start: false, step: .log(.gym))) },
                 Tile(icon: "square.grid.3x3", title: "Board send",
-                     sub: lastBoard.map { "\(db.board($0.boardId)?.code == "KB" ? "KILTER" : "TENSION") \($0.angle ?? 40)°" } ?? "V1–V10") {
+                     sub: lastBoard.map { "\(db.board($0.boardId)?.code == "KB" ? "Kilter" : "Tension") \($0.angle ?? 40)°" } ?? "V1 to V10") {
                     go(.logging(start: false, step: .log(.board)))
                 },
                 pain, rehab,
-                Tile(icon: "flag.checkered", title: "End & rate", sub: "FINISH SESSION") { go(.logging(start: false, step: .review)) },
-                Tile(icon: "list.bullet.clipboard", title: "Plan", sub: "TOMORROW") { planTab() },
+                Tile(icon: "flag.checkered", title: "End and rate", sub: "Finish session") { go(.logging(start: false, step: .review)) },
+                Tile(icon: "list.bullet.clipboard", title: "Plan", sub: "Tomorrow") { planTab() },
             ]
         }
         let plan = db.plannedSession(on: today)
         return [
             Tile(icon: "play.fill", title: "Start session",
-                 sub: plan.map { "\((db.gym($0.gymId)?.shortName ?? "").uppercased()) · \(($0.intent ?? "").uppercased())" } ?? "PICK A GYM",
+                 sub: plan.map { "\(db.gym($0.gymId)?.shortName ?? ""), \(($0.intent ?? "").lowercased())" } ?? "Pick a gym",
                  hero: true) { go(.logging(start: true, step: .log(.gym))) },
-            Tile(icon: "figure.climbing", title: "Gym send", sub: "STARTS A SESSION") { go(.logging(start: true, step: .log(.gym))) },
-            Tile(icon: "square.grid.3x3", title: "Board send", sub: "STARTS A SESSION") { go(.logging(start: true, step: .log(.board))) },
-            Tile(icon: "list.bullet.clipboard", title: "Plan today", sub: Taper.seasonLine(db, today: today)) { planTab() },
+            Tile(icon: "figure.climbing", title: "Gym send", sub: "Starts a session") { go(.logging(start: true, step: .log(.gym))) },
+            Tile(icon: "square.grid.3x3", title: "Board send", sub: "Starts a session") { go(.logging(start: true, step: .log(.board))) },
+            Tile(icon: "list.bullet.clipboard", title: "Plan today", sub: Taper.seasonText(db, today: today)) { planTab() },
             pain, rehab,
         ]
     }
@@ -118,24 +121,32 @@ struct TileView: View {
     var body: some View {
         Button(action: tile.action) {
             VStack(alignment: .leading, spacing: 0) {
-                Image(systemName: tile.icon).font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(tile.hero ? accent.onAccent : tile.warn ? Palette.warn : Palette.ink)
-                    .frame(width: 30, height: 30)
-                    .background(Circle().fill(tile.hero ? accent.onAccent.opacity(0.18) : Palette.track))
-                Spacer(minLength: 6)
-                Text(tile.title).font(.sans(15, .semibold)).foregroundStyle(tile.hero ? accent.onAccent : Palette.ink)
-                Text(tile.sub).font(.mono(10)).lineLimit(1).minimumScaleFactor(0.7)
-                    .foregroundStyle(tile.hero ? accent.onAccent.opacity(0.8) : tile.warn ? Palette.warn : Palette.muted)
-                    .padding(.top, 4)
+                Image(systemName: tile.icon).font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(tile.hero ? accent.onAccent : tile.warn ? Palette.injury : Palette.text)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(tile.hero ? accent.onAccent.opacity(0.12) : Palette.text.opacity(0.08)))
+                Spacer(minLength: 14)
+                Text(tile.title).font(.sans(17, .bold)).foregroundStyle(tile.hero ? accent.onAccent : Palette.text)
+                Text(tile.sub).font(.sans(13)).lineLimit(1).minimumScaleFactor(0.75)
+                    .foregroundStyle(tile.hero ? accent.onAccent.opacity(0.7) : tile.warn ? Palette.injuryText : Palette.secondary)
+                    .padding(.top, 2)
             }
-            .frame(maxWidth: .infinity, minHeight: 72, alignment: .topLeading)
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(tile.hero ? accent.color : Palette.card.opacity(0.72)))
+            .frame(maxWidth: .infinity, minHeight: 92, alignment: .topLeading)
+            .padding(14)
+            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(tile.hero ? accent.color : Palette.tile))
             .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TilePressStyle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(tile.title), \(tile.sub.lowercased())")
+        .accessibilityLabel("\(tile.title), \(tile.sub)")
+    }
+}
+
+struct TilePressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.snappy(duration: 0.15), value: configuration.isPressed)
     }
 }
 
@@ -156,21 +167,22 @@ struct PainCheckInSheet: View {
                     ForEach(db.activeInjuries) { inj in injuryBlock(inj, db: db).padding(.bottom, 18) }
                     if db.activeInjuries.isEmpty {
                         Text("No active injuries.")
-                            .font(.sans(13)).foregroundStyle(Palette.muted).padding(.bottom, 14)
+                            .font(.sans(13)).foregroundStyle(Palette.secondary).padding(.bottom, 14)
                     }
                     if !db.watchingInjuries.isEmpty {
-                        Text(db.activeInjuries.isEmpty ? "Watching" : "Also watching").micro().padding(.top, 4).padding(.bottom, 10)
+                        FieldLabel(title: db.activeInjuries.isEmpty ? "Watching" : "Also watching").padding(.top, 4)
                         ForEach(db.watchingInjuries) { w in
                             VStack(alignment: .leading, spacing: 10) {
                                 Button {
                                     if expanded.contains(w.id) { expanded.remove(w.id) } else { expanded.insert(w.id) }
                                 } label: {
                                     HStack(spacing: 10) {
-                                        RoundedRectangle(cornerRadius: 3).fill(Palette.watch).frame(width: 11, height: 11)
-                                        Text(shortName(w.name)).font(.sans(13.5, .medium)).foregroundStyle(Palette.ink)
+                                        Circle().fill(Palette.caution).frame(width: 10, height: 10)
+                                        Text(shortName(w.name)).font(.sans(15, .medium)).foregroundStyle(Palette.text)
                                         Spacer()
-                                        Text("\(levels[w.id].map(String.init) ?? "—") /10 \(expanded.contains(w.id) ? "▾" : "▸")")
-                                            .font(.mono(11)).foregroundStyle(Palette.muted)
+                                        Text("\(levels[w.id].map(String.init) ?? "–")/10")
+                                            .font(.num(13)).foregroundStyle(Palette.secondary)
+                                        Image(systemName: expanded.contains(w.id) ? "chevron.up" : "chevron.down").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.tertiary)
                                     }
                                     .contentShape(Rectangle())
                                 }
@@ -178,23 +190,23 @@ struct PainCheckInSheet: View {
                                 if expanded.contains(w.id) { PainRow(selected: levels[w.id]) { levels[w.id] = $0 } }
                             }
                             .padding(.horizontal, 14).padding(.vertical, 12)
-                            .background(Palette.card).overlay(Rectangle().strokeBorder(Palette.rule, lineWidth: 1))
-                            .padding(.bottom, 6)
+                            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Palette.surface))
+                            .padding(.bottom, 8)
                         }
                     }
                     LinkButton(title: "+ New pain") { router.sheet = .newInjury }.padding(.top, 8)
                 }
                 .padding(.horizontal, 16).padding(.bottom, 30)
             }
-            .background(Palette.paper)
+            .background(Palette.sheet)
             .safeAreaInset(edge: .bottom) {
                 Button("Save check-in") { save() }.buttonStyle(PrimaryButtonStyle()).disabled(levels.isEmpty)
-                    .padding(.horizontal, 16).padding(.vertical, 12).background(Palette.paper)
+                    .padding(.horizontal, 16).padding(.vertical, 12).background(Palette.sheet)
             }
-            .modifier(SheetChrome(title: "Pain check-in", subtitle: Day.plan(store.today)))
+            .modifier(SheetChrome(title: "Pain check-in", subtitle: Day.fullDate(store.today)))
         }
         .presentationDetents([.height(520), .large])
-        .presentationBackground(Palette.paper)
+        .presentationBackground(Palette.sheet)
     }
 
     func injuryBlock(_ inj: Injury, db: Database) -> some View {
@@ -204,16 +216,16 @@ struct PainCheckInSheet: View {
         let rule = db.loadRules.first { $0.injuryId == inj.id }
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
-                Text(shortName(inj.name, full: true)).font(.sans(15, .semibold))
+                Text(shortName(inj.name, full: true)).font(.sans(16, .semibold)).foregroundStyle(Palette.text)
                 Spacer()
-                Text("LAST \(last.map { "\($0.level)" } ?? "—")/10").font(.mono(10.5)).foregroundStyle(Palette.warn)
+                Text("Last \(last.map { "\($0.level)" } ?? "–")/10").font(.sans(13)).foregroundStyle(Palette.injuryText)
             }
             PainRow(selected: levels[inj.id], last: last?.level) { levels[inj.id] = $0 }.padding(.top, 10).padding(.bottom, 6)
             if let last, let prev {
                 let d = last.level - prev.level
                 let w = Day.weekday(prev.date)
-                Text("\(d < 0 ? "▼ \(-d)" : d > 0 ? "▲ \(d)" : "— LEVEL") SINCE \(w)\(rule != nil ? " · RULES LIFT AT 1/10" : "")")
-                    .font(.mono(10.5)).foregroundStyle(Palette.muted)
+                Text("\(d < 0 ? "Down \(-d)" : d > 0 ? "Up \(d)" : "Level") since \(Day.weekdayShort(prev.date))\(rule != nil ? ". Rules lift at 1/10." : "")")
+                    .font(.sans(13)).foregroundStyle(d > 0 ? Palette.cautionText : Palette.secondary)
             }
         }
     }
@@ -251,7 +263,7 @@ struct RehabTodaySheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     if exercises.isEmpty {
-                        Text("No exercises yet. Add them in Body.").font(.sans(13)).foregroundStyle(Palette.muted)
+                        Text("No exercises yet. Add them in Body.").font(.sans(13)).foregroundStyle(Palette.secondary)
                     }
                     ForEach(exercises) { e in
                         RehabRow(exercise: e) { done in
@@ -261,20 +273,20 @@ struct RehabTodaySheet: View {
                     if !exercises.isEmpty {
                         AdherenceStrip(done: adh.done).padding(.top, 8)
                         Text("Saves as you tap.")
-                            .font(.sans(12)).foregroundStyle(Palette.muted).padding(.top, 8)
+                            .font(.sans(12)).foregroundStyle(Palette.secondary).padding(.top, 8)
                     }
                 }
                 .padding(.horizontal, 16).padding(.bottom, 30)
             }
-            .background(Palette.paper)
+            .background(Palette.sheet)
             .modifier(SheetChrome(title: "Rehab today",
-                                  subtitle: [injury.map { shortInjury($0.name).uppercased() }, week.map { "WK \($0)" }, "\(adh.streak)-DAY STREAK"]
-                                    .compactMap { $0 }.joined(separator: " · ")))
+                                  subtitle: [injury.map { shortInjury($0.name) }, week.map { "week \($0)" }, "\(adh.streak)-day streak"]
+                                    .compactMap { $0 }.joined(separator: ", ")))
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .toastOverlay(inSheet: true)
         }
         .presentationDetents([.height(500), .large])
-        .presentationBackground(Palette.paper)
+        .presentationBackground(Palette.sheet)
     }
 }
 

@@ -1,240 +1,368 @@
 import SwiftUI
 import AscentCore
 
-/// Web Dashboard `2a` (DESIGN §3.1).
+/// r3 Today (DESIGN §3.1): the three pillars, the live session, the last 7 days, one insight, up next.
 struct TodayView: View {
     @Environment(AscentStore.self) private var store
     @Environment(Router.self) private var router
-    @State private var showReads = true
 
     var body: some View {
         let db = store.db
         let today = store.today
-        let m = DashboardModel(db: db, today: today)
 
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                if let live = db.activeSession {
-                    LiveSessionCard(session: live).padding(.horizontal, 16).padding(.bottom, 14)
-                }
-
-                SquareSegment(options: RangeID.allCases.map { ($0, $0.label) },
-                              selection: Binding(get: { db.settings.dashboardRange }, set: { store.setDashboardRange($0) }))
-                    .padding(.horizontal, 16).padding(.bottom, 14)
-
-                KpiGrid(kpis: m.kpis)
-
-                Band {
-                    SectionHead(title: "Send pyramid") { PyramidLegend() }
-                    Text("Numbered gyms").micro().padding(.top, -6).padding(.bottom, 12)
-                    PyramidView(rows: m.pyramid)
-                    reads(label: "Read:", Metrics.pyramidRead(m.pyramid))
-                }
-
-                Band {
-                    SectionHead("Camp5 colours")
-                    TallyView(bars: m.tally)
-                    Insight(label: nil, text: Metrics.camp5Read(m.tally))
-                }
-
-                Band {
-                    SectionHead("Boards")
-                    if m.boards.isEmpty {
-                        Text("No board sends.").font(.sans(13)).foregroundStyle(Palette.muted)
-                    }
-                    VStack(spacing: 8) { ForEach(m.boards, id: \.boardId) { BoardCard(b: $0) } }
-                }
-
-                if let injury = db.activeInjuries.first {
-                    Band { InjuryWatch(injury: injury, db: db, today: today) }
-                }
-
-                Band {
-                    Button { router.planSegment = .season; router.select(.plan) } label: {
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("COMP READINESS\(m.compWeeks.map { " · \($0) WK" } ?? "")").micro(Palette.ink)
-                            ReadinessRows(rows: m.readiness)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint("Opens the season plan")
-                }
-
-                Band {
-                    SectionHead("Where you send", note: "SEND % · \(m.heat.filter(\.weak).count) GAPS")
-                    HeatmapView(rows: m.heat)
-                    let weak = m.heat.filter(\.weak)
-                    if !weak.isEmpty {
-                        Insight(label: nil, text: Dictionary(grouping: weak, by: \.comment).sorted { $0.key < $1.key }
-                            .map { "\($0.value.map(\.style).joined(separator: ", ")): \($0.key.replacingOccurrences(of: "gap: ", with: ""))." }
-                            .joined(separator: " "), color: Palette.warn)
-                    }
-                    reads(label: "Comp prep:", Metrics.heatmapRead(m.heat, compName: m.comp?.displayName))
-                }
-
-                Band(bottomPadding: 8) {
-                    SectionHead("Recent", note: "\(db.sessions.filter { $0.status == .done }.count) TOTAL")
-                    if m.recent.isEmpty {
-                        Text("No sessions.").font(.sans(13)).foregroundStyle(Palette.muted)
-                    }
-                    ForEach(m.recent) { s in
-                        NavigationLink(value: Route.session(s.id)) { LedgerRow(session: s, db: db) }.buttonStyle(.plain)
-                    }
-                }
+            VStack(spacing: 12) {
+                PillarsCard(db: db, today: today)
+                if let live = db.activeSession { LiveSessionCard(session: live) }
+                LastSevenDaysCard(db: db, today: today)
+                if let insight = Insights.today(db, today: today) { InsightCard(insight: insight) }
+                UpNextCard(db: db, today: today)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
+            .padding(.bottom, 96)
         }
-        .background(Palette.paper)
+        .background(Palette.ground)
         .navigationTitle("Today")
-        .navigationSubtitle(Day.weekRangeShort(today))
+        .navigationSubtitle(Day.fullDate(today))
         .largeTitle()
     }
+}
 
-    @ViewBuilder func reads(label: String, _ text: String) -> some View {
-        if showReads {
-            Button { withAnimation { showReads = false } } label: { Insight(label: label, text: text) }
+/* ── Pillars ───────────────────────────────────────────────────────────── */
+
+struct PillarsCard: View {
+    @Environment(Router.self) private var router
+    @Environment(\.accent) private var accent
+    @Environment(\.zoomNamespace) private var ns
+    @Environment(\.dynamicTypeSize) private var type
+    var db: Database
+    var today: String
+
+    var body: some View {
+        let load = Load.window(db, today: today)
+        let progress = Pillars.progress(db, today: today)
+        let body = Pillars.body(db, today: today)
+        let layout = type.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 18)) : AnyLayout(HStackLayout(alignment: .top, spacing: 0))
+
+        Card(padding: 0) {
+            layout {
+                NavigationLink(value: Route.load) {
+                    PillarColumn(title: "Load", caption: loadCaption(load), captionColor: load.band == .spiking ? Palette.cautionText : Palette.secondary,
+                                 progress: load.band == .building ? Double(load.weeksOfBaseline) / 4 : load.ratio ?? 0,
+                                 color: load.band == .spiking ? Palette.caution : accent.color, dashed: load.band == .building, delay: 0) {
+                        if load.band == .building {
+                            Text("\(load.weeksOfBaseline)\(Text("/4").font(.num(14)).foregroundStyle(Palette.secondary))").font(.num(22))
+                        } else {
+                            Text("\(Int(((load.ratio ?? 0) * 100).rounded()))%").font(.num(22)).contentTransition(.numericText())
+                        }
+                    }
+                }
                 .buttonStyle(.plain)
-                .accessibilityHint("Hides the reads")
-        } else if label == "Read:" {
-            LinkButton(title: "Show reads") { withAnimation { showReads = true } }.padding(.top, 10)
+                .zoomSource("load", in: ns)
+                .accessibilityLabel(load.band == .building ? "Load, building baseline, \(load.weeksOfBaseline) of 4 weeks"
+                                    : "Load, \(Int(((load.ratio ?? 0) * 100).rounded())) percent of your usual week")
+
+                NavigationLink(value: Route.progress) {
+                    PillarColumn(title: "Progress", caption: "\(progress.hardSends) hard sends", captionColor: Palette.secondary,
+                                 progress: progress.ratio ?? 0, color: accent.color, dashed: false, delay: 0.08) {
+                        VStack(spacing: 3) {
+                            Text(progress.top.map(String.init) ?? "–").font(.num(26)).contentTransition(.numericText())
+                            if let d = progress.delta, d != 0 {
+                                DeltaChip(text: d > 0 ? "+\(d)" : "−\(-d)", tone: d > 0 ? .neutral : .caution)
+                                    .scaleEffect(0.85)
+                            }
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .zoomSource("progress", in: ns)
+                .accessibilityLabel("Progress, top grade \(progress.top.map(String.init) ?? "none"), \(progress.hardSends) hard sends")
+
+                Button { router.select(.body) } label: {
+                    PillarColumn(title: "Body", caption: bodyCaption(body), captionColor: bodyColor(body).caption,
+                                 progress: body.state == .clear ? 1 : Double(body.rehabDays) / 7,
+                                 color: bodyColor(body).ring, dashed: false, delay: 0.16) {
+                        if body.state == .clear {
+                            Text("Clear").font(.num(16))
+                        } else {
+                            Text("\(body.pain.map(String.init) ?? "–")\(Text("/10").font(.num(14)).foregroundStyle(Palette.secondary))").font(.num(22))
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(body.state == .clear ? "Body, clear" : "Body, pain \(body.pain ?? 0) of 10, \(bodyCaption(body))")
+                .accessibilityHint("Opens Body")
+            }
+            .padding(.vertical, 20).padding(.horizontal, 6)
+        }
+    }
+
+    func loadCaption(_ w: Load.Window) -> String {
+        switch w.band {
+        case .building: "Building baseline"
+        case .spiking: "Spiking"
+        case .light: "Light week"
+        case .inRange: "vs usual week"
+        }
+    }
+
+    func bodyCaption(_ b: Pillars.Body) -> String {
+        switch b.state {
+        case .clear: "No active injury"
+        case .onTrack: "Rehab \(b.rehabDays) of 7"
+        case .caution, .warning: b.reason ?? "Rehab \(b.rehabDays) of 7"
+        }
+    }
+
+    func bodyColor(_ b: Pillars.Body) -> (ring: Color, caption: Color) {
+        switch b.state {
+        case .warning: (Palette.injury, Palette.injuryText)
+        case .caution: (Palette.caution, Palette.cautionText)
+        default: (accent.color, Palette.secondary)
         }
     }
 }
 
-/// Everything the dashboard draws for one range, derived from the log.
-struct DashboardModel {
-    let kpis: [Metrics.Kpi]
-    let pyramid: [Metrics.PyramidRow]
-    let tally: [Metrics.TagBar]
-    let boards: [Metrics.BoardSummary]
-    let heat: [Metrics.HeatRow]
-    let readiness: [Metrics.ReadinessRow]
-    let recent: [Session]
-    let comp: Competition?
-    let compWeeks: Int?
+struct PillarColumn<Center: View>: View {
+    var title: String
+    var caption: String
+    var captionColor: Color
+    var progress: Double
+    var color: Color
+    var dashed: Bool
+    var delay: Double
+    @ViewBuilder var center: Center
 
-    init(db: Database, today: String) {
-        let range = db.settings.dashboardRange
-        let w = range.windows(today: today)
-        let cur = Metrics.climbsInRange(db.climbs, from: w.from, to: w.to)
-        let prev = Metrics.climbsInRange(db.climbs, from: w.prevFrom, to: w.prevTo)
-        let inRange = db.sessions.filter { $0.status == .done && $0.date >= w.from && $0.date <= w.to }
-        let weeks = max(1, Day.weeksBetween(w.from, w.to))
-        kpis = Metrics.buildKpis(cur: cur, prev: prev, gyms: db.gyms, sessionCount: inRange.count, rangeLabel: range.label.lowercased())
-        pyramid = Metrics.sendPyramid(cur)
-        tally = Metrics.camp5Tally(cur, tags: db.gyms.first(where: \.isRanked)?.tags ?? Vocab.camp5Tags)
-        boards = Metrics.boardSummaries(cur: cur, prev: prev, boards: db.boards, weeks: weeks)
-        heat = Metrics.styleGradeMatrix(cur)
-        readiness = Metrics.compReadiness(cur, reviews: db.reviews, today: today)
-        recent = Array(inRange.sorted { $0.date > $1.date }.prefix(5))
-        comp = db.upcomingComps(from: today).first { $0.effectivePriority != .c } ?? db.nextComp(from: today)
-        compWeeks = comp.map { Metrics.weeksOut(today: today, compDate: $0.date) }
+    var body: some View {
+        VStack(spacing: 10) {
+            ZStack {
+                PillarRing(progress: progress, color: color, dashed: dashed, delay: delay)
+                center.foregroundStyle(Palette.text)
+            }
+            .frame(width: 96, height: 96)
+            VStack(spacing: 2) {
+                Text(title).font(.sans(15, .semibold)).foregroundStyle(Palette.text)
+                Text(caption).font(.sans(12)).foregroundStyle(captionColor).lineLimit(1).minimumScaleFactor(0.8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
     }
 }
+
+/* ── Live session ──────────────────────────────────────────────────────── */
 
 struct LiveSessionCard: View {
     @Environment(AscentStore.self) private var store
     @Environment(Router.self) private var router
+    @Environment(\.accent) private var accent
     var session: Session
 
     var body: some View {
         let db = store.db
-        let climbs = db.climbs.filter { $0.sessionId == session.id }
-        let sends = climbs.filter(Metrics.isSend)
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 7) {
-                TimelineView(.periodic(from: .now, by: 30)) { ctx in
-                    HStack(spacing: 6) {
-                        Circle().fill(Palette.ink).frame(width: 6, height: 6)
-                        Text("LIVE · \(db.gym(session.gymId)?.name ?? "—") · \(session.startedAt.map { Day.elapsedLabel(from: $0, now: ctx.date) } ?? "0m")")
-                            .micro(Palette.ink)
-                    }
+        let sends = db.climbs.filter { $0.sessionId == session.id }.filter(Metrics.isSend)
+        Card {
+            HStack {
+                HStack(spacing: 8) {
+                    Circle().fill(accent.color).frame(width: 8, height: 8)
+                        .background(Circle().fill(accent.color.opacity(0.2)).frame(width: 16, height: 16))
+                    Text("Live at \(db.gym(session.gymId)?.name ?? "the gym")").font(.sans(15, .semibold)).foregroundStyle(Palette.text)
                 }
-                Text("\(sends.count) sends · high \(Text(LiveSummary.high(sends, db: db)).foregroundStyle(Palette.ink).bold()) · \(sends.filter(Metrics.isFlash).count) flashed")
-                    .font(.sans(13)).foregroundStyle(Palette.muted)
+                Spacer()
+                if let intent = session.intent { Text(intent).font(.sans(13)).foregroundStyle(Palette.secondary) }
             }
-            Spacer()
+            if let start = session.startedAt {
+                Text(timerInterval: start...Date.distantFuture, countsDown: false)
+                    .font(.num(44, relativeTo: .largeTitle)).foregroundStyle(Palette.text)
+                    .padding(.top, 10)
+                    .accessibilityLabel("Running for \(spokenDuration(from: start))")
+            }
+            HStack(spacing: 8) {
+                stat("\(sends.count)", "sends")
+                stat(LiveSummary.high(sends, db: db, sessionGym: session.gymId), "high")
+                stat("\(sends.filter(Metrics.isFlash).count)", "flashed")
+            }
+            .padding(.top, 16)
             Button("Resume") { router.sheet = .logging(start: false, step: .log(.gym)) }
-                .buttonStyle(PrimaryButtonStyle(height: 40))
-                .frame(width: 96)
+                .buttonStyle(PrimaryButtonStyle(height: 50))
+                .padding(.top, 16)
         }
-        .padding(.leading, 14).padding(.trailing, 12).padding(.vertical, 12)
-        .background(Palette.card)
-        .overlay(Rectangle().strokeBorder(Palette.ink, lineWidth: 2))
         .accessibilityElement(children: .contain)
+    }
+
+    func stat(_ value: String, _ label: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value).font(.num(20)).foregroundStyle(Palette.text).contentTransition(.numericText())
+            Text(label).font(.sans(12)).foregroundStyle(Palette.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }
 
 enum LiveSummary {
-    /// Top grade tonight; a Camp5 tag stays a tag ("PUR"), never a number.
-    static func high(_ sends: [Climb], db: Database) -> String {
+    /// Top grade in a session; a Camp5 tag stays a tag ("PUR"), never a number.
+    static func high(_ sends: [Climb], db: Database, sessionGym: String? = nil) -> String {
         let gymSends = sends.filter { $0.gradeKind != .v }
         let numbered = gymSends.filter { $0.gradeKind == .number }
         let tagged = gymSends.filter { $0.gradeKind == .tag }
-        if let active = db.activeSession, db.gym(active.gymId)?.isRanked == true, let best = tagged.max(by: { $0.grade < $1.grade }) {
+        let gymId = sessionGym ?? db.activeSession?.gymId
+        if db.gym(gymId)?.isRanked == true, let best = tagged.max(by: { $0.grade < $1.grade }) {
             return Vocab.colourCode(best.tagId)
         }
         if let m = numbered.map(\.grade).max() { return "\(m)" }
         if let best = tagged.max(by: { $0.grade < $1.grade }) { return Vocab.colourCode(best.tagId) }
         if let v = sends.filter({ $0.gradeKind == .v }).map(\.grade).max() { return "V\(v)" }
-        return "—"
+        return "–"
     }
 }
 
-struct InjuryWatch: View {
-    @Environment(AscentStore.self) private var store
-    @Environment(Router.self) private var router
-    var injury: Injury
+/* ── Last 7 days ───────────────────────────────────────────────────────── */
+
+struct LastSevenDaysCard: View {
+    @Environment(\.accent) private var accent
     var db: Database
     var today: String
 
     var body: some View {
-        let pain = db.painEntries.filter { $0.injuryId == injury.id }.sorted { $0.date < $1.date }.suffix(7)
-        let exercises = db.rehabExercises.filter { $0.injuryId == injury.id }
-        let adherence = Metrics.rehabAdherence(exercises, logs: db.rehabLogs, today: today)
-        let rehabWeek = injury.rehabStart.map { max(1, Day.weeksBetween($0, today) + 1) }
-        let usage = Metrics.loadRuleUsage(db.loadRules.filter { $0.maxPerWeek != nil }, climbs: db.climbs, weekStart: Day.weekStart(today))
-        let hot = usage.first(where: \.blocked) ?? usage.first(where: \.nearing)
-
-        VStack(alignment: .leading, spacing: 0) {
-            SectionHead("Injury watch", note: rehabWeek.map { "REHAB · WK \($0)" }, noteColor: Palette.warn)
-            Button { router.select(.body) } label: {
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        Text(injury.name).font(.sans(14, .medium)).foregroundStyle(Palette.ink)
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.muted)
-                    }
-                    if pain.isEmpty {
-                        Text("No pain logged").font(.sans(12)).foregroundStyle(Palette.muted).padding(.vertical, 12)
-                    } else {
-                        PainBars(levels: pain.map(\.level)).padding(.top, 12).padding(.bottom, 8)
-                    }
-                    HStack {
-                        Text(pain.isEmpty ? "pain —" : "pain \(pain.first!.level) → \(pain.last!.level)/10")
-                        Spacer()
-                        Text("rehab streak \(adherence.streak)d")
-                    }
-                    .font(.mono(11)).foregroundStyle(Palette.muted)
+        let days = Load.daily(db, today: today)
+        let window = Load.window(db, today: today)
+        let average = window.baseline.map { $0 / 7 }
+        let top = max(days.map(\.load).max() ?? 0, (average ?? 0) * 1.4, 0.001)
+        let sessions = Load.sessions(db, today: today).count
+        NavigationLink(value: Route.load) {
+            Card {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Last 7 days").font(.sans(17, .semibold)).foregroundStyle(Palette.text)
+                    Spacer()
+                    Text("\(sessions) session\(sessions == 1 ? "" : "s")").font(.sans(13)).foregroundStyle(Palette.secondary)
                 }
-                .padding(.horizontal, 16).padding(.vertical, 14)
-                .background(Palette.warnBg)
-                .overlay(Rectangle().strokeBorder(Palette.warnBorder, lineWidth: 1))
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Opens the body log")
-
-            if let hot {
-                Text("\(Text("Load · ").foregroundStyle(Palette.warn).font(.sans(13, .semibold)))\(hot.headline): \(hot.used)/\(hot.cap ?? 0) this week\(hot.blocked ? ". Limit reached." : ".")")
-                    .font(.sans(13)).foregroundStyle(Palette.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 14).padding(.vertical, 12)
-                    .background(Palette.card)
-                    .overlay(Rectangle().strokeBorder(Palette.rule, lineWidth: 1))
-                    .padding(.top, 8)
+                ZStack(alignment: .bottom) {
+                    HStack(alignment: .bottom, spacing: 10) {
+                        ForEach(days, id: \.day) { d in
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(d.load == 0 ? Palette.track : accent.color.opacity(d.isToday ? 1 : 0.55))
+                                .frame(height: d.load == 0 ? 4 : max(8, 96 * d.load / top))
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    if let average, average > 0 {
+                        Line().stroke(Palette.text.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                            .frame(height: 1)
+                            .offset(y: -96 * average / top)
+                    }
+                }
+                .frame(height: 96, alignment: .bottom)
+                .padding(.top, 16)
+                HStack(spacing: 10) {
+                    ForEach(days, id: \.day) { d in
+                        Text(Day.weekdayShort(d.day).prefix(1))
+                            .font(.sans(12, d.isToday ? .semibold : .regular))
+                            .foregroundStyle(d.isToday ? Palette.text : Palette.secondary)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(.top, 8)
             }
         }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Last 7 days, \(sessions) sessions")
+        .accessibilityHint("Opens Load")
+    }
+}
+
+/// A horizontal line for dashed averages.
+nonisolated struct Line: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { p in p.move(to: CGPoint(x: rect.minX, y: rect.midY)); p.addLine(to: CGPoint(x: rect.maxX, y: rect.midY)) }
+    }
+}
+
+/* ── Insight and up next ───────────────────────────────────────────────── */
+
+struct InsightCard: View {
+    @Environment(Router.self) private var router
+    var insight: Insights.Insight
+
+    var body: some View {
+        let content = HStack(spacing: 14) {
+            Image(systemName: insight.destination == .progress ? "chart.line.uptrend.xyaxis" : "text.bubble")
+                .font(.system(size: 16, weight: .semibold)).foregroundStyle(Palette.text)
+                .frame(width: 40, height: 40).background(Circle().fill(Palette.raised))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(insight.headline).font(.sans(16, .semibold)).foregroundStyle(Palette.text).fixedSize(horizontal: false, vertical: true)
+                Text(insight.detail).font(.sans(13)).foregroundStyle(Palette.secondary)
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.tertiary)
+        }
+        .padding(.horizontal, 18).padding(.vertical, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Palette.surface))
+        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+        switch insight.destination {
+        case .progress: NavigationLink(value: Route.progress) { content }.buttonStyle(.plain)
+        case .history: Button { router.select(.history) } label: { content }.buttonStyle(.plain)
+        }
+    }
+}
+
+struct UpNextCard: View {
+    @Environment(Router.self) private var router
+    var db: Database
+    var today: String
+
+    var body: some View {
+        let plan = db.sessions.filter { $0.status == .planned && $0.date >= today }.min { $0.date < $1.date }
+        let blocks = plan?.plannedBlocks ?? []
+        let minutes = blocks.reduce(0) { $0 + $1.durationMin }
+        let usage = Metrics.loadRuleUsage(db.loadRules.filter { $0.maxPerWeek != nil }, climbs: db.climbs, weekStart: Day.weekStart(today))
+        let blocked = usage.first(where: \.blocked)
+
+        Button { router.planSegment = .today; router.select(.plan) } label: {
+            Card {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Up next").micro()
+                    Spacer()
+                    if let plan { Text(Day.relative(plan.date, today: today)).font(.sans(13)).foregroundStyle(Palette.secondary) }
+                }
+                Text(plan.map { "\($0.intent ?? "Session") day" } ?? "Nothing planned")
+                    .font(.sans(20, .bold)).foregroundStyle(Palette.text).padding(.top, 6)
+                Text(plan == nil ? "Plan your next session" : "\(blocks.count) block\(blocks.count == 1 ? "" : "s"), \(Self.duration(minutes))")
+                    .font(.sans(14)).foregroundStyle(Palette.secondary).padding(.top, 2)
+                if let blocked {
+                    WarnPanel(lead: "\(blocked.headline) off", text: "\(blocked.used) of \(blocked.cap ?? 0) this week").padding(.top, 12)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens Plan")
+    }
+
+    static func duration(_ minutes: Int) -> String {
+        minutes >= 60 ? "\(minutes / 60) h\(minutes % 60 > 0 ? " \(minutes % 60) min" : "")" : "\(minutes) min"
+    }
+}
+
+/* ── Zoom from a card into its detail screen ───────────────────────────── */
+
+private struct ZoomNamespaceKey: EnvironmentKey { static let defaultValue: Namespace.ID? = nil }
+extension EnvironmentValues {
+    var zoomNamespace: Namespace.ID? {
+        get { self[ZoomNamespaceKey.self] }
+        set { self[ZoomNamespaceKey.self] = newValue }
+    }
+}
+
+extension View {
+    @ViewBuilder func zoomSource(_ id: String, in ns: Namespace.ID?) -> some View {
+        if let ns { matchedTransitionSource(id: id, in: ns) } else { self }
+    }
+
+    @ViewBuilder func zoomDestination(_ id: String, in ns: Namespace.ID?) -> some View {
+        if let ns { zoomTransition(id, in: ns) } else { self }
     }
 }

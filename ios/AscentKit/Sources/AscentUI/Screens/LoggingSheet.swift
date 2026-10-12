@@ -36,7 +36,7 @@ struct LoggingSheet: View {
             }
         }
         .presentationDetents([.large])
-        .presentationBackground(Palette.paper)
+        .presentationBackground(Palette.sheet)
     }
 }
 
@@ -79,31 +79,31 @@ struct StartSessionView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 if let plan {
-                    Text("\(Text("Plan for today · ").bold().foregroundStyle(Palette.ink))\(plan.intent ?? "A session") at \(db.gym(plan.gymId)?.name ?? "the gym"). ")
-                        .font(.sans(13)).foregroundStyle(Palette.muted)
+                    Text("\(Text("Plan for today: ").bold().foregroundStyle(Palette.text))\(plan.intent ?? "A session") at \(db.gym(plan.gymId)?.name ?? "the gym"). ")
+                        .font(.sans(14)).foregroundStyle(Palette.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 14).padding(.vertical, 13)
-                        .background(Palette.card).overlay(Rectangle().strokeBorder(Palette.rule, lineWidth: 1))
+                        .padding(.horizontal, 14).padding(.top, 13).padding(.bottom, 40)
+                        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Palette.surface))
                         .overlay(alignment: .bottomTrailing) {
                             LinkButton(title: "Open plan") { router.planSegment = .today; router.closeSheet(then: .plan) }.padding(.trailing, 14)
                         }
                 }
-                Text("Gym").micro().padding(.top, 22).padding(.bottom, 10)
+                FieldLabel(title: "Gym").padding(.top, 22)
                 ChipFlow { ForEach(db.gyms) { g in Chip(label: g.name, on: gymId == g.id, small: true) { gymId = g.id } } }
-                Text("Intent — optional").micro().padding(.top, 22).padding(.bottom, 10)
+                FieldLabel(title: "Intent", note: "Optional").padding(.top, 22)
                 ChipFlow {
                     ForEach(Vocab.sessionIntents, id: \.self) { i in
                         Chip(label: i, on: intent == i, small: true) { intent = intent == i ? nil : i }
                     }
                 }
                 if !focus.isEmpty {
-                    Text("Focus from plan").micro().padding(.top, 22).padding(.bottom, 10)
+                    FieldLabel(title: "Focus from plan").padding(.top, 22)
                     ChipFlow { ForEach(focus, id: \.self) { f in Chip(label: f, on: true, small: true) { focus.removeAll { $0 == f } } } }
                 }
             }
             .padding(.horizontal, 16).padding(.bottom, 40)
         }
-        .background(Palette.paper)
+        .background(Palette.sheet)
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 10) {
                 Button("Start session") {
@@ -116,9 +116,9 @@ struct StartSessionView: View {
                 .disabled(gymId.isEmpty)
             }
             .padding(.horizontal, 16).padding(.vertical, 12)
-            .background(Palette.paper)
+            .background(Palette.sheet)
         }
-        .modifier(SheetChrome(title: "Start session", subtitle: Day.plan(store.today)))
+        .modifier(SheetChrome(title: "Start session", subtitle: Day.fullDate(store.today)))
         .onAppear {
             guard !loaded else { return }
             loaded = true
@@ -137,7 +137,6 @@ struct LogView: View {
     var initialMode: LogMode
     @Binding var path: NavigationPath
     @State private var mode: LogMode?
-    @State private var tick = Date.now
 
     var body: some View {
         let db = store.db
@@ -146,7 +145,7 @@ struct LogView: View {
             let current = mode ?? initialMode
             VStack(spacing: 0) {
                 SquareSegment(options: [(LogMode.gym, "Gym"), (.board, "Board")], selection: Binding(get: { current }, set: { mode = $0 }))
-                    .padding(.horizontal, 16).padding(.bottom, 12)
+                    .padding(.horizontal, 16).padding(.bottom, 8)
                 switch current {
                 case .gym:
                     if gym?.isRanked == true { TallyLogView(session: session, gym: gym!, path: $path) }
@@ -155,7 +154,7 @@ struct LogView: View {
                     BoardLogView(session: session, path: $path)
                 }
             }
-            .background(Palette.paper)
+            .background(Palette.sheet)
             .modifier(SheetChrome(title: current == .board ? "Board session" : gym?.isRanked == true ? "Tally" : "Log a send",
                                   subtitle: subtitle(session: session, gym: gym, mode: current)))
             .toolbar {
@@ -168,16 +167,14 @@ struct LogView: View {
                                 }
                             }
                         } label: {
-                            Text("\(gym?.shortName ?? "Gym") ▾").font(.system(size: 14, weight: .semibold))
+                            HStack(spacing: 5) {
+                                Text(gym?.shortName ?? "Gym")
+                                Image(systemName: "chevron.down").font(.system(size: 11, weight: .bold))
+                            }
+                            .font(.system(size: 15, weight: .semibold))
                         }
                         .accessibilityLabel("Switch gym, now \(gym?.name ?? "none")")
                     }
-                }
-            }
-            .task {
-                while !Task.isCancelled {
-                    try? await Task.sleep(for: .seconds(30))
-                    tick = .now
                 }
             }
         } else {
@@ -186,10 +183,8 @@ struct LogView: View {
     }
 
     func subtitle(session: Session, gym: Gym?, mode: LogMode) -> String {
-        let elapsed = session.startedAt.map { Day.elapsedLabel(from: $0, now: tick) } ?? "0m"
-        if mode == .board { return "\(gym?.name ?? "Board") · \(elapsed)".uppercased() }
-        let scale = gym?.isRanked == true ? "YELLOW → BLACK" : "1–\(gym?.maxGrade ?? 15)"
-        return "\(gym?.name ?? "No gym") · \(scale) · \(elapsed)".uppercased()
+        let place = mode == .board ? "Board" : gym?.isRanked == true ? "\(gym?.shortName ?? "Camp5"), pink to black" : "\(gym?.shortName ?? "No gym"), 1 to \(gym?.maxGrade ?? 15)"
+        return place
     }
 }
 
@@ -201,26 +196,46 @@ func trippedRules(_ db: Database, styles: [String], today: String) -> [Metrics.L
         }
 }
 
-/// Optional fields, kept from the last climb.
+/// The live timer under the sheet title.
+struct LiveTimerLine: View {
+    var session: Session
+    var body: some View {
+        if let start = session.startedAt {
+            HStack(spacing: 6) {
+                Text("Live")
+                Text(timerInterval: start...Date.distantFuture, countsDown: false).font(.num(12)).monospacedDigit()
+            }
+            .font(.sans(12)).foregroundStyle(Palette.secondary)
+            .accessibilityElement(children: .combine)
+        }
+    }
+}
+
+/// A small section label above a block of controls.
+struct FieldLabel: View {
+    var title: String
+    var note: String?
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(title).font(.sans(15, .semibold)).foregroundStyle(Palette.text)
+            Spacer()
+            if let note { Text(note).font(.sans(13)).foregroundStyle(Palette.secondary) }
+        }
+        .padding(.bottom, 10)
+    }
+}
+
+/// Styles, Not sent and Where — reset after every save.
 struct OptionalBlock: View {
-    @Binding var tickType: TickType
     @Binding var styles: [String]
+    @Binding var notSent: Bool
     @Binding var location: String
     var styleList = Vocab.climbStyles
     var showWhere = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Optional").micro()
-                Spacer()
-                LinkButton(title: "Clear") { tickType = .flash; styles = []; location = "" }
-            }
-            .padding(.bottom, 6)
-            ChipFlow {
-                ForEach(Vocab.tickTypes, id: \.id) { t in Chip(label: t.label, on: tickType == t.id, small: true) { tickType = t.id } }
-            }
-            .padding(.bottom, 8)
+            FieldLabel(title: "Style")
             ChipFlow {
                 ForEach(styleList, id: \.self) { s in
                     Chip(label: s, on: styles.contains(s), small: true) {
@@ -228,9 +243,75 @@ struct OptionalBlock: View {
                     }
                 }
             }
-            .padding(.bottom, 10)
-            if showWhere { TextFieldRow(label: "WHERE", placeholder: "cave, right of the arête", text: $location) }
+            NotSentRow(notSent: $notSent).padding(.top, 16)
+            if showWhere { TextFieldRow(label: "Where", placeholder: "Cave, right of the arête", text: $location).padding(.top, 10) }
         }
+    }
+}
+
+struct NotSentRow: View {
+    @Environment(\.accent) private var accent
+    @Binding var notSent: Bool
+    var body: some View {
+        Toggle(isOn: $notSent) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Not sent").font(.sans(15, .semibold)).foregroundStyle(Palette.text)
+                Text("Log attempts without a send").font(.sans(12)).foregroundStyle(Palette.secondary)
+            }
+        }
+        .tint(accent.color)
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Palette.raised))
+    }
+}
+
+/// The pinned bottom bar: `[ − n + ]  label / hint  ……  [ Send ]` (DESIGN §3.5).
+struct AttemptBar: View {
+    @Binding var attempts: Int
+    var notSent: Bool
+    /// nil = no button (the Camp5 tally logs from each row)
+    var sendTitle: String?
+    var canSend = true
+    var hint: String?
+    var send: () -> Void = {}
+
+    var body: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 0) {
+                StepButton(systemName: "minus", label: "One fewer attempt", size: 40, fill: .clear, disabled: attempts <= 1) {
+                    attempts = max(1, attempts - 1)
+                }
+                Text("\(attempts)").font(.num(22)).foregroundStyle(Palette.text).frame(minWidth: 28)
+                    .contentTransition(.numericText())
+                    .accessibilityLabel("\(attempts) attempt\(attempts == 1 ? "" : "s")")
+                StepButton(systemName: "plus", label: "One more attempt", size: 40, fill: .clear) {
+                    attempts = min(99, attempts + 1)
+                }
+            }
+            .padding(.horizontal, 2)
+            .background(Capsule().fill(Palette.raised))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(Vocab.attemptsLabel(attempts, sent: !notSent)).font(.sans(16, .bold)).foregroundStyle(Palette.text)
+                    .contentTransition(.opacity)
+                Text(hint ?? (notSent ? "No send logged" : attempts == 1 ? "First go" : "Attempts until sent"))
+                    .font(.sans(12)).foregroundStyle(Palette.secondary).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let sendTitle {
+                Button(sendTitle, action: send)
+                    .buttonStyle(PrimaryButtonStyle(height: 50))
+                    .frame(width: 100)
+                    .disabled(!canSend)
+            }
+        }
+        .padding(.leading, 8).padding(.trailing, sendTitle == nil ? 16 : 8)
+        .frame(minHeight: 70)
+        .background(Capsule().fill(Palette.surface).shadow(color: .black.opacity(0.18), radius: 16, y: -2))
+        .overlay(Capsule().strokeBorder(Palette.hairline, lineWidth: 1))
+        .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 6)
+        .animation(.snappy(duration: 0.2), value: attempts)
+        .animation(.snappy(duration: 0.2), value: notSent)
+        .sensoryFeedback(.selection, trigger: attempts)
     }
 }
 
@@ -243,7 +324,8 @@ struct GymLogView: View {
 
     @State private var grade: Int?
     @State private var colour: String?
-    @State private var tickType: TickType = .flash
+    @State private var attempts = 1
+    @State private var notSent = false
     @State private var styles: [String] = []
     @State private var location = ""
     @State private var showAll = false
@@ -259,76 +341,77 @@ struct GymLogView: View {
 
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                LiveTimerLine(session: session).frame(maxWidth: .infinity).padding(.bottom, 14)
                 HStack(alignment: .firstTextBaseline) {
-                    Text("1 · Grade").micro()
+                    Text("Grade").font(.sans(15, .semibold)).foregroundStyle(Palette.text)
                     Spacer()
-                    if maxGrade > 10 { LinkButton(title: showAll ? "Top 10 only" : "Show 1–\(maxGrade)") { showAll.toggle() } }
+                    if maxGrade > 10 { LinkButton(title: showAll ? "Top 10 only" : "Show 1 to \(maxGrade)", color: Palette.secondary) { showAll.toggle() } }
                 }
                 .padding(.bottom, 6)
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 5), spacing: 5) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
                     ForEach(lowest...maxGrade, id: \.self) { g in
-                        GradeCell(label: "\(g)", on: grade == g) { grade = g }
+                        GradeCell(label: "\(g)", on: grade == g) { grade = grade == g ? nil : g }
                     }
                 }
-                .padding(.bottom, 18)
+                .padding(.bottom, 20)
 
-                Text("2 · Hold colour").micro().padding(.bottom, 10)
-                HoldStrip(selection: $colour).padding(.bottom, 18)
+                FieldLabel(title: "Colour", note: "Optional")
+                HoldStrip(selection: $colour).padding(.bottom, 20)
 
                 if let t = tripped.first {
-                    WarnPanel(lead: "Load", text: "\(t.headline): \(t.used)/\(t.cap ?? 0) this week\(t.blocked ? ". Limit reached." : ". 1 left.")")
+                    WarnPanel(lead: "\(t.headline)", text: "\(t.used) of \(t.cap ?? 0) this week\(t.blocked ? ". Limit reached." : ". 1 left.")")
                         .padding(.bottom, 14)
                 }
 
-                OptionalBlock(tickType: $tickType, styles: $styles, location: $location)
+                OptionalBlock(styles: $styles, notSent: $notSent, location: $location)
             }
             .padding(.horizontal, 16)
 
-            SessionRows(climbs: climbs, sends: sends, gymOnly: true)
-                .padding(.top, 18)
+            SessionRows(climbs: climbs, sends: sends, gymOnly: true, path: $path)
+                .padding(.top, 8)
                 .padding(.bottom, 20)
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 6) {
-                ConfirmBar(grade: grade, colour: colour) { save() }
-                LinkButton(title: "End & rate") { path.append(LogStep.review) }
-            }
-            .padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 4)
-            .background(Palette.paper)
+            AttemptBar(attempts: $attempts, notSent: notSent, sendTitle: notSent ? "Log" : "Send", canSend: grade != nil) { save() }
         }
         .sensoryFeedback(.success, trigger: sentCount)
         .onChange(of: session.gymId) { grade = nil; colour = nil }
     }
 
     func save() {
-        guard let grade, let colour, let gym else { return }
+        guard let grade, let gym else { return }
+        let tick = Vocab.tickType(attempts: attempts, sent: !notSent)
+        let label = Vocab.attemptsLabel(attempts, sent: !notSent)
         let id = store.addClimb(Climb(sessionId: session.id, gymId: gym.id, gradeKind: .number, grade: grade, holdColour: colour,
                                       styles: styles, location: location.trimmingCharacters(in: .whitespaces).isEmpty ? nil : location,
-                                      tickType: tickType, attempts: tickType == .flash ? 1 : tickType == .secondGo ? 2 : 3))
-        let attempts = tickType == .flash ? "flash" : "\(tickType == .secondGo ? 2 : 3) tries"
-        router.show(Toast(title: "Sent", detail: "\(grade) \(Vocab.colourLabel(colour).lowercased()) · \(attempts)",
-                          undo: { [store] in store.deleteClimb(id) }))
+                                      tickType: tick, attempts: attempts))
+        router.show(Toast(title: "Logged \(grade)", detail: label, undo: { [store] in store.deleteClimb(id) }))
         sentCount += 1
+        // every climb starts as a first go
         self.grade = nil
-        self.colour = nil
+        colour = nil
+        styles = []
+        location = ""
+        attempts = 1
+        notSent = false
     }
 }
 
 struct GradeCell: View {
+    @Environment(\.accent) private var accent
     var label: String
     var on: Bool
-    var height: CGFloat = 48
+    var height: CGFloat = 54
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Text(label).font(.mono(17, .medium, relativeTo: .body))
-                .foregroundStyle(on ? Palette.paper : Palette.ink)
+            Text(label).font(.num(19, relativeTo: .title3))
+                .foregroundStyle(on ? accent.onAccent : Palette.text)
                 .frame(maxWidth: .infinity, minHeight: height)
-                .background(on ? Palette.ink : Palette.card)
-                .overlay(Rectangle().strokeBorder(on ? Palette.ink : Palette.ruleChip, lineWidth: 1))
-                .contentShape(Rectangle())
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(on ? accent.color : Palette.raised))
+                .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
         .sensoryFeedback(.selection, trigger: on)
@@ -337,21 +420,22 @@ struct GradeCell: View {
     }
 }
 
-/// 9 contiguous hold colours, 40 × 48 pt.
+/// The 9 hold colours as dots; tap again to clear.
 struct HoldStrip: View {
+    @Environment(\.accent) private var accent
     @Binding var selection: String?
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(Vocab.holdColours, id: \.id) { c in
                 let on = selection == c.id
-                Button { selection = c.id } label: {
-                    Rectangle().fill(Color(hex: c.hex))
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .overlay(Rectangle().strokeBorder(Palette.ruleStrong, lineWidth: Palette.needsHairline(c.id) ? 1 : 0))
-                        .overlay(Rectangle().strokeBorder(Palette.paper, lineWidth: on ? 3 : 0).padding(0))
-                        .overlay(Rectangle().strokeBorder(Palette.ink, lineWidth: on ? 2 : 0).padding(-1))
-                        .zIndex(on ? 1 : 0)
+                Button { selection = on ? nil : c.id } label: {
+                    Circle().fill(Color(hex: c.hex))
+                        .frame(width: 34, height: 34)
+                        .overlay(Circle().strokeBorder(Palette.hairlineStrong, lineWidth: Palette.needsHairline(c.id) ? 1 : 0))
+                        .padding(3)
+                        .overlay(Circle().strokeBorder(accent.color, lineWidth: on ? 2 : 0))
+                        .frame(maxWidth: .infinity, minHeight: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -363,50 +447,27 @@ struct HoldStrip: View {
     }
 }
 
-struct ConfirmBar: View {
-    var grade: Int?
-    var colour: String?
-    var send: () -> Void
-
-    var body: some View {
-        let ready = grade != nil && colour != nil
-        HStack(spacing: 11) {
-            Text(grade.map(String.init) ?? "—").font(.serif(24)).foregroundStyle(ready ? Palette.ink : Palette.faint).frame(minWidth: 26)
-            Swatch(colour: colour, size: 24)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(ready ? "Grade \(grade!) · \(Vocab.colourLabel(colour).lowercased())" : "Pick a grade and a colour")
-                    .font(.sans(14, .medium)).foregroundStyle(Palette.ink)
-                Text(ready ? "tap send to save" : "two taps, then send").font(.mono(10.5)).foregroundStyle(Palette.muted)
-            }
-            Spacer(minLength: 4)
-            Button("Send", action: send).buttonStyle(PrimaryButtonStyle(height: 44)).frame(width: 92).disabled(!ready)
-        }
-        .padding(.leading, 14).padding(.trailing, 10).padding(.vertical, 10)
-        .background(Palette.card)
-        .overlay(Rectangle().strokeBorder(ready ? Palette.ink : Palette.rule, lineWidth: 2))
-    }
-}
-
-/// "This session · N sends" rows.
+/// "This session" rows, the latest first, plus End and rate.
 struct SessionRows: View {
     @Environment(AscentStore.self) private var store
     var climbs: [Climb]
     var sends: [Climb]
     var gymOnly = false
+    @Binding var path: NavigationPath
 
     var body: some View {
         let shown = gymOnly ? climbs.filter { $0.gradeKind != .v } : climbs
         Band {
-            SectionHead("This session · \(sends.count) send\(sends.count == 1 ? "" : "s")",
-                        note: "HIGH \(LiveSummary.high(sends, db: store.db)) · \(sends.filter(Metrics.isFlash).count) FLASHED", size: 18)
-            if shown.isEmpty { Text("Nothing logged yet tonight.").font(.sans(13)).foregroundStyle(Palette.muted) }
-            ForEach(shown.prefix(8)) { c in
+            SectionHead("This session", note: "\(sends.count) send\(sends.count == 1 ? "" : "s"), high \(LiveSummary.high(sends, db: store.db)), \(sends.filter(Metrics.isFlash).count) flashed")
+            if shown.isEmpty { Text("Nothing logged yet.").font(.sans(14)).foregroundStyle(Palette.secondary) }
+            ForEach(Array(shown.prefix(8).enumerated()), id: \.element.id) { i, c in
                 ClimbRow(climb: c)
+                    .overlay(alignment: .bottom) { if i < min(8, shown.count) - 1 { Hairline() } }
                     .swipeToDelete { store.deleteClimb(c.id) }
             }
-            if let last = climbs.first {
-                LinkButton(title: "Undo last") { store.deleteClimb(last.id) }.padding(.top, 6)
-            }
+            Button("End and rate") { path.append(LogStep.review) }
+                .buttonStyle(SecondaryButtonStyle(height: 46))
+                .padding(.top, 14)
         }
     }
 }
@@ -415,10 +476,12 @@ struct SessionRows: View {
 struct TallyLogView: View {
     @Environment(AscentStore.self) private var store
     @Environment(Router.self) private var router
+    @Environment(\.accent) private var accent
     var session: Session
     var gym: Gym
     @Binding var path: NavigationPath
-    @State private var tickType: TickType = .flash
+    @State private var attempts = 1
+    @State private var notSent = false
     @State private var styles: [String] = []
     @State private var location = ""
     @State private var added = 0
@@ -428,56 +491,56 @@ struct TallyLogView: View {
         let tags = gym.tags ?? Vocab.camp5Tags
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
+                LiveTimerLine(session: session).frame(maxWidth: .infinity).padding(.bottom, 6)
                 ForEach(Array(tags.enumerated()), id: \.element) { i, tag in
                     let count = climbs.filter { $0.tagId == tag && Metrics.isSend($0) }.count
                     HStack(spacing: 12) {
                         Swatch(colour: tag, size: 30)
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(Vocab.colourLabel(tag)).font(.sans(14, .medium))
-                            Text("TAG \(i + 1) OF \(tags.count)\(i == 0 ? " · EASIEST" : i == tags.count - 1 ? " · HARDEST" : "")")
-                                .font(.mono(10)).tracking(0.6).foregroundStyle(Palette.muted)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(Vocab.colourLabel(tag)).font(.sans(15, .semibold)).foregroundStyle(Palette.text)
+                            Text("About \(Vocab.camp5Ranges[tag] ?? "")\(i == 0 ? ", easiest" : i == tags.count - 1 ? ", hardest" : "")")
+                                .font(.sans(12)).foregroundStyle(Palette.secondary)
                         }
                         Spacer()
-                        Text("\(count)").font(.mono(18)).foregroundStyle(count > 0 ? Palette.ink : Palette.faint)
+                        Text("\(count)").font(.num(18)).foregroundStyle(count > 0 ? Palette.text : Palette.tertiary)
+                            .contentTransition(.numericText())
                         Button { add(tag, ordinal: i + 1) } label: {
-                            Text("+").font(.sans(20)).foregroundStyle(count > 0 ? Palette.paper : Palette.ink)
+                            Image(systemName: "plus").font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(count > 0 ? accent.onAccent : Palette.text)
                                 .frame(width: 44, height: 44)
-                                .background(count > 0 ? Palette.ink : .clear)
-                                .overlay(Rectangle().strokeBorder(count > 0 ? Palette.ink : Palette.ruleChip, lineWidth: 1))
-                                .contentShape(Rectangle())
+                                .background(Circle().fill(count > 0 ? accent.color : Palette.raised))
+                                .contentShape(Circle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Log a \(Vocab.colourLabel(tag)) tag")
+                        .accessibilityLabel("Log a \(Vocab.colourLabel(tag)) tag, \(Vocab.attemptsLabel(attempts, sent: !notSent))")
                     }
-                    .foregroundStyle(Palette.ink)
-                    .padding(.horizontal, 13).padding(.vertical, 8)
-                    .background(Palette.card)
-                    .overlay(Rectangle().strokeBorder(count > 0 ? Palette.ink : Palette.rule, lineWidth: count > 0 ? 2 : 1))
+                    .padding(.leading, 14).padding(.trailing, 8).padding(.vertical, 8)
+                    .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Palette.surface))
                 }
-                Text("Style, tick type and location below apply to every tag.")
-                    .font(.sans(12.5)).foregroundStyle(Palette.muted).padding(.top, 2).padding(.bottom, 14)
                 if let t = trippedRules(store.db, styles: styles, today: store.today).first {
-                    WarnPanel(lead: "Load", text: "\(t.headline): \(t.used)/\(t.cap ?? 0) this week\(t.blocked ? ". Limit reached." : ". 1 left.")")
-                        .padding(.bottom, 14)
+                    WarnPanel(lead: "\(t.headline)", text: "\(t.used) of \(t.cap ?? 0) this week\(t.blocked ? ". Limit reached." : ". 1 left.")")
+                        .padding(.top, 6)
                 }
-                OptionalBlock(tickType: $tickType, styles: $styles, location: $location)
+                OptionalBlock(styles: $styles, notSent: $notSent, location: $location).padding(.top, 14)
             }
             .padding(.horizontal, 16)
-            SessionRows(climbs: climbs, sends: climbs.filter(Metrics.isSend), gymOnly: true).padding(.top, 18).padding(.bottom, 20)
+            SessionRows(climbs: climbs, sends: climbs.filter(Metrics.isSend), gymOnly: true, path: $path).padding(.top, 8).padding(.bottom, 20)
         }
         .safeAreaInset(edge: .bottom) {
-            Button("End & rate") { path.append(LogStep.review) }.buttonStyle(SecondaryButtonStyle())
-                .padding(.horizontal, 16).padding(.vertical, 10).background(Palette.paper)
+            AttemptBar(attempts: $attempts, notSent: notSent, sendTitle: nil, hint: "Then tap + on a tag")
         }
         .sensoryFeedback(.success, trigger: added)
     }
 
     func add(_ tag: String, ordinal: Int) {
+        let label = Vocab.attemptsLabel(attempts, sent: !notSent)
         let id = store.addClimb(Climb(sessionId: session.id, gymId: gym.id, gradeKind: .tag, grade: ordinal, tagId: tag, holdColour: tag,
-                                      styles: styles, location: location.isEmpty ? nil : location, tickType: tickType,
-                                      attempts: tickType == .flash ? 1 : 2))
-        router.show(Toast(title: "Tallied", detail: Vocab.colourLabel(tag).lowercased(), undo: { [store] in store.deleteClimb(id) }))
+                                      styles: styles, location: location.isEmpty ? nil : location,
+                                      tickType: Vocab.tickType(attempts: attempts, sent: !notSent), attempts: attempts))
+        router.show(Toast(title: "Logged \(Vocab.colourLabel(tag).lowercased())", detail: label, undo: { [store] in store.deleteClimb(id) }))
         added += 1
+        attempts = 1
+        notSent = false
     }
 }
 
@@ -485,6 +548,7 @@ struct TallyLogView: View {
 struct BoardLogView: View {
     @Environment(AscentStore.self) private var store
     @Environment(Router.self) private var router
+    @Environment(\.accent) private var accent
     var session: Session
     @Binding var path: NavigationPath
     @State private var boardId = ""
@@ -492,7 +556,8 @@ struct BoardLogView: View {
     @State private var v: Int?
     @State private var name = ""
     @State private var styles: [String] = []
-    @State private var tickType: TickType = .secondGo
+    @State private var attempts = 1
+    @State private var notSent = false
     @State private var logged = 0
 
     var body: some View {
@@ -505,78 +570,66 @@ struct BoardLogView: View {
 
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 6) {
+                LiveTimerLine(session: session).frame(maxWidth: .infinity).padding(.bottom, 14)
+                HStack(spacing: 8) {
                     ForEach(db.boards) { b in
+                        let on = b.id == board?.id
                         Button {
                             boardId = b.id
                             if !b.angles.contains(angle) { angle = b.angles.first ?? 40 }
                         } label: {
-                            Text(b.name).font(.sans(13, b.id == board?.id ? .semibold : .medium))
-                                .foregroundStyle(b.id == board?.id ? Palette.paper : Palette.ink)
+                            Text(b.name).font(.sans(14, on ? .semibold : .medium))
+                                .foregroundStyle(on ? accent.onAccent : Palette.text)
                                 .frame(maxWidth: .infinity, minHeight: 44)
-                                .background(b.id == board?.id ? Palette.ink : Palette.card)
-                                .overlay(Rectangle().strokeBorder(b.id == board?.id ? Palette.ink : Palette.ruleChip, lineWidth: 1))
+                                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(on ? accent.color : Palette.raised))
                         }
                         .buttonStyle(.plain)
                     }
                 }
                 .padding(.bottom, 12)
-                FieldRow(label: "ANGLE") {
+                FieldRow(label: "Angle") {
                     Spacer()
-                    HStack(spacing: 4) {
-                        ForEach(board?.angles ?? [], id: \.self) { a in GradeCell(label: "\(a)°", on: a == angle, height: 36) { angle = a }.frame(width: 52) }
+                    HStack(spacing: 6) {
+                        ForEach(board?.angles ?? [], id: \.self) { a in GradeCell(label: "\(a)°", on: a == angle, height: 36) { angle = a }.frame(width: 56) }
                     }
+                }
+                .padding(.bottom, 20)
+                FieldLabel(title: "Grade")
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+                    ForEach(1...10, id: \.self) { g in GradeCell(label: "V\(g)", on: v == g) { v = v == g ? nil : g } }
                 }
                 .padding(.bottom, 16)
-                Text("Grade sent").micro().padding(.bottom, 10)
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 5), spacing: 5) {
-                    ForEach(1...10, id: \.self) { g in GradeCell(label: "V\(g)", on: v == g) { v = g } }
-                }
-                .padding(.bottom, 14)
-                TextFieldRow(label: "CLIMB", placeholder: "shrimp cocktail", text: $name).padding(.bottom, 10)
-                ChipFlow {
-                    ForEach(Vocab.boardStyles, id: \.self) { s in
-                        Chip(label: s, on: styles.contains(s), small: true) {
-                            if styles.contains(s) { styles.removeAll { $0 == s } } else { styles.append(s) }
-                        }
-                    }
-                }
-                .padding(.bottom, 8)
-                ChipFlow {
-                    ForEach(Vocab.tickTypes, id: \.id) { t in Chip(label: t.label, on: tickType == t.id, small: true) { tickType = t.id } }
-                }
-                .padding(.bottom, 14)
+                TextFieldRow(label: "Climb", placeholder: "Shrimp cocktail", text: $name).padding(.bottom, 16)
                 if let t = tripped.first {
-                    WarnPanel(lead: "Load",
-                              text: "\(t.headline): \(t.used)/\(t.cap ?? 0) this week\(t.used == t.cap ? ". Limit reached." : ".")")
+                    WarnPanel(lead: "\(t.headline)", text: "\(t.used) of \(t.cap ?? 0) this week\(t.used == t.cap ? ". Limit reached." : ".")")
                         .padding(.bottom, 14)
                 }
-                Button(v == nil ? "Pick a V-grade" : "Log V\(v!) · \(board?.name ?? "") \(angle)°") { save(board) }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .disabled(v == nil || board == nil)
-                ForEach(tonight.prefix(5)) { c in
-                    HStack {
-                        Text("V\(c.grade)").font(.serif(16)).frame(width: 30, alignment: .leading)
-                        Text(boardDetail(c)).font(.sans(13)).foregroundStyle(Palette.muted).lineLimit(1)
-                        Spacer()
-                        LinkButton(title: "Undo", size: 12) { store.deleteClimb(c.id) }
-                    }
-                    .padding(.top, 8)
-                }
+                OptionalBlock(styles: $styles, notSent: $notSent, location: .constant(""), styleList: Vocab.boardStyles, showWhere: false)
             }
             .padding(.horizontal, 16)
 
-            Band {
-                SectionHead("\(board?.name.replacingOccurrences(of: "Board", with: "").trimmingCharacters(in: .whitespaces) ?? "") \(angle)° · all time",
-                            note: maxV.map { "MAX V\($0)" } ?? "NO SENDS", noteColor: Palette.ink, size: 18)
-                BoardHistogramView(bars: bars)
+            if !tonight.isEmpty {
+                Band {
+                    SectionHead("Tonight", note: "\(tonight.filter(Metrics.isSend).count) sends")
+                    ForEach(Array(tonight.prefix(6).enumerated()), id: \.element.id) { i, c in
+                        ClimbRow(climb: c)
+                            .overlay(alignment: .bottom) { if i < min(6, tonight.count) - 1 { Hairline() } }
+                            .swipeToDelete { store.deleteClimb(c.id) }
+                    }
+                }
             }
-            .padding(.top, 14)
+
+            Band {
+                SectionHead("\(board?.name ?? "Board") \(angle)°, all time", note: maxV.map { "Max V\($0)" } ?? "No sends")
+                BoardHistogramView(bars: bars)
+                Button("End and rate") { path.append(LogStep.review) }
+                    .buttonStyle(SecondaryButtonStyle(height: 46))
+                    .padding(.top, 14)
+            }
             .padding(.bottom, 20)
         }
         .safeAreaInset(edge: .bottom) {
-            Button("End & rate") { path.append(LogStep.review) }.buttonStyle(SecondaryButtonStyle())
-                .padding(.horizontal, 16).padding(.vertical, 10).background(Palette.paper)
+            AttemptBar(attempts: $attempts, notSent: notSent, sendTitle: notSent ? "Log" : "Send", canSend: v != nil && board != nil) { save(board) }
         }
         .sensoryFeedback(.success, trigger: logged)
         .onAppear {
@@ -590,15 +643,18 @@ struct BoardLogView: View {
 
     func save(_ board: Board?) {
         guard let v, let board else { return }
-        let attempts = tickType == .flash ? 1 : tickType == .secondGo ? 2 : 4
+        let label = Vocab.attemptsLabel(attempts, sent: !notSent)
         let id = store.addClimb(Climb(sessionId: session.id, boardId: board.id, angle: angle, gradeKind: .v, grade: v, styles: styles,
-                                      name: name.trimmingCharacters(in: .whitespaces).isEmpty ? nil : name, tickType: tickType, attempts: attempts))
-        router.show(Toast(title: "Logged", detail: "V\(v) · \(board.name) \(angle)°", undo: { [store] in store.deleteClimb(id) }))
+                                      name: name.trimmingCharacters(in: .whitespaces).isEmpty ? nil : name,
+                                      tickType: Vocab.tickType(attempts: attempts, sent: !notSent), attempts: attempts))
+        router.show(Toast(title: "Logged V\(v)", detail: label, undo: { [store] in store.deleteClimb(id) }))
         logged += 1
         self.v = nil
         name = ""
+        styles = []
+        attempts = 1
+        notSent = false
     }
-
 }
 
 /* ── 2.6 Review ─────────────────────────────────────────────────────────── */
@@ -633,9 +689,9 @@ struct ReviewView: View {
             let avg = db.reviews.isEmpty ? nil : ((db.reviews.map(\.overallScore).reduce(0, +) / Double(db.reviews.count)) * 10).rounded() / 10
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("How did that feel?").font(.serif(28, relativeTo: .title))
+                    Text("How did that feel?").font(.sans(28, .bold)).foregroundStyle(Palette.text)
                     Text("\(sends) send\(sends == 1 ? "" : "s"). Tap any that apply.")
-                        .font(.sans(13)).foregroundStyle(Palette.muted).padding(.top, 8)
+                        .font(.sans(15)).foregroundStyle(Palette.secondary).padding(.top, 6)
 
                     if session.intent == nil {
                         group("Session type") {
@@ -672,55 +728,55 @@ struct ReviewView: View {
                     }
                     if newPain {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("New pain").micro()
-                            TextFieldRow(label: "WHAT", placeholder: "R shoulder · front deltoid", text: $newPainName)
+                            FieldLabel(title: "New pain")
+                            TextFieldRow(label: "What", placeholder: "R shoulder, front deltoid", text: $newPainName)
                             ChipFlow { ForEach(Vocab.bodyParts, id: \.id) { p in Chip(label: p.label, on: newPainPart == p.id, small: true) { newPainPart = p.id } } }
                             Button("Add") { addNewPain() }.buttonStyle(PrimaryButtonStyle(height: 44))
                                 .disabled(newPainName.trimmingCharacters(in: .whitespaces).isEmpty)
                         }
-                        .padding(14).background(Palette.card).overlay(Rectangle().strokeBorder(Palette.rule, lineWidth: 1))
+                        .padding(14).background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Palette.surface))
                         .padding(.top, 10)
                     }
 
                     VStack(alignment: .leading, spacing: 0) {
                         HStack(alignment: .firstTextBaseline) {
-                            Text("Overall session").micro()
+                            Text("Overall session").font(.sans(15, .semibold)).foregroundStyle(Palette.text)
                             Spacer()
-                            Text(String(format: "%.1f", score)).font(.serif(32)).monospacedDigit()
+                            Text(String(format: "%.1f", score)).font(.num(32)).foregroundStyle(Palette.text).contentTransition(.numericText())
                         }
                         Slider(value: $score, in: 0...10, step: 0.1).tint(accent.color).padding(.top, 8)
                             .accessibilityLabel("Overall session score")
                             .accessibilityValue(String(format: "%.1f out of 10", score))
                         HStack {
-                            Text("ROUGH"); Spacer(); Text(avg.map { String(format: "AVG %.1f", $0) } ?? "NO AVG YET"); Spacer(); Text("BEST")
+                            Text("Rough"); Spacer(); Text(avg.map { String(format: "Average %.1f", $0) } ?? "No average yet"); Spacer(); Text("Best")
                         }
-                        .font(.mono(10.5)).foregroundStyle(Palette.muted).padding(.top, 10)
+                        .font(.sans(12)).foregroundStyle(Palette.secondary).padding(.top, 10)
                     }
-                    .padding(16).background(Palette.card).overlay(Rectangle().strokeBorder(Palette.rule, lineWidth: 1))
+                    .padding(16).background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Palette.surface))
                     .padding(.top, 18)
 
                     NoteBox(placeholder: "Note", text: $note).padding(.top, 10)
                 }
                 .padding(.horizontal, 16).padding(.bottom, 40)
             }
-            .background(Palette.paper)
+            .background(Palette.sheet)
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {
                 Button(db.review(for: session.id) == nil ? "Save review" : "Update review") { save(session) }
                     .buttonStyle(PrimaryButtonStyle())
-                    .padding(.horizontal, 16).padding(.vertical, 12).background(Palette.paper)
+                    .padding(.horizontal, 16).padding(.vertical, 12).background(Palette.sheet)
             }
-            .modifier(SheetChrome(title: "", subtitle: [db.gym(session.gymId)?.name, session.intent].compactMap { $0 }.joined(separator: " · ").uppercased()))
+            .modifier(SheetChrome(title: "", subtitle: [db.gym(session.gymId)?.name, session.intent].compactMap { $0 }.joined(separator: ", ")))
             .onAppear { load(session, db: db) }
         } else {
-            Text("No session to review.").font(.sans(14)).foregroundStyle(Palette.muted)
-                .frame(maxWidth: .infinity, maxHeight: .infinity).background(Palette.paper)
+            Text("No session to review.").font(.sans(14)).foregroundStyle(Palette.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity).background(Palette.sheet)
                 .modifier(SheetChrome(title: "Review", subtitle: ""))
         }
     }
 
     @ViewBuilder func group<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
-        Text(title).micro().padding(.top, 18).padding(.bottom, 9)
+        FieldLabel(title: title).padding(.top, 20)
         ChipFlow { content() }
     }
 
@@ -797,8 +853,8 @@ struct SavedView: View {
 
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Saved · \([db.gym(s?.gymId)?.name, s?.intent].compactMap { $0 }.joined(separator: " · "))").micro()
-                Text(headline(review?.overallScore, avg)).font(.serif(28, relativeTo: .title)).padding(.top, 10)
+                Text("Saved, \([db.gym(s?.gymId)?.name, s?.intent].compactMap { $0 }.joined(separator: ", "))").micro()
+                Text(headline(review?.overallScore, avg)).font(.sans(28, .bold)).foregroundStyle(Palette.text).padding(.top, 8)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 16)
@@ -806,13 +862,13 @@ struct SavedView: View {
             VStack(spacing: 10) {
                 HStack(spacing: 8) {
                     Button("Body log") { router.closeSheet(then: .body) }.buttonStyle(SecondaryButtonStyle())
-                    Button("Dashboard") { router.closeSheet(then: .today) }.buttonStyle(SecondaryButtonStyle())
+                    Button("Today") { router.closeSheet(then: .today) }.buttonStyle(SecondaryButtonStyle())
                 }
                 Button("Update review") { path.removeLast() }.buttonStyle(SecondaryButtonStyle(dashed: true))
             }
             .padding(.horizontal, 16).padding(.bottom, 40)
         }
-        .background(Palette.paper)
+        .background(Palette.sheet)
         .navigationBarBackButtonHiddenIfAvailable()
         .navigationTitle("")
         .inlineTitle()
@@ -826,7 +882,7 @@ struct SavedView: View {
         guard let avg else { return "\(s)" }
         let a = String(format: "%.1f", avg)
         if (score * 10).rounded() == (avg * 10).rounded() { return "\(s), your average" }
-        return "\(s) · avg \(a)"
+        return "\(s), average \(a)"
     }
 }
 

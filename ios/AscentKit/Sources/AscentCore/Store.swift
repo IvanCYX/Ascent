@@ -92,6 +92,9 @@ public final class AscentStore {
     public func setWeeklyTarget(_ n: Int) { write { $0.settings.weeklyTarget = min(7, max(1, n)) } }
     public func saveTemplate(_ intent: String, blocks: [PlanBlock]) { write { $0.settings.templates[intent] = blocks } }
     public func setTaperOverride(_ day: String?) { write { $0.settings.taperOverrideDay = day } }
+    public func setNormalNumbered(_ g: Int?) { write { $0.settings.normalNumbered = g.map { min(15, max(1, $0)) } } }
+    public func setNormalTag(_ tag: String?) { write { $0.settings.normalTag = tag } }
+    public func setNormalV(_ v: Int?) { write { $0.settings.normalV = v.map { min(17, max(0, $0)) } } }
 
     /* ── Sessions ────────────────────────────────────────────────────── */
 

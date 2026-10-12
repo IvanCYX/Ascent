@@ -44,7 +44,7 @@ public enum Seed {
     /// Batuu is the home gym; BHUB is the soft one you drop into.
     static let gymWeights: [(String, Double)] = [("batuu", 34), ("bump-pbj", 20), ("bump-j1", 15), ("bump-ssq", 11), ("bhub", 20)]
 
-    static let tagWeights: [(String, Int)] = [("yellow", 7), ("pink", 10), ("blue", 14), ("orange", 17), ("green", 14), ("purple", 10), ("red", 5)]
+    static let tagWeights: [(String, Int)] = [("pink", 7), ("blue", 10), ("yellow", 14), ("orange", 17), ("green", 14), ("purple", 10), ("red", 5)]
 
     static let holdPool = ["yellow", "pink", "blue", "orange", "green", "purple", "red", "black", "white"]
 

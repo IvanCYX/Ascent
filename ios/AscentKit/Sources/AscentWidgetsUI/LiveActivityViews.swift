@@ -13,8 +13,8 @@ public struct LiveSessionActivity: Widget {
     public var body: some WidgetConfiguration {
         ActivityConfiguration(for: LiveSessionAttributes.self) { context in
             LockScreenLiveView(state: context.state, stale: context.isStale)
-                .activityBackgroundTint(Palette.paper)
-                .activitySystemActionForegroundColor(Palette.ink)
+                .activityBackgroundTint(Palette.ground)
+                .activitySystemActionForegroundColor(Palette.text)
                 .environment(\.accent, SharedAccent.current)
         } dynamicIsland: { context in
             let s = context.state
@@ -22,7 +22,7 @@ public struct LiveSessionActivity: Widget {
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Label("LIVE · \(s.gymName.uppercased())", systemImage: "hand.raised.fingers.spread.fill")
+                        Label("Live · \(s.gymName)", systemImage: "hand.raised.fingers.spread.fill")
                             .font(.system(size: 13, weight: .semibold)).foregroundStyle(accent.color)
                         if let intent = s.intent { Text(intent).font(.system(size: 13)).opacity(0.7) }
                     }
@@ -83,8 +83,8 @@ struct LiveButtons: View {
                     .frame(maxWidth: .infinity, minHeight: 44).background(Capsule().fill(accent.color))
             }
             Link(destination: URL(string: "ascent://review")!) {
-                Text("End & rate").font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.ink)
-                    .frame(maxWidth: .infinity, minHeight: 44).background(Capsule().fill(Palette.ink.opacity(0.12)))
+                Text("End & rate").font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.text)
+                    .frame(maxWidth: .infinity, minHeight: 44).background(Capsule().fill(Palette.text.opacity(0.12)))
             }
         }
     }
@@ -100,8 +100,8 @@ struct LockScreenLiveView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
                 Circle().fill(accent.color).frame(width: 6, height: 6)
-                Text(stale ? "STILL CLIMBING?" : "LIVE · \(state.gymName.uppercased())\(state.intent.map { " · \($0.uppercased())" } ?? "")")
-                    .font(.mono(10.5)).tracking(1.2).foregroundStyle(Palette.muted)
+                Text(stale ? "Still climbing?" : "Live · \(state.gymName)\(state.intent.map { " · \($0)" } ?? "")")
+                    .font(.sans(12, .semibold)).foregroundStyle(Palette.secondary)
                     .privacySensitive(state.privacyLock)
             }
             HStack(alignment: .lastTextBaseline) {
@@ -116,14 +116,14 @@ struct LockScreenLiveView: View {
             }
             LiveButtons(accent: accent)
         }
-        .foregroundStyle(Palette.ink)
+        .foregroundStyle(Palette.text)
         .padding(16)
     }
 
     func stat(_ v: String, _ l: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(v).font(.serif(20))
-            Text(l.uppercased()).font(.mono(9)).foregroundStyle(Palette.muted)
+            Text(l).font(.sans(11)).foregroundStyle(Palette.secondary)
         }
     }
 }

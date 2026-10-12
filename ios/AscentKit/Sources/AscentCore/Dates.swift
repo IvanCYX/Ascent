@@ -59,6 +59,33 @@ public enum Day {
         return "\(days[p.dow]) \(p.d) \(months[p.m - 1])"
     }
 
+    /// "Monday 12 October" (r3 tab subtitles)
+    public static func fullDate(_ iso: String) -> String {
+        let p = parts(iso)
+        return "\(fullDays[p.dow]) \(p.d) \(fullMonths[p.m - 1])"
+    }
+
+    /// "Today", "Tomorrow", "Yesterday", else "Wednesday" within a week, else "12 Oct"
+    public static func relative(_ iso: String, today: String) -> String {
+        switch between(today, iso) {
+        case 0: return "Today"
+        case 1: return "Tomorrow"
+        case -1: return "Yesterday"
+        case 2...6, -6 ... -2: return fullDays[parts(iso).dow]
+        default: return pretty(iso)
+        }
+    }
+
+    /// "Mon"
+    public static func weekdayShort(_ iso: String) -> String {
+        let d = days[parts(iso).dow]
+        return d.prefix(1) + d.dropFirst().lowercased()
+    }
+
+    static let fullDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    static let fullMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
+                             "October", "November", "December"]
+
     /// "Sun 8 Nov 2026"
     public static func long(_ iso: String) -> String {
         let p = parts(iso)

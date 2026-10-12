@@ -27,6 +27,24 @@ public struct Database: Sendable, Hashable {
         var dates: [String: String] = [:]
         for s in sessions { dates[s.id] = s.date }
         reviews = stableSorted(reviews) { (dates[$0.sessionId] ?? "") < (dates[$1.sessionId] ?? "") }
+        rerankTags()
+    }
+
+    /// Ranked gyms follow `Vocab.camp5Tags`, and a tag climb's ordinal is its tag's place in its gym's list.
+    /// Logs saved before r3 ranked yellow first; this brings them onto the current order. Idempotent.
+    mutating func rerankTags() {
+        let standard = Set(Vocab.camp5Tags)
+        for i in gyms.indices where gyms[i].isRanked {
+            if let tags = gyms[i].tags, Set(tags) == standard, tags != Vocab.camp5Tags { gyms[i].tags = Vocab.camp5Tags }
+        }
+        var tagsByGym: [String: [String]] = [:]
+        for g in gyms where g.isRanked { tagsByGym[g.id] = g.tags ?? Vocab.camp5Tags }
+        for i in climbs.indices where climbs[i].gradeKind == .tag {
+            let tags = climbs[i].gymId.flatMap { tagsByGym[$0] } ?? Vocab.camp5Tags
+            if let tag = climbs[i].tagId, let idx = tags.firstIndex(of: tag), climbs[i].grade != idx + 1 {
+                climbs[i].grade = idx + 1
+            }
+        }
     }
 
     /* ── Lookups ─────────────────────────────────────────────────────── */
@@ -93,6 +111,9 @@ extension Database: Codable {
             case "seededAt": s.seededAt = row.value.string
             case "weeklyTarget": s.weeklyTarget = row.value.int ?? 4
             case "taperOverrideDay": s.taperOverrideDay = row.value.string
+            case "normalNumbered": s.normalNumbered = row.value.int
+            case "normalTag": s.normalTag = row.value.string
+            case "normalV": s.normalV = row.value.int
             case let key where key.hasPrefix("template:"):
                 if let blocks = try? row.value.decode([PlanBlock].self) {
                     s.templates[String(key.dropFirst("template:".count))] = blocks
@@ -127,6 +148,9 @@ extension Database: Codable {
         if let v = settings.blockStart { rows.append(.init(key: "blockStart", value: .string(v))) }
         if let v = settings.seededAt { rows.append(.init(key: "seededAt", value: .string(v))) }
         if let v = settings.taperOverrideDay { rows.append(.init(key: "taperOverrideDay", value: .string(v))) }
+        if let v = settings.normalNumbered { rows.append(.init(key: "normalNumbered", value: .number(Double(v)))) }
+        if let v = settings.normalTag { rows.append(.init(key: "normalTag", value: .string(v))) }
+        if let v = settings.normalV { rows.append(.init(key: "normalV", value: .number(Double(v)))) }
         for (intent, blocks) in settings.templates.sorted(by: { $0.key < $1.key }) {
             rows.append(.init(key: "template:\(intent)", value: try JSONValue(encoding: blocks)))
         }

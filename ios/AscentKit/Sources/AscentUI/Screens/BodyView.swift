@@ -17,55 +17,58 @@ struct BodyView: View {
 
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .top, spacing: 10) {
-                    BodyMapView(status: bodyStatus(db), selected: filter) { filter = $0 }
-                        .frame(width: 150)
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Tap an area to filter").micro()
-                        legend(Palette.warn, "Active", db.activeInjuries)
-                        legend(Palette.watch, "Watching", db.watchingInjuries)
-                        if filter != nil { LinkButton(title: "Clear filter") { filter = nil } }
+                Card {
+                    HStack(alignment: .center, spacing: 18) {
+                        BodyMapView(status: bodyStatus(db), selected: filter) { filter = $0 }
+                            .frame(width: 120)
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(db.activeInjuries) { legend(Palette.injury, shortInjury($0.name), bold: true) }
+                            ForEach(db.watchingInjuries) { legend(Palette.caution, shortInjury($0.name), bold: false) }
+                            if db.activeInjuries.isEmpty && db.watchingInjuries.isEmpty {
+                                Text("Nothing logged").font(.sans(14)).foregroundStyle(Palette.secondary)
+                            }
+                            if filter != nil { LinkButton(title: "Clear filter") { filter = nil } }
+                            else { Text("Tap an area to filter").font(.sans(12)).foregroundStyle(Palette.secondary) }
+                        }
+                        Spacer(minLength: 0)
                     }
-                    .padding(.top, 12)
                 }
-                .padding(.horizontal, 16).padding(.bottom, 6)
+                .padding(.horizontal, 16).padding(.top, 4)
 
                 if shown.isEmpty {
                     Text("Nothing logged here.")
-                        .font(.sans(13)).foregroundStyle(Palette.muted).padding(16)
+                        .font(.sans(14)).foregroundStyle(Palette.secondary).padding(20)
                 }
 
                 ForEach(shown) { inj in InjuryDetail(injury: inj) }
 
                 if !watching.isEmpty && !active.isEmpty && filter == nil {
                     Band {
-                        Text("Watching").micro().padding(.bottom, 10)
-                        ForEach(watching) { w in
+                        SectionHead("Watching")
+                        ForEach(Array(watching.enumerated()), id: \.element.id) { i, w in
                             HStack(spacing: 12) {
-                                RoundedRectangle(cornerRadius: 3).fill(Palette.watch).frame(width: 11, height: 11)
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(w.name).font(.sans(13.5, .medium))
-                                    Text("SINCE \(Day.pretty(w.onsetDate).uppercased())").font(.mono(10)).foregroundStyle(Palette.muted)
+                                Circle().fill(Palette.caution).frame(width: 10, height: 10)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(w.name).font(.sans(15, .medium)).foregroundStyle(Palette.text)
+                                    Text("Since \(Day.pretty(w.onsetDate))").font(.sans(13)).foregroundStyle(Palette.secondary)
                                 }
                                 Spacer()
                                 LinkButton(title: "Escalate") {
                                     store.updateInjury(w.id) { $0.status = .active; $0.rehabStart = store.today }
                                 }
                             }
-                            .padding(.horizontal, 14).padding(.vertical, 8)
-                            .background(Palette.card)
-                            .overlay(Rectangle().strokeBorder(Palette.rule, lineWidth: 1))
-                            .padding(.bottom, 6)
+                            .padding(.vertical, 8)
+                            .overlay(alignment: .bottom) { if i < watching.count - 1 { Hairline() } }
                         }
                     }
                 }
 
                 if !resolved.isEmpty && filter == nil {
                     Band {
-                        Text("Resolved").micro().padding(.bottom, 10)
+                        SectionHead("Resolved")
                         ForEach(resolved) { r in
                             HStack {
-                                Text(r.name).font(.sans(13)).foregroundStyle(Palette.muted)
+                                Text(r.name).font(.sans(14)).foregroundStyle(Palette.secondary)
                                 Spacer()
                                 LinkButton(title: "Reopen") { store.updateInjury(r.id) { $0.status = .watching } }
                             }
@@ -73,22 +76,21 @@ struct BodyView: View {
                     }
                 }
             }
-            .padding(.bottom, 80)
+            .padding(.bottom, 96)
         }
-        .background(Palette.paper)
+        .background(Palette.ground)
         .navigationTitle("Body")
-        .navigationSubtitle("\(db.activeInjuries.count) ACTIVE · \(db.watchingInjuries.count) WATCHING")
+        .navigationSubtitle("\(db.activeInjuries.count) active, \(db.watchingInjuries.count) watching")
         .largeTitle()
         .toolbar {
             ToolbarItem(placement: .trailing) { Button("Log new") { router.sheet = .newInjury } }
         }
     }
 
-    func legend(_ c: Color, _ label: String, _ items: [Injury]) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            RoundedRectangle(cornerRadius: 3).fill(c).frame(width: 11, height: 11).padding(.top, 3)
-            Text("\(Text(label).bold()) · \(items.map { shortInjury($0.name) }.joined(separator: ", ").ifEmpty("none"))")
-                .font(.sans(13)).foregroundStyle(Palette.ink).fixedSize(horizontal: false, vertical: true)
+    func legend(_ c: Color, _ label: String, bold: Bool) -> some View {
+        HStack(spacing: 8) {
+            Circle().fill(c).frame(width: 10, height: 10)
+            Text(label).font(.sans(14, bold ? .semibold : .regular)).foregroundStyle(Palette.text).fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -121,9 +123,15 @@ struct InjuryDetail: View {
         let usage = Metrics.loadRuleUsage(rules.filter { $0.maxPerWeek != nil }, climbs: db.climbs, weekStart: Day.weekStart(today))
 
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 0) {
+            Card {
                 HStack(alignment: .top, spacing: 10) {
-                    Text(injury.name).font(.serif(22, relativeTo: .title2)).fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(shortInjury(injury.name).replacingOccurrences(of: "L ", with: "Left ").replacingOccurrences(of: "R ", with: "Right "))
+                            .font(.sans(20, .bold)).foregroundStyle(Palette.text).fixedSize(horizontal: false, vertical: true)
+                        Text([injury.name.components(separatedBy: " · ").dropFirst().first, rehabWeek.map { "rehab week \($0)" }]
+                                .compactMap { $0 }.joined(separator: ", ").ifEmpty("Since \(Day.pretty(injury.onsetDate))"))
+                            .font(.sans(14)).foregroundStyle(Palette.secondary)
+                    }
                     Spacer()
                     Menu {
                         Button(injury.status == .active ? "Downgrade to watching" : injury.status == .watching ? "Resolve" : "Reopen") {
@@ -136,76 +144,71 @@ struct InjuryDetail: View {
                         }
                         Button("Edit") { router.sheet = .editInjury(injury.id) }
                     } label: {
-                        Image(systemName: "ellipsis").font(.system(size: 14, weight: .semibold)).foregroundStyle(Palette.ink)
+                        Image(systemName: "ellipsis").font(.system(size: 14, weight: .semibold)).foregroundStyle(Palette.text)
                             .frame(width: 36, height: 36)
-                            .glassEffect(.regular.interactive(), in: .circle)
+                            .background(Circle().fill(Palette.raised))
+                            .frame(width: 44, height: 44)
                     }
                     .menuIndicator(.hidden)
                     .accessibilityLabel("Injury actions")
                 }
-                Text(["Onset \(Day.pretty(injury.onsetDate))", injury.severity, injury.diagnosis].compactMap { $0 }.joined(separator: " · "))
-                    .font(.sans(12.5)).foregroundStyle(Palette.muted).padding(.top, 7)
-                if let rehabWeek, injury.status == .active {
-                    Text("REHAB WK \(rehabWeek)").font(.mono(10.5)).tracking(1).foregroundStyle(Palette.warn).padding(.top, 8)
+                if let severity = injury.severity ?? injury.diagnosis {
+                    Text([injury.severity, injury.diagnosis].compactMap { $0 }.joined(separator: ", ").ifEmpty(severity))
+                        .font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 6)
                 }
 
-                Text("Pain 0–10 · by session").micro().padding(.top, 18).padding(.bottom, 10)
-                if pain.isEmpty {
-                    Text("no entries yet").font(.sans(12)).foregroundStyle(Palette.muted)
-                } else {
-                    PainBars(levels: pain.map(\.level), height: 70, fullCount: 2)
-                        .overlay(alignment: .bottom) { Hairline(color: Palette.ruleStrong) }
-                    HStack {
-                        Text("\(Day.short(pain.first!.date)) · \(pain.first!.level)/10")
-                        Spacer()
-                        Text("NOW · \(pain.last!.level)/10")
+                if let last = pain.last {
+                    HStack(alignment: .center, spacing: 8) {
+                        Text("\(last.level)\(Text("/10").font(.num(20)).foregroundStyle(Palette.secondary))").font(.num(40, relativeTo: .largeTitle))
+                            .foregroundStyle(Palette.text)
+                        if let first = pain.first, first.id != last.id, first.level != last.level {
+                            let d = last.level - first.level
+                            DeltaChip(text: "\(d > 0 ? "+" : "−")\(abs(d)) since \(Day.pretty(first.date))", tone: d > 0 ? .caution : .neutral)
+                        }
                     }
-                    .font(.mono(10.5)).foregroundStyle(Palette.muted).padding(.top, 7)
+                    .padding(.top, 16)
+                    PainBars(levels: pain.map(\.level), height: 64, fullCount: 2).padding(.top, 14)
+                } else {
+                    Text("No pain logged yet").font(.sans(14)).foregroundStyle(Palette.secondary).padding(.top, 16)
                 }
 
-                Text("Log today").micro().padding(.top, 14).padding(.bottom, 8)
+                Text("Pain today").font(.sans(15, .semibold)).foregroundStyle(Palette.text).padding(.top, 18).padding(.bottom, 10)
                 PainRow(selected: todayLevel) { store.addPainEntry(injuryId: injury.id, level: $0) }
-
-                if !exercises.isEmpty {
-                    Text("Adherence").micro().padding(.top, 20).padding(.bottom, 6)
-                    Text("\(adh.streak)\(Text(" day streak").font(.serif(15)).foregroundStyle(Palette.muted))").font(.serif(34, relativeTo: .largeTitle))
-                    AdherenceStrip(done: adh.done).padding(.top, 12)
-                    Text("\(adh.doneDays) of \(adh.total) days\(adh.missedLabel.map { " · missed \(Day.weekday($0).prefix(1))\(Day.weekday($0).dropFirst().lowercased()) \(Day.pretty($0))" } ?? "")")
-                        .font(.sans(11.5)).foregroundStyle(Palette.muted).padding(.top, 8)
-                }
             }
-            .padding(16)
-            .overlay(Rectangle().strokeBorder(Palette.ruleStrong, lineWidth: 1))
             .padding(.horizontal, 16)
 
             Band(top: false) {
-                SectionHead("Rehab protocol", note: "TAP TO TICK TODAY")
+                SectionHead("Rehab today", note: exercises.isEmpty ? nil : "\(Metrics.rehabAdherence(exercises, logs: db.rehabLogs, window: 7, today: today).doneDays) of 7 this week")
                 ForEach(exercises) { e in
                     RehabRow(exercise: e)
                         .swipeToDelete { store.deleteRehabExercise(e.id) }
                 }
-                if exercises.isEmpty { Text("No exercises yet.").font(.sans(13)).foregroundStyle(Palette.muted) }
-                LinkButton(title: "+ Add exercise") { router.sheet = .addExercise(injuryId: injury.id) }.padding(.top, 6)
+                if exercises.isEmpty { Text("No exercises yet.").font(.sans(14)).foregroundStyle(Palette.secondary) }
+                if adh.streak > 0 {
+                    Text("\(adh.streak)-day streak").font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 4)
+                }
+                LinkButton(title: "Add exercise") { router.sheet = .addExercise(injuryId: injury.id) }.padding(.top, 4)
             }
 
             Band {
-                SectionHead("Load rules & notes")
+                SectionHead("Load rules")
                 ForEach(rules) { r in
                     LoadRuleCard(rule: r, usage: usage.first { $0.ruleId == r.id }) { store.deleteLoadRule(r.id) }
                 }
-                LinkButton(title: "+ Add load rule") { router.sheet = .addLoadRule(injuryId: injury.id) }.padding(.bottom, 8)
+                LinkButton(title: "Add load rule") { router.sheet = .addLoadRule(injuryId: injury.id) }
                 if injury.physioNext != nil || injury.physioNote != nil {
                     VStack(alignment: .leading, spacing: 8) {
                         if let next = injury.physioNext {
-                            Text("Physio · next \(Day.weekday(next).prefix(1))\(Day.weekday(next).dropFirst().lowercased()) \(Day.pretty(next))").micro()
+                            Text("Physio next \(Day.weekdayShort(next)) \(Day.pretty(next))").micro()
                         }
                         if let note = injury.physioNote {
-                            Text("“\(note)”").font(.sans(13)).foregroundStyle(Palette.ink).fixedSize(horizontal: false, vertical: true)
+                            Text("“\(note)”").font(.sans(14)).foregroundStyle(Palette.text).fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 14).padding(.vertical, 13)
-                    .overlay(Rectangle().strokeBorder(Palette.ruleStrong, style: StrokeStyle(lineWidth: 1, dash: [5, 3])))
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.raised))
+                    .padding(.top, 10)
                 }
             }
         }
@@ -220,15 +223,15 @@ struct PainRow: View {
     var onPick: (Int) -> Void
 
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 3) {
             ForEach(0...10, id: \.self) { n in
                 let on = selected == n
                 Button { onPick(n) } label: {
-                    Text("\(n)").font(.mono(12, on ? .semibold : .regular))
-                        .foregroundStyle(on ? Color.white : n == last ? Palette.warn : Palette.ink)
+                    Text("\(n)").font(.num(13))
+                        .foregroundStyle(on ? Color.white : n == last ? Palette.injuryText : Palette.text)
                         .frame(maxWidth: .infinity, minHeight: 44)
-                        .background(on ? Palette.warn : Palette.card)
-                        .overlay(Rectangle().strokeBorder(n == last && !on ? Palette.warnBorder : Palette.ruleChip, lineWidth: 1))
+                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(on ? Palette.injury : Palette.raised))
+                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Palette.injuryBorder, lineWidth: n == last && !on ? 1 : 0))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -251,34 +254,32 @@ struct RehabRow: View {
         let today = store.today
         let doneToday = db.rehabLogs.contains { $0.exerciseId == exercise.id && $0.date == today && $0.done }
         let thisWeek = db.rehabLogs.filter { $0.exerciseId == exercise.id && $0.date >= Day.weekStart(today) && $0.done }.count
-        let status = exercise.frequency >= 7 ? (doneToday ? "DONE" : "DUE") : "\(min(thisWeek, exercise.frequency)) OF \(exercise.frequency)"
+        let status = exercise.frequency >= 7 ? (doneToday ? "Done" : "Due") : "\(min(thisWeek, exercise.frequency)) of \(exercise.frequency)"
 
         Button {
             store.toggleRehab(exercise.id)
             onToggle?(!doneToday)
         } label: {
-            HStack(spacing: 11) {
-                Rectangle().fill(doneToday ? accent.color : .clear)
-                    .frame(width: 20, height: 20)
-                    .overlay(Rectangle().strokeBorder(doneToday ? accent.color : Palette.ruleStrong, lineWidth: 1))
-                    .overlay { if doneToday { Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(accent.onAccent) } }
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(exercise.name).font(.sans(14, .medium)).foregroundStyle(Palette.ink)
-                    Text(exercise.prescription).font(.mono(10.5)).foregroundStyle(Palette.muted)
+            HStack(spacing: 12) {
+                Circle().fill(doneToday ? Palette.injury : .clear)
+                    .frame(width: 28, height: 28)
+                    .overlay(Circle().strokeBorder(Palette.injury, lineWidth: doneToday ? 0 : 2))
+                    .overlay { if doneToday { Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundStyle(.white) } }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(exercise.name).font(.sans(15)).foregroundStyle(doneToday ? Palette.secondary : Palette.text)
+                        .strikethrough(doneToday, color: Palette.secondary)
+                    Text(exercise.prescription.sentenceCased).font(.sans(13)).foregroundStyle(Palette.secondary)
                 }
                 Spacer()
-                Text(status).font(.mono(10.5)).foregroundStyle(status == "DUE" ? Palette.warn : Palette.muted)
+                Text(status).font(.sans(13, .medium)).foregroundStyle(status == "Due" ? Palette.injuryText : Palette.secondary)
             }
-            .padding(.horizontal, 13).padding(.vertical, 11)
-            .background(Palette.card)
-            .overlay(Rectangle().strokeBorder(Palette.rule, lineWidth: 1))
+            .padding(.vertical, 10)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .sensoryFeedback(.success, trigger: doneToday) { _, new in new }
         .accessibilityAddTraits(doneToday ? .isSelected : [])
         .accessibilityValue(status.lowercased())
-        .padding(.bottom, 8)
     }
 }
 
@@ -289,33 +290,29 @@ struct LoadRuleCard: View {
 
     var body: some View {
         let capped = rule.maxPerWeek != nil
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top) {
-                Text(rule.headline).font(.sans(13, .semibold)).foregroundStyle(capped ? Palette.warn : Palette.ink)
-                Spacer()
-                Button(action: onDelete) {
-                    Image(systemName: "xmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(Palette.faint).frame(width: 28, height: 28)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Delete rule")
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(rule.styleOrType).font(.sans(15, .semibold)).foregroundStyle(Palette.text)
+                Text(capped ? "Max \(rule.maxPerWeek!) a week, \(rule.condition)" : "Not at all, \(rule.condition)")
+                    .font(.sans(13)).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
             }
+            Spacer()
             if capped, let u = usage {
-                HStack(spacing: 4) {
-                    ForEach(0..<(rule.maxPerWeek! + 1), id: \.self) { i in
-                        Rectangle().fill(i < u.used ? Palette.warn : Palette.track).frame(width: 28, height: 8)
-                    }
-                }
+                Text("\(u.used) of \(rule.maxPerWeek!)")
+                    .font(.sans(13, .semibold)).monospacedDigit()
+                    .foregroundStyle(u.blocked ? Palette.injuryText : u.nearing ? Palette.cautionText : Palette.secondary)
+                    .padding(.horizontal, 9).frame(minHeight: 24)
+                    .background(Capsule().fill(u.blocked ? Palette.injuryBg : u.nearing ? Palette.cautionBg : Palette.raised))
+            } else if !capped {
+                Text("Off").font(.sans(13, .semibold)).foregroundStyle(Palette.injuryText)
+                    .padding(.horizontal, 9).frame(minHeight: 24).background(Capsule().fill(Palette.injuryBg))
             }
-            Text(capped && usage != nil
-                 ? "\(usage!.used)/\(rule.maxPerWeek!) this week, \(rule.condition)."
-                 : "In force \(rule.condition).")
-                .font(.sans(12.5)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 15).padding(.vertical, 13)
-        .background(capped ? Palette.warnBg : Palette.card)
-        .overlay(Rectangle().strokeBorder(capped ? Palette.warnBorder : Palette.rule, lineWidth: 1))
+        .padding(.vertical, 10)
+        .overlay(alignment: .bottom) { Hairline() }
+        .contentShape(Rectangle())
+        .contextMenu { Button("Delete rule", role: .destructive, action: onDelete) }
         .swipeToDelete(perform: onDelete)
-        .padding(.bottom, 11)
     }
 }
 
@@ -336,7 +333,7 @@ struct SheetScaffold<Content: View>: View {
                 VStack(alignment: .leading, spacing: 0) { content }
                     .padding(.horizontal, 16).padding(.bottom, 40)
             }
-            .background(Palette.paper)
+            .background(Palette.sheet)
             .navigationTitle(title)
             .navigationSubtitle(subtitle ?? "")
             .inlineTitle()
@@ -367,17 +364,17 @@ struct InjuryEditorSheet: View {
     @State private var loaded = false
 
     var body: some View {
-        SheetScaffold(title: injuryId == nil ? "Log something new" : "Edit", subtitle: "BODY LOG",
+        SheetScaffold(title: injuryId == nil ? "Log something new" : "Edit", subtitle: "Body log",
                       action: injuryId == nil ? "Add" : "Save", actionEnabled: !name.trimmingCharacters(in: .whitespaces).isEmpty, onAction: save) {
-            TextFieldRow(label: "WHAT", placeholder: "Left ring finger · A2 pulley strain", text: $name).padding(.bottom, 14)
-            Text("Where").micro().padding(.bottom, 9)
+            TextFieldRow(label: "What", placeholder: "Left ring finger · A2 pulley strain", text: $name).padding(.bottom, 16)
+            FieldLabel(title: "Where")
             ChipFlow { ForEach(Vocab.bodyParts, id: \.id) { p in Chip(label: p.label, on: part == p.id, small: true) { part = p.id } } }
-                .padding(.bottom, 14)
-            Text("Status").micro().padding(.bottom, 9)
+                .padding(.bottom, 16)
+            FieldLabel(title: "Status")
             SquareSegment(options: [(InjuryStatus.active, "Active"), (.watching, "Watching")], selection: $status).padding(.bottom, 14)
-            TextFieldRow(label: "SEVERITY", placeholder: "grade I", text: $severity).padding(.bottom, 8)
-            TextFieldRow(label: "DIAGNOSIS", placeholder: "confirmed by physio", text: $diagnosis).padding(.bottom, 8)
-            FieldRow(label: "PHYSIO NEXT") {
+            TextFieldRow(label: "Severity", placeholder: "Grade I", text: $severity).padding(.bottom, 8)
+            TextFieldRow(label: "Diagnosis", placeholder: "Confirmed by physio", text: $diagnosis).padding(.bottom, 8)
+            FieldRow(label: "Physio next") {
                 Spacer()
                 if hasPhysio { DatePicker("Physio", selection: $physioNext, displayedComponents: .date).labelsHidden() }
                 Toggle("Physio booked", isOn: $hasPhysio).labelsHidden()
@@ -431,13 +428,13 @@ struct AddExerciseSheet: View {
     var body: some View {
         SheetScaffold(title: "Add exercise", subtitle: nil, action: "Add", actionEnabled: !name.trimmingCharacters(in: .whitespaces).isEmpty) {
             store.addRehabExercise(injuryId: injuryId, name: name.trimmingCharacters(in: .whitespaces),
-                                   prescription: dose.trimmingCharacters(in: .whitespaces).uppercased().ifEmpty(frequency >= 7 ? "DAILY" : "\(frequency)×/WEEK"),
+                                   prescription: dose.trimmingCharacters(in: .whitespaces).ifEmpty(frequency >= 7 ? "Daily" : "\(frequency)× a week"),
                                    frequency: frequency)
             dismiss()
         } content: {
-            TextFieldRow(label: "NAME", placeholder: "Tendon glides", text: $name).padding(.bottom, 8)
-            TextFieldRow(label: "DOSE", placeholder: "2 × 10 · MORNING & NIGHT", text: $dose).padding(.bottom, 8)
-            FieldRow(label: "TIMES / WEEK") {
+            TextFieldRow(label: "Name", placeholder: "Tendon glides", text: $name).padding(.bottom, 8)
+            TextFieldRow(label: "Dose", placeholder: "2 × 10, morning and night", text: $dose).padding(.bottom, 8)
+            FieldRow(label: "Times a week") {
                 Spacer()
                 SquareStepper(value: frequency >= 7 ? "Daily" : "\(frequency)",
                               decrement: { frequency = max(1, frequency - 1) }, increment: { frequency = min(7, frequency + 1) })
@@ -457,24 +454,24 @@ struct AddLoadRuleSheet: View {
     var body: some View {
         let injury = store.db.injuries.first { $0.id == injuryId }
         let short = injury.map { shortInjury($0.name) } ?? "the injury"
-        SheetScaffold(title: "Add load rule", subtitle: "CAP A STYLE", action: "Add") {
+        SheetScaffold(title: "Add load rule", subtitle: "Cap a style", action: "Add") {
             store.addLoadRule(LoadRule(injuryId: injuryId, styleOrType: style, maxPerWeek: prohibition ? nil : cap,
                                        condition: prohibition ? "until \(short) is pain-free" : "while \(short) is above 1/10",
                                        headline: prohibition ? "No \(style.lowercased())" : "\(style) sessions · max \(cap) per week"))
             dismiss()
         } content: {
-            Text("Style").micro().padding(.bottom, 9)
+            FieldLabel(title: "Style")
             ChipFlow { ForEach(Vocab.boardStyles + ["Campus"], id: \.self) { s in Chip(label: s, on: style == s, small: true) { style = s } } }
                 .padding(.bottom, 14)
             SquareSegment(options: [(false, "Weekly cap"), (true, "Not at all")], selection: $prohibition).padding(.bottom, 10)
             if !prohibition {
-                FieldRow(label: "MAX / WEEK") {
+                FieldRow(label: "Max a week") {
                     Spacer()
                     SquareStepper(value: "\(cap)", decrement: { cap = max(0, cap - 1) }, increment: { cap = min(7, cap + 1) })
                 }
             }
             Text("Counts sessions, not climbs.")
-                .font(.sans(12.5)).foregroundStyle(Palette.muted).padding(.top, 10)
+                .font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 10)
         }
     }
 }

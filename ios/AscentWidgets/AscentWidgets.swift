@@ -77,7 +77,7 @@ struct AscentWidgetEntryView: View {
         AscentWidgetView(kind: kind, summary: entry.summary, privacyLock: entry.privacyLock, accent: entry.accent)
             .widgetURL(URL(string: isHome ? "ascent://today" : "ascent://log"))
             .containerBackground(for: .widget) {
-                if isHome { Palette.paper } else { Color.clear }
+                if isHome { Palette.surface } else { Color.clear }
             }
     }
 }

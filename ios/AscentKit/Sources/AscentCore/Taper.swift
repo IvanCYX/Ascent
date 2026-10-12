@@ -9,6 +9,17 @@ public enum Phase: String, Sendable, Hashable {
     case comp = "COMP"
 
     public var isTaper: Bool { self == .taper || self == .compWeek }
+
+    /// "Build", "Peak", "Taper", "Comp week", "Comp day" (r3 sentence case)
+    public var label: String {
+        switch self {
+        case .build: "Build"
+        case .peak: "Peak"
+        case .taper: "Taper"
+        case .compWeek: "Comp week"
+        case .comp: "Comp day"
+        }
+    }
 }
 
 public enum Taper {
@@ -80,6 +91,26 @@ public enum Taper {
         let start = db.settings.blockStart ?? Day.weekStart(today)
         let wk = min(db.settings.blockWeeks, max(1, Day.weeksBetween(start, today) + 1))
         return "WK \(wk) OF \(db.settings.blockWeeks) · \(db.settings.blockPhase)"
+    }
+
+    /// The season line in sentence case for r3 subtitles: "Peak, 5 weeks to KL Open".
+    public static func seasonText(_ db: Database, today: String) -> String {
+        if let dp = dayPhase(db.competitions, on: today), Day.between(today, dp.comp.date) <= 56 {
+            let days = Day.between(today, dp.comp.date)
+            let name = dp.comp.displayName
+            switch dp.phase {
+            case .taper, .compWeek:
+                return "\(dp.phase.label), \(days) day\(days == 1 ? "" : "s") to \(name)"
+            case .comp:
+                return "Comp day, \(name)"
+            default:
+                let weeks = Metrics.weeksOut(today: today, compDate: dp.comp.date)
+                return "\(dp.phase.label), \(weeks) week\(weeks == 1 ? "" : "s") to \(name)"
+            }
+        }
+        let start = db.settings.blockStart ?? Day.weekStart(today)
+        let wk = min(db.settings.blockWeeks, max(1, Day.weeksBetween(start, today) + 1))
+        return "Week \(wk) of \(db.settings.blockWeeks), \(db.settings.blockPhase.sentenceCasedPhase)"
     }
 
     /* ── 8-week averages ─────────────────────────────────────────────── */
@@ -270,4 +301,9 @@ public enum Taper {
     public static func peakStart(_ comp: Competition) -> String? {
         comp.effectivePriority == .a ? Day.add(Day.weekStart(comp.date), -14) : nil
     }
+}
+
+extension String {
+    /// "BUILD" → "build" for the block phase inside a sentence.
+    var sentenceCasedPhase: String { Phase(rawValue: self)?.label.lowercased() ?? lowercased() }
 }

@@ -11,16 +11,16 @@ struct PlanView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 SquareSegment(options: [(Router.PlanSegment.today, "Today"), (.season, "Season")], selection: $router.planSegment)
-                    .padding(.horizontal, 16).padding(.bottom, 16)
+                    .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 12)
                 switch router.planSegment {
                 case .today: PlanDayEditor(date: store.today)
                 case .season: SeasonView()
                 }
             }
         }
-        .background(Palette.paper)
+        .background(Palette.ground)
         .navigationTitle("Plan")
-        .navigationSubtitle(Taper.seasonLine(store.db, today: store.today))
+        .navigationSubtitle(Taper.seasonText(store.db, today: store.today))
         .largeTitle()
         .toolbar {
             if router.planSegment == .season {
@@ -39,7 +39,7 @@ struct PlanDayScreen: View {
 
     var body: some View {
         ScrollView { PlanDayEditor(date: date).padding(.top, 8) }
-            .background(Palette.paper)
+            .background(Palette.ground)
             .navigationTitle(Day.long(date))
             .inlineTitle()
     }
@@ -49,6 +49,7 @@ struct PlanDayScreen: View {
 struct PlanDayEditor: View {
     @Environment(AscentStore.self) private var store
     @Environment(Router.self) private var router
+    @Environment(\.accent) private var accent
     var date: String
 
     @State private var loadedFor: String?
@@ -80,45 +81,43 @@ struct PlanDayEditor: View {
         let gym = db.gym(gymId)
 
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("\(Day.plan(date)) · \(gym?.name ?? "No gym")").micro()
-                Text("\(intent.capitalized) Day")
-                    .font(.serif(27, relativeTo: .title)).foregroundStyle(Palette.ink)
+            Card {
+                Text("\(Day.relative(date, today: store.today)) at \(gym?.name ?? "no gym")").micro()
+                Text(intent.prefix(1).uppercased() + intent.dropFirst())
+                    .font(.sans(26, .bold)).foregroundStyle(Palette.text).padding(.top, 4)
                     .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.horizontal, 16).padding(.bottom, 16)
-
-            if tapering, let dp, let scaled {
-                TaperCard(dp: dp, scaled: scaled, db: db, date: date).padding(.horizontal, 16).padding(.bottom, 4)
-            }
-
-            if !tapering {
-                Band {
-                    Text("Gym").micro().padding(.bottom, 12)
+                if !tapering {
+                    // edge to edge inside the card, clipped at its corners
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 8) {
                             ForEach(db.gyms) { g in Chip(label: g.name, on: g.id == gymId, small: true) { gymId = g.id } }
                         }
                     }
-                    .scrollClipDisabled()
+                    .contentMargins(.horizontal, 18, for: .scrollContent)
+                    .padding(.horizontal, -18)
+                    .padding(.top, 14)
                 }
+            }
+            .padding(.horizontal, 16)
+
+            if tapering, let dp, let scaled {
+                TaperCard(dp: dp, scaled: scaled, db: db, date: date).padding(.horizontal, 16).padding(.top, 12)
             }
 
             Band(top: !tapering) {
-                Text("Session type").micro().padding(.bottom, 12)
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 7), count: 3), spacing: 7) {
+                SectionHead("Session type")
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                     ForEach(Vocab.sessionIntents, id: \.self) { i in
                         let struck = tapering && Vocab.highCostIntents.contains(i)
                         Button { applyIntent(i, db: db) } label: {
-                            Text(i).font(.sans(13, i == intent ? .semibold : .medium))
+                            Text(i).font(.sans(14, i == intent ? .semibold : .medium))
                                 .strikethrough(struck)
                                 .multilineTextAlignment(.center)
-                                .foregroundStyle(struck ? Palette.faint : i == intent ? Palette.paper : Palette.ink)
-                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .foregroundStyle(struck ? Palette.tertiary : i == intent ? accent.onAccent : Palette.text)
+                                .frame(maxWidth: .infinity, minHeight: 52)
                                 .padding(.horizontal, 6)
-                                .background(i == intent ? Palette.ink : Palette.card)
-                                .overlay(Rectangle().strokeBorder(i == intent ? Palette.ink : Palette.ruleChip, lineWidth: 1))
-                                .contentShape(Rectangle())
+                                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(i == intent ? accent.color : Palette.raised))
+                                .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                         }
                         .buttonStyle(.plain)
                         .disabled(struck)
@@ -131,7 +130,7 @@ struct PlanDayEditor: View {
             }
 
             Band {
-                SectionHead("Focus", note: "WEAKEST FIRST")
+                SectionHead("Focus", note: "Weakest first")
                 ChipFlow(spacing: 7) {
                     ForEach(suggested, id: \.self) { s in
                         Chip(label: s, on: focus.contains(s), blocked: blocked[s] != nil) {
@@ -142,19 +141,21 @@ struct PlanDayEditor: View {
                 if let (style, info) = blocked.sorted(by: { $0.key < $1.key }).first {
                     let alt = suggested.first { blocked[$0] == nil && weak.contains($0) }
                     WarnPanel(lead: "\(style) off",
-                              text: "\(info.usage.used)/\(info.usage.cap ?? 0) this week for \(shortInjury(info.injury)). \(alt.map { "Try \($0.lowercased())." } ?? "Pick another style.")")
+                              text: "\(info.usage.used) of \(info.usage.cap ?? 0) this week for \(shortInjury(info.injury)). \(alt.map { "Try \($0.lowercased())." } ?? "Pick another style.")")
                         .padding(.top, 15)
                 }
                 if !activeBlockedFocus.isEmpty {
-                    Text("REMOVE \(activeBlockedFocus.joined(separator: ", ").uppercased()) TO START")
-                        .font(.mono(10)).foregroundStyle(Palette.warn).padding(.top, 8)
+                    Text("Remove \(activeBlockedFocus.joined(separator: ", ").lowercased()) to start")
+                        .font(.sans(13)).foregroundStyle(Palette.injuryText).padding(.top, 8)
                 }
             }
 
             Band {
-                SectionHead("Blocks", note: scaled.map { "\($0.minutes) MIN · WAS \($0.originalMinutes)" } ?? "\(total) MIN")
-                VStack(spacing: 8) {
-                    ForEach(Array(shown.enumerated()), id: \.offset) { _, b in BlockRow(block: b, tapering: tapering) }
+                SectionHead("Blocks", note: scaled.map { "\(UpNextCard.duration($0.minutes)), was \(UpNextCard.duration($0.originalMinutes))" } ?? UpNextCard.duration(total))
+                VStack(spacing: 0) {
+                    ForEach(Array(shown.enumerated()), id: \.offset) { i, b in
+                        BlockRow(block: b, tapering: tapering).overlay(alignment: .bottom) { if i < shown.count - 1 { Hairline() } }
+                    }
                 }
                 HStack(spacing: 8) {
                     if tapering {
@@ -181,16 +182,16 @@ struct PlanDayEditor: View {
                 }
                 .padding(.top, 16)
                 if isToday && db.activeSession != nil {
-                    Text("A session is already running.").font(.sans(12)).foregroundStyle(Palette.muted).padding(.top, 8)
+                    Text("A session is already running.").font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 8)
                 }
                 if db.settings.taperOverrideDay == date, dp?.phase.isTaper == true {
                     LinkButton(title: "Use taper plan") { store.setTaperOverride(nil) }.padding(.top, 8)
                 }
                 if let comp = db.upcomingComps(from: date).first(where: { $0.effectivePriority != .c }) ?? db.nextComp(from: date) {
-                    Text(footer(comp, date: date)).micro().padding(.top, 16).fixedSize(horizontal: false, vertical: true)
+                    Text(footer(comp, date: date)).font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 16).fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .padding(.bottom, 80)
+            .padding(.bottom, 96)
         }
         .onAppear { load(db) }
         .onChange(of: date) { load(store.db) }
@@ -264,9 +265,10 @@ struct PlanDayEditor: View {
     }
 
     private func footer(_ comp: Competition, date: String) -> String {
-        var parts = ["NEXT: \(comp.shortName)", "\(Metrics.weeksOut(today: date, compDate: comp.date)) WK"]
-        if let t = Taper.taperStart(comp), t > date { parts.append("TAPER \(Day.plan(t))") }
-        return parts.joined(separator: " · ")
+        let weeks = Metrics.weeksOut(today: date, compDate: comp.date)
+        var parts = ["Next: \(comp.displayName), \(weeks) week\(weeks == 1 ? "" : "s")"]
+        if let t = Taper.taperStart(comp), t > date { parts.append("taper starts \(Day.weekdayShort(t)) \(Day.pretty(t))") }
+        return parts.joined(separator: ", ") + "."
     }
 
     private func stableSort(_ xs: [String], by first: (String, String) -> Bool) -> [String] {
@@ -279,23 +281,36 @@ struct PlanDayEditor: View {
 }
 
 struct BlockRow: View {
+    @Environment(\.accent) private var accent
     var block: PlanBlock
     var tapering = false
 
     var body: some View {
-        HStack(spacing: 14) {
-            Text("\(block.durationMin) min").font(.mono(11)).foregroundStyle(block.isEmphasis ? Palette.ink : Palette.muted)
-                .frame(width: 48, alignment: .leading)
-            Text(block.description).font(.sans(13.5, .medium)).foregroundStyle(Palette.ink)
-                .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
-            Text(block.isRehab && tapering ? "rehab · kept" : block.target ?? "")
-                .font(.sans(12)).multilineTextAlignment(.trailing)
-                .foregroundStyle(block.isRehab ? Palette.warn : block.isEmphasis ? Palette.ink : Palette.muted)
-                .frame(maxWidth: 110, alignment: .trailing)
+        let parts = block.description.components(separatedBy: " · ")
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text("\(block.durationMin)").font(.num(20)).foregroundStyle(Palette.text)
+                Text("min").font(.sans(12)).foregroundStyle(Palette.secondary)
+            }
+            .frame(width: 62, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Text(parts[0]).font(.sans(16, .semibold)).foregroundStyle(block.isRehab ? Palette.injuryText : Palette.text)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if block.isEmphasis {
+                        Text("Focus").font(.sans(11, .bold)).foregroundStyle(accent.onAccent)
+                            .padding(.horizontal, 7).frame(height: 20).background(Capsule().fill(accent.color))
+                    }
+                }
+                let detail = (parts.dropFirst() + [block.isRehab && tapering ? "kept in taper" : block.target].compactMap { $0 })
+                    .filter { !$0.isEmpty && $0 != "rehab" }.joined(separator: ", ")
+                if !detail.isEmpty {
+                    Text(detail).font(.sans(13)).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 15).padding(.vertical, 13)
-        .background(Palette.card)
-        .overlay(Rectangle().strokeBorder(block.isEmphasis ? Palette.ink : Palette.rule, lineWidth: block.isEmphasis ? 2 : 1))
+        .padding(.vertical, 12)
         .accessibilityElement(children: .combine)
     }
 }
@@ -310,24 +325,21 @@ struct TaperCard: View {
     var body: some View {
         let avg = Taper.averages(db, today: date).minutesPerWeek
         let week = Taper.minutesThisWeek(db, today: date)
-        VStack(alignment: .leading, spacing: 0) {
+        Card {
             HStack(alignment: .firstTextBaseline) {
-                Text("\(dp.phase.rawValue) · \(Int(dp.factor * 100))% VOLUME").micro(Palette.ink)
+                Text("\(dp.phase.label), \(Int(dp.factor * 100))% volume").font(.sans(17, .semibold)).foregroundStyle(Palette.text)
                 Spacer()
-                Text("\(dp.comp.shortName) · \(Day.plan(dp.comp.date))").font(.mono(10.5)).foregroundStyle(Palette.muted)
+                Text("\(dp.comp.displayName), \(Day.pretty(dp.comp.date))").font(.sans(13)).foregroundStyle(Palette.secondary)
             }
-            Text(scaled.explanation).font(.sans(13)).foregroundStyle(Palette.muted).padding(.top, 8)
+            Text(scaled.explanation).font(.sans(14)).foregroundStyle(Palette.secondary).padding(.top, 8)
                 .fixedSize(horizontal: false, vertical: true)
             LoadBar(fill: avg > 0 ? Double(week) / Double(avg) : 0)
             HStack {
-                Text("THIS WEEK \(week) MIN")
+                Text("This week \(week) min")
                 Spacer()
-                Text("AVG \(avg)")
+                Text("Average \(avg)")
             }
-            .font(.mono(10)).foregroundStyle(Palette.muted).padding(.top, 7)
+            .font(.sans(12)).foregroundStyle(Palette.secondary).padding(.top, 8)
         }
-        .padding(.horizontal, 14).padding(.vertical, 13)
-        .background(Palette.card)
-        .overlay(Rectangle().strokeBorder(Palette.ink, lineWidth: 2))
     }
 }

@@ -49,7 +49,7 @@ extension View {
 
 struct WidgetLabel: View {
     var text: String
-    var body: some View { Text(text).font(.mono(9.5)).tracking(1).textCase(.uppercase).foregroundStyle(Palette.muted) }
+    var body: some View { Text(text).font(.sans(12, .semibold)).foregroundStyle(Palette.secondary) }
 }
 
 struct WeekStrip: View {
@@ -61,11 +61,11 @@ struct WeekStrip: View {
         HStack(spacing: 4) {
             ForEach(0..<7, id: \.self) { i in
                 VStack(spacing: 3) {
-                    Rectangle().fill(days[i] ? accent.color : Palette.track)
+                    RoundedRectangle(cornerRadius: 3, style: .continuous).fill(days[i] ? accent.color : Palette.track)
                         .frame(height: 8)
-                        .overlay(Rectangle().strokeBorder(Palette.ink, lineWidth: i == today ? 1 : 0))
+                        .overlay(RoundedRectangle(cornerRadius: 3, style: .continuous).strokeBorder(Palette.text, lineWidth: i == today ? 1.5 : 0))
                         .widgetAccentable()
-                    Text(["M", "T", "W", "T", "F", "S", "S"][i]).font(.mono(8)).foregroundStyle(Palette.muted)
+                    Text(["M", "T", "W", "T", "F", "S", "S"][i]).font(.sans(9, .medium)).foregroundStyle(Palette.secondary)
                 }
             }
         }
@@ -95,16 +95,16 @@ struct MiniPyramid: View {
         VStack(spacing: 4) {
             ForEach(rows, id: \.grade) { r in
                 HStack(spacing: 6) {
-                    Text("\(r.grade)").font(.serif(12)).frame(width: 16, alignment: .trailing)
+                    Text("\(r.grade)").font(.num(11)).lineLimit(1).fixedSize().frame(width: 22, alignment: .trailing)
                     GeometryReader { g in
                         ZStack(alignment: .leading) {
                             Rectangle().fill(Palette.track)
-                            Rectangle().fill(Palette.worked).frame(width: g.size.width * r.width)
+                            Rectangle().fill(accent.color.opacity(0.4)).frame(width: g.size.width * r.width).widgetAccentable()
                             Rectangle().fill(accent.color).frame(width: g.size.width * r.width * r.flashShare).widgetAccentable()
                         }
                     }
                     .frame(height: 11)
-                    if counts { Text("\(r.count)").font(.mono(9.5)).foregroundStyle(Palette.muted).frame(width: 16, alignment: .leading) }
+                    if counts { Text("\(r.count)").font(.mono(9.5)).foregroundStyle(Palette.secondary).frame(width: 16, alignment: .leading) }
                 }
             }
         }
@@ -132,26 +132,26 @@ struct SmallWidget: View {
                 Text(s.sessionsThisWeek == 1 ? "session" : "sessions").font(.sans(12, .medium))
                 WeekStrip(days: s.weekStrip, today: s.todayIndex).padding(.top, 10)
                 Spacer(minLength: 0)
-                Text("\(s.streakWeeks)-WEEK STREAK").font(.mono(10)).foregroundStyle(Palette.muted)
+                Text("\(s.streakWeeks)-week streak").font(.sans(11)).foregroundStyle(Palette.secondary)
             } else {
                 WidgetLabel(text: "This week · top")
                 Text(s.topGrade ?? "—").font(.serif(52)).padding(.top, 8).privacySensitive()
                 Text([s.topGym, s.topDelta].compactMap { $0 }.joined(separator: " · ").ifEmpty("no numbered sends yet"))
                     .font(.sans(12, .medium)).lineLimit(1).privacySensitive()
-                Text("\(s.sessionsThisWeek) SESSIONS · \(s.sendsThisWeek) SENDS").font(.mono(10)).foregroundStyle(Palette.muted).padding(.top, 8)
+                Text("\(s.sessionsThisWeek) sessions, \(s.sendsThisWeek) sends").font(.sans(11)).foregroundStyle(Palette.secondary).padding(.top, 8)
                     .lineLimit(1).minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
                 if s.rehabDue > 0 || s.painNow != nil {
                     HStack {
-                        Text(s.rehabDue > 0 ? "REHAB DUE" : "PAIN")
+                        Text(s.rehabDue > 0 ? "Rehab due" : "Pain")
                         Spacer()
                         Text(s.painNow.map { "\($0)/10" } ?? "")
                     }
-                    .font(.mono(10, .medium)).foregroundStyle(Palette.warn).privacySensitive()
+                    .font(.sans(11, .medium)).foregroundStyle(Palette.injuryText).privacySensitive()
                 }
             }
         }
-        .foregroundStyle(Palette.ink)
+        .foregroundStyle(Palette.text)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
@@ -167,14 +167,14 @@ struct MediumWidget: View {
                     WidgetLabel(text: "This week")
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text("\(s.sessionsThisWeek)").font(.serif(44))
-                        Text("sessions").font(.sans(14)).foregroundStyle(Palette.muted)
+                        Text("sessions").font(.sans(14)).foregroundStyle(Palette.secondary)
                     }
                     .padding(.top, 6)
                 } else {
                     WidgetLabel(text: "This week")
                     HStack(spacing: 14) {
-                        stat(s.topGrade ?? "—", "TOP \(s.topDelta?.replacingOccurrences(of: " ", with: "") ?? "")")
-                        stat(s.flashRate.map { "\($0)%" } ?? "—", "FLASH")
+                        stat(s.topGrade ?? "–", "Top \(s.topDelta?.replacingOccurrences(of: " ", with: "") ?? "")")
+                        stat(s.flashRate.map { "\($0)%" } ?? "–", "Flash")
                     }
                     .padding(.top, 8)
                     .privacySensitive()
@@ -182,8 +182,8 @@ struct MediumWidget: View {
                 Spacer(minLength: 6)
                 WeekStrip(days: s.weekStrip, today: s.todayIndex)
                 if locked {
-                    Text("\(s.streakWeeks)-WEEK STREAK\(s.weeksToComp.map { " · COMP IN \($0) WK" } ?? "")")
-                        .font(.mono(9.5)).foregroundStyle(Palette.muted).padding(.top, 8).lineLimit(1).minimumScaleFactor(0.7)
+                    Text("\(s.streakWeeks)-week streak\(s.weeksToComp.map { ", comp in \($0) wk" } ?? "")")
+                        .font(.sans(11)).foregroundStyle(Palette.secondary).padding(.top, 8).lineLimit(1).minimumScaleFactor(0.7)
                 }
             }
             .frame(width: 140, alignment: .leading)
@@ -192,27 +192,27 @@ struct MediumWidget: View {
                 if locked {
                     Spacer(minLength: 0)
                     RedactBars(widths: [140, 110, 128])
-                    Text("Unlock for details").font(.sans(10.5)).foregroundStyle(Palette.muted)
+                    Text("Unlock for details").font(.sans(10.5)).foregroundStyle(Palette.secondary)
                     Spacer(minLength: 0)
                 } else {
                     Spacer(minLength: 0)
                     MiniPyramid(rows: slice(s.pyramid, from: 13, to: 9))
                     if let inj = s.injuryShort {
-                        Text("\(inj.uppercased()) \(s.painNow.map { "\($0)/10" } ?? "")\(s.rehabStreak.map { " · \($0)-DAY REHAB" } ?? "")")
-                            .font(.mono(10, .medium)).foregroundStyle(Palette.warn).lineLimit(1).minimumScaleFactor(0.7).padding(.top, 4)
+                        Text("\(inj) \(s.painNow.map { "\($0)/10" } ?? "")\(s.rehabStreak.map { ", \($0)-day rehab" } ?? "")")
+                            .font(.sans(11, .medium)).foregroundStyle(Palette.injuryText).lineLimit(1).minimumScaleFactor(0.7).padding(.top, 4)
                     }
                     Spacer(minLength: 0)
                 }
             }
             .privacySensitive()
         }
-        .foregroundStyle(Palette.ink)
+        .foregroundStyle(Palette.text)
     }
 
     func stat(_ v: String, _ l: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(v).font(.serif(38)).lineLimit(1).minimumScaleFactor(0.6)
-            Text(l).font(.mono(9)).foregroundStyle(Palette.muted)
+            Text(l).font(.sans(11)).foregroundStyle(Palette.secondary)
         }
     }
 }
@@ -229,7 +229,7 @@ struct LargeWidget: View {
                     Text("\(s.sessionsThisWeek)").font(.serif(56))
                     VStack(alignment: .leading, spacing: 2) {
                         Text("sessions").font(.sans(13, .medium))
-                        Text("\(s.streakWeeks)-week streak").font(.sans(13)).foregroundStyle(Palette.muted)
+                        Text("\(s.streakWeeks)-week streak").font(.sans(13)).foregroundStyle(Palette.secondary)
                     }
                     .padding(.bottom, 8)
                 }
@@ -237,11 +237,11 @@ struct LargeWidget: View {
                 WeekStrip(days: s.weekStrip, today: s.todayIndex).padding(.top, 12)
                 RedactBars(widths: [300, 240, 280, 200]).padding(.top, 22)
                 Spacer(minLength: 0)
-                Rectangle().fill(Palette.rule).frame(height: 1)
+                Rectangle().fill(Palette.hairline).frame(height: 1)
                 HStack {
-                    Text(s.weeksToComp.map { "NEXT COMP · \($0) WEEKS OUT" } ?? "NO COMP PLANNED").font(.mono(10)).foregroundStyle(Palette.muted)
+                    Text(s.weeksToComp.map { "Next comp, \($0) weeks out" } ?? "No comp planned").font(.sans(11)).foregroundStyle(Palette.secondary)
                     Spacer()
-                    Label("Unlock for details", systemImage: "lock.fill").font(.sans(10.5)).foregroundStyle(Palette.muted)
+                    Label("Unlock for details", systemImage: "lock.fill").font(.sans(10.5)).foregroundStyle(Palette.secondary)
                 }
                 .padding(.top, 10)
             } else {
@@ -254,7 +254,7 @@ struct LargeWidget: View {
                     ForEach(Array(s.kpis.prefix(3).enumerated()), id: \.offset) { i, k in
                         VStack(alignment: .leading, spacing: 4) {
                             Text(k.value).font(.serif(32))
-                            Text(["TOP", "FLASH 8+", "ATT/SEND"][i]).font(.mono(9)).foregroundStyle(Palette.muted)
+                            Text(["Top", "Flash 8+", "Tries/send"][i]).font(.sans(11)).foregroundStyle(Palette.secondary)
                         }
                     }
                 }
@@ -263,33 +263,33 @@ struct LargeWidget: View {
                 HStack(alignment: .bottom, spacing: 3) {
                     let maxCount = max(1, s.camp5.map(\.count).max() ?? 0)
                     ForEach(s.camp5, id: \.tagId) { b in
-                        Rectangle().fill(b.count > 0 ? Palette.hold(b.tagId) : Palette.worked)
+                        RoundedRectangle(cornerRadius: 3, style: .continuous).fill(b.count > 0 ? Palette.hold(b.tagId) : Palette.track)
                             .frame(height: b.count > 0 ? max(4, 28 * CGFloat(b.count) / CGFloat(maxCount)) : 2)
                     }
                 }
                 .frame(height: 30, alignment: .bottom)
                 .padding(.top, 12)
                 Spacer(minLength: 0)
-                Rectangle().fill(Palette.rule).frame(height: 1)
+                Rectangle().fill(Palette.hairline).frame(height: 1)
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(s.injuryShort.map { "\($0) · \(s.painNow.map { "\($0)/10" } ?? "—")" } ?? "No active injury").font(.sans(12, .medium))
                         if s.injuryShort != nil {
-                            Text("\(s.rehabDue > 0 ? "REHAB DUE" : "REHAB DONE")\(s.rehabStreak.map { " · \($0)-DAY STREAK" } ?? "")")
-                                .font(.mono(9.5)).foregroundStyle(Palette.warn)
+                            Text("\(s.rehabDue > 0 ? "Rehab due" : "Rehab done")\(s.rehabStreak.map { ", \($0)-day streak" } ?? "")")
+                                .font(.sans(11)).foregroundStyle(Palette.injuryText)
                         }
                     }
                     Spacer()
                     VStack(alignment: .trailing, spacing: 3) {
                         Text(s.compName ?? "No comp").font(.sans(12, .medium))
-                        Text([s.weeksToComp.map { "\($0) WK" }, s.weakest?.uppercased()].compactMap { $0 }.joined(separator: " · "))
-                            .font(.mono(9.5)).foregroundStyle(Palette.muted)
+                        Text([s.weeksToComp.map { "\($0) wk" }, s.weakest].compactMap { $0 }.joined(separator: " · "))
+                            .font(.mono(9.5)).foregroundStyle(Palette.secondary)
                     }
                 }
                 .padding(.top, 10)
             }
         }
-        .foregroundStyle(Palette.ink)
+        .foregroundStyle(Palette.text)
         .privacySensitive(!locked)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -307,7 +307,7 @@ struct CircularWidget: View {
         } currentValueLabel: {
             VStack(spacing: 0) {
                 Text(locked || s.topGrade == nil ? "\(s.sessionsThisWeek)" : s.topGrade!).font(.system(size: 22, weight: .bold))
-                Text(locked || s.topGrade == nil ? "OF \(s.weeklyTarget)" : "TOP").font(.system(size: 8, weight: .semibold)).opacity(0.8)
+                Text(locked || s.topGrade == nil ? "of \(s.weeklyTarget)" : "top").font(.system(size: 8, weight: .semibold)).opacity(0.8)
             }
         }
         .circularCapacityStyle()
@@ -333,14 +333,14 @@ struct RectangularWidget: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             if locked {
-                Text("ASCENT").font(.system(size: 12, weight: .semibold)).opacity(0.75)
+                Text("Ascent").font(.system(size: 12, weight: .semibold)).opacity(0.75)
                 Text("\(s.sessionsThisWeek) sessions this week").font(.system(size: 15, weight: .semibold))
                 HStack(spacing: 6) {
                     Text("\(s.streakWeeks)-wk streak").font(.system(size: 12, weight: .medium)).opacity(0.85)
                     RoundedRectangle(cornerRadius: 2).fill(.primary.opacity(0.3)).frame(width: 52, height: 9)
                 }
             } else {
-                Text(["ASCENT", s.liveGym?.uppercased() ?? s.topGym?.uppercased()].compactMap { $0 }.joined(separator: " · "))
+                Text(["Ascent", s.liveGym ?? s.topGym].compactMap { $0 }.joined(separator: " · "))
                     .font(.system(size: 12, weight: .semibold)).opacity(0.75)
                 Text(s.topGrade.map { "Top \($0) · \(s.sendsThisWeek) sends" } ?? "\(s.sessionsThisWeek) sessions · \(s.sendsThisWeek) sends")
                     .font(.system(size: 15, weight: .semibold))
