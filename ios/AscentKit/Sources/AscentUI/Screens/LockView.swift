@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 5.1 — full-screen paper overlay above everything. Auto-evaluates on appear.
+/// 5.1 — full-screen overlay above everything. Auto-evaluates on appear.
 public struct LockView: View {
     @Environment(AppLock.self) private var lock
     @Environment(\.accent) private var accent
@@ -14,14 +14,14 @@ public struct LockView: View {
         VStack(spacing: 0) {
             Spacer()
             VStack(spacing: 14) {
-                Text("ASCENT").font(.sans(15, .semibold)).tracking(3.6)
-                Text("Your log is locked").font(.serif(30, relativeTo: .title)).padding(.top, 6)
-                Text("Stored only on this iPhone").micro()
+                Text("Ascent").font(.num(22))
+                Text("Your log is locked").font(.sans(28, .bold)).padding(.top, 4)
+                Text("Stored only on this iPhone").font(.sans(15)).foregroundStyle(Palette.secondary)
                 if let err = lock.lastError {
-                    Text(err).font(.sans(12)).foregroundStyle(Palette.muted).padding(.top, 6)
+                    Text(err).font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 6)
                 }
             }
-            .foregroundStyle(Palette.ink)
+            .foregroundStyle(Palette.text)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 40)
             Spacer()
@@ -37,13 +37,13 @@ public struct LockView: View {
                 .glassEffect(.regular.tint(accent.color).interactive(), in: .capsule)
             }
             if lock.kind != .passcode {
-                LinkButton(title: "Use passcode", color: Palette.ink, size: 14) { Task { await lock.authenticate(passcodeOnly: true) } }
+                LinkButton(title: "Use passcode", color: Palette.text, size: 14) { Task { await lock.authenticate(passcodeOnly: true) } }
                     .padding(.top, 16)
             }
             Spacer().frame(height: 50)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Palette.paper.ignoresSafeArea())
+        .background(Palette.ground.ignoresSafeArea())
         .task {
             if autoPrompt && phase == .active { await lock.authenticate() }
         }
@@ -56,12 +56,12 @@ public struct PrivacyCover: View {
     public var body: some View {
         ZStack {
             Rectangle().fill(.ultraThinMaterial).ignoresSafeArea()
-            Palette.paper.opacity(0.55).ignoresSafeArea()
+            Palette.ground.opacity(0.55).ignoresSafeArea()
             VStack(spacing: 10) {
                 Image(systemName: "lock.fill").font(.system(size: 22, weight: .semibold))
-                Text("ASCENT").font(.sans(13, .semibold)).tracking(3.1)
+                Text("Ascent").font(.num(17))
             }
-            .foregroundStyle(Palette.ink)
+            .foregroundStyle(Palette.text)
         }
     }
 }

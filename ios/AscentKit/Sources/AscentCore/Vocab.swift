@@ -17,12 +17,35 @@ public enum Vocab {
     public static let highCostIntents: Set<String> = ["Max strength", "Power endurance"]
 
     public static let tickTypes: [(id: TickType, label: String)] = [
-        (.flash, "Flash"), (.secondGo, "2nd go"), (.project, "Project"), (.attempt, "Attempt only"),
+        (.flash, "Flash"), (.secondGo, "2nd go"), (.project, "Project"), (.attempt, "Not sent"),
     ]
 
     public static func tickLabel(_ t: TickType) -> String {
         tickTypes.first { $0.id == t }?.label ?? t.rawValue
     }
+
+    /// r3: the attempt counter is the source of truth; the tick type follows from it.
+    public static func tickType(attempts: Int, sent: Bool) -> TickType {
+        if !sent { return .attempt }
+        switch attempts {
+        case ...1: return .flash
+        case 2: return .secondGo
+        default: return .project
+        }
+    }
+
+    /// 1 → "Flash", 2 → "2nd go", 3+ → "N tries"; not sent → "N attempts".
+    public static func attemptsLabel(_ attempts: Int, sent: Bool) -> String {
+        let n = max(1, attempts)
+        if !sent { return n == 1 ? "1 attempt" : "\(n) attempts" }
+        switch n {
+        case 1: return "Flash"
+        case 2: return "2nd go"
+        default: return "\(n) tries"
+        }
+    }
+
+    public static func attemptsLabel(_ c: Climb) -> String { attemptsLabel(c.attempts, sent: c.tickType != .attempt) }
 
     public struct HoldColour: Sendable, Hashable {
         public let id: String
@@ -48,8 +71,14 @@ public enum Vocab {
     public static func colourCode(_ id: String?) -> String { holdColours.first { $0.id == id }?.code ?? "—" }
     public static func colourLabel(_ id: String?) -> String { holdColours.first { $0.id == id }?.label ?? "" }
 
-    /// Camp5 ranked-colour tags, ordinal 1–8. Never mapped onto 1–15.
-    public static let camp5Tags: [String] = ["yellow", "pink", "blue", "orange", "green", "purple", "red", "black"]
+    /// Camp5 ranked-colour tags, easiest first, ordinal 1–8. Never mapped onto 1–15.
+    public static let camp5Tags: [String] = ["pink", "blue", "yellow", "orange", "green", "purple", "red", "black"]
+
+    /// Camp5's own V-scale bands; they overlap, so each tag covers about three V grades.
+    public static let camp5Ranges: [String: String] = [
+        "pink": "VB–V1", "blue": "V0–V2", "yellow": "V1–V3", "orange": "V2–V4",
+        "green": "V3–V5", "purple": "V4–V6", "red": "V5–V7", "black": "V6–V8+",
+    ]
 
     public enum ChipGroup: String, CaseIterable, Sendable { case body = "BODY", head = "HEAD", execution = "EXECUTION" }
 

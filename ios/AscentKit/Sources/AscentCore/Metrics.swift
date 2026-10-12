@@ -458,7 +458,7 @@ public enum Metrics {
     }
 
     /// Chips worth acting on — the ones that name something going wrong.
-    static let watchChips: Set<String> = [
+    public static let watchChips: Set<String> = [
         "Felt weak", "Fatigued early", "Poor recovery", "Distracted", "Hesitant", "Scared of the fall",
         "Missed the timing", "Sloppy feet", "Read beta wrong",
     ]

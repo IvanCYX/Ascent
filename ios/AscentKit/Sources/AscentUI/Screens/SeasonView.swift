@@ -20,8 +20,8 @@ struct SeasonView: View {
                 NextCompCard(comp: next, today: today)
                     .padding(.horizontal, 16)
             } else {
-                Text("No comps yet.").font(.sans(13)).foregroundStyle(Palette.muted)
-                    .padding(.horizontal, 16)
+                Text("No comps yet.").font(.sans(14)).foregroundStyle(Palette.secondary)
+                    .padding(.horizontal, 20)
             }
 
             Band(top: false) {
@@ -35,7 +35,7 @@ struct SeasonView: View {
 
             if let comp = governing ?? comps.first {
                 Band {
-                    SectionHead("Taper plan", note: "\(comp.shortName) · \(comp.effectivePriority.rawValue)")
+                    SectionHead("Taper plan", note: "\(comp.displayName), \(comp.effectivePriority.rawValue)")
                     let weakest = Metrics.compReadiness(Metrics.climbsInRange(db.climbs, from: Day.add(today, -55), to: today),
                                                         reviews: db.reviews, today: today).last
                     ForEach(Taper.planRows(db, comp: comp, today: today, weakest: weakest)) { row in TaperRow(row: row) }
@@ -47,24 +47,24 @@ struct SeasonView: View {
 
             Band {
                 SectionHead("Upcoming", note: "\(comps.count)")
-                if comps.isEmpty { Text("None yet.").font(.sans(13)).foregroundStyle(Palette.muted) }
+                if comps.isEmpty { Text("None yet.").font(.sans(14)).foregroundStyle(Palette.secondary) }
                 ForEach(comps) { c in
                     NavigationLink(value: Route.comp(c.id)) {
-                        HStack(spacing: 12) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("\(Day.dayOfMonth(c.date))").font(.serif(20))
-                                Text(Day.short(c.date).components(separatedBy: " ").last ?? "").font(.mono(10)).foregroundStyle(Palette.muted)
+                        HStack(spacing: 14) {
+                            VStack(spacing: 2) {
+                                Text("\(Day.dayOfMonth(c.date))").font(.num(20))
+                                Text(Day.pretty(c.date).components(separatedBy: " ").last ?? "").font(.sans(11)).foregroundStyle(Palette.secondary)
                             }
-                            .frame(width: 44, alignment: .leading)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(c.name).font(.sans(14, .semibold))
-                                Text(Taper.summary(c, all: db.competitions)).font(.sans(12.5)).foregroundStyle(Palette.muted)
+                            .frame(width: 44)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(c.name).font(.sans(16, .semibold))
+                                Text(Taper.summary(c, all: db.competitions).replacingOccurrences(of: " · ", with: ", ")).font(.sans(13)).foregroundStyle(Palette.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             Spacer()
-                            Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.faint)
+                            Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.tertiary)
                         }
-                        .foregroundStyle(Palette.ink)
+                        .foregroundStyle(Palette.text)
                         .padding(.vertical, 13)
                         .overlay(alignment: .bottom) { Hairline() }
                         .contentShape(Rectangle())
@@ -79,9 +79,9 @@ struct SeasonView: View {
                 }
                 .padding(.top, 16)
                 Text("Lower in taper weeks.")
-                    .font(.sans(12)).foregroundStyle(Palette.muted).padding(.top, 8)
+                    .font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 8)
             }
-            .padding(.bottom, 80)
+            .padding(.bottom, 96)
         }
     }
 
@@ -102,23 +102,21 @@ struct NextCompCard: View {
     var body: some View {
         let days = Day.between(today, comp.date)
         Button { router.paths[.plan, default: NavigationPath()].append(Route.comp(comp.id)) } label: {
-            VStack(alignment: .leading, spacing: 0) {
+            Card {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("NEXT COMP").micro(Palette.ink)
+                    Text("Next comp, \(comp.effectivePriority.rawValue) priority").micro()
                     Spacer()
-                    Text("\(days) DAY\(days == 1 ? "" : "S")").font(.mono(10.5)).foregroundStyle(Palette.muted)
+                    Text("\(days) day\(days == 1 ? "" : "s")").font(.num(15)).foregroundStyle(Palette.text)
                 }
-                Text(comp.name).font(.serif(26, relativeTo: .title)).foregroundStyle(Palette.ink).padding(.top, 10)
+                Text(comp.name).font(.sans(24, .bold)).foregroundStyle(Palette.text).padding(.top, 8)
                     .fixedSize(horizontal: false, vertical: true)
                 Text([Day.long(comp.date).components(separatedBy: " ").dropLast().joined(separator: " "), comp.location, comp.category,
-                      comp.rounds.map { $0.map { $0.lowercased() }.joined(separator: " → ") }]
-                    .compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " · "))
-                    .font(.sans(13)).foregroundStyle(Palette.muted).padding(.top, 6)
+                      comp.rounds.map { $0.map { $0.lowercased() }.joined(separator: " to ") }]
+                    .compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: ", "))
+                    .font(.sans(14)).foregroundStyle(Palette.secondary).padding(.top, 4)
                     .fixedSize(horizontal: false, vertical: true)
                 PhaseBar(comp: comp, today: today).padding(.top, 16)
             }
-            .padding(16)
-            .overlay(Rectangle().strokeBorder(Palette.ink, lineWidth: 2))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -146,15 +144,15 @@ struct PhaseBar: View {
         case .a:
             let peak = Day.add(week, -14)
             let buildWeeks = max(1, CGFloat(Day.between(buildStart, peak)) / 7)
-            return [.init(label: "BUILD", phase: .build, start: buildStart, weight: buildWeeks),
-                    .init(label: "PEAK", phase: .peak, start: peak, weight: 1),
-                    .init(label: "TAPER", phase: .taper, start: Day.add(week, -7), weight: 1),
-                    .init(label: "COMP WK", phase: .compWeek, start: week, weight: 1)]
+            return [.init(label: "Build", phase: .build, start: buildStart, weight: buildWeeks),
+                    .init(label: "Peak", phase: .peak, start: peak, weight: 1),
+                    .init(label: "Taper", phase: .taper, start: Day.add(week, -7), weight: 1),
+                    .init(label: "Comp wk", phase: .compWeek, start: week, weight: 1)]
         case .b:
-            return [.init(label: "BUILD", phase: .build, start: buildStart, weight: max(1, CGFloat(Day.between(buildStart, week)) / 7)),
-                    .init(label: "TAPER", phase: .taper, start: week, weight: 1)]
+            return [.init(label: "Build", phase: .build, start: buildStart, weight: max(1, CGFloat(Day.between(buildStart, week)) / 7)),
+                    .init(label: "Taper", phase: .taper, start: week, weight: 1)]
         case .c:
-            return [.init(label: "BUILD", phase: .build, start: buildStart, weight: max(1, CGFloat(Day.between(buildStart, comp.date)) / 7))]
+            return [.init(label: "Build", phase: .build, start: buildStart, weight: max(1, CGFloat(Day.between(buildStart, comp.date)) / 7))]
         }
     }
 
@@ -169,14 +167,10 @@ struct PhaseBar: View {
                     ForEach(segs) { s in
                         let isNow = s.phase == now
                         ZStack {
-                            if s.phase.isTaper {
-                                Hatch(fg: Palette.worked, bg: Palette.track)
-                            } else {
-                                Rectangle().fill(isNow ? accent.color : Palette.track)
-                            }
-                            Text(isNow ? "\(s.label) · NOW" : s.label)
-                                .font(.mono(9.5, .medium)).tracking(0.8).lineLimit(1).minimumScaleFactor(0.6)
-                                .foregroundStyle(isNow && !s.phase.isTaper ? accent.onAccent : s.phase.isTaper ? Palette.ink : Palette.muted)
+                            Rectangle().fill(isNow ? accent.color : PhaseTint.color(s.phase) ?? Palette.track)
+                            Text(isNow ? "\(s.label), now" : s.label)
+                                .font(.sans(11, .semibold)).lineLimit(1).minimumScaleFactor(0.6)
+                                .foregroundStyle(isNow ? accent.onAccent : Palette.text)
                                 .padding(.horizontal, 2)
                         }
                         .frame(width: unit * s.weight, height: 30)
@@ -184,19 +178,32 @@ struct PhaseBar: View {
                     Rectangle().fill(accent.color).frame(width: unit * 0.45, height: 30)
                         .overlay(Image(systemName: "flag.fill").font(.system(size: 11)).foregroundStyle(accent.onAccent))
                 }
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 ZStack(alignment: .topLeading) {
                     ForEach(Array(segs.enumerated()), id: \.offset) { i, s in
                         let x = segs.prefix(i).reduce(0) { $0 + $1.weight * unit + 2 }
-                        Text(Day.short(s.start)).font(.mono(9.5)).foregroundStyle(Palette.muted).fixedSize().offset(x: x)
+                        Text(Day.pretty(s.start)).font(.sans(11)).foregroundStyle(Palette.secondary).fixedSize().offset(x: x)
                     }
-                    Text("\(Day.dayOfMonth(comp.date))").font(.mono(9.5)).foregroundStyle(Palette.muted)
+                    Text("\(Day.dayOfMonth(comp.date))").font(.sans(11)).foregroundStyle(Palette.secondary)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
         }
         .frame(height: 50)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Season phases: " + segs.map { $0.label }.joined(separator: ", ") + ", then the comp. Now: \(now?.rawValue ?? "")")
+        .accessibilityLabel("Season phases: " + segs.map { $0.label }.joined(separator: ", ") + ", then the comp. Now: \(now?.label ?? "")")
+    }
+}
+
+/// Surface tints for the phases that shade the calendar (r3 drops the hatching).
+enum PhaseTint {
+    static func color(_ p: Phase?) -> Color? {
+        switch p {
+        case .peak: Palette.text.opacity(0.08)
+        case .taper: Palette.text.opacity(0.14)
+        case .compWeek: Palette.text.opacity(0.22)
+        default: nil
+        }
     }
 }
 
@@ -227,19 +234,19 @@ struct TaperRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(row.phase.rawValue).font(.mono(10.5, .medium)).tracking(0.8).foregroundStyle(Palette.ink)
-                Text(row.range.replacingOccurrences(of: " – ", with: "\n–")).font(.mono(10.5)).foregroundStyle(Palette.muted)
+                Text(row.phase.label).font(.sans(14, .semibold)).foregroundStyle(Palette.text)
+                Text(row.range.replacingOccurrences(of: " – ", with: "\n–").sentenceCased).font(.sans(12)).foregroundStyle(Palette.secondary)
             }
-            .frame(width: 60, alignment: .leading)
+            .frame(width: 72, alignment: .leading)
             VStack(alignment: .leading, spacing: 0) {
-                Text("\(Text(row.lead).foregroundStyle(Palette.ink).font(.sans(13, .semibold))) \(row.body)")
-                    .font(.sans(13)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+                Text("\(Text(row.lead).foregroundStyle(Palette.text).font(.sans(14, .semibold))) \(row.body)")
+                    .font(.sans(14)).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
                 if let f = row.factor { LoadBar(fill: f) }
             }
         }
-        .padding(.vertical, 13)
-        .background(row.isNow ? Palette.track : .clear)
-        .overlay(alignment: .bottom) { Hairline() }
+        .padding(.vertical, 12).padding(.horizontal, row.isNow ? 10 : 0)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(row.isNow ? Palette.raised : .clear))
+        .padding(.horizontal, row.isNow ? -10 : 0)
         .accessibilityElement(children: .combine)
     }
 }
@@ -293,7 +300,7 @@ struct MonthGrid: View {
             if out.isEmpty || Day.weekday(iso) == "MON" { out.append([iso]) } else { out[out.count - 1].append(iso) }
         }
         return VStack(alignment: .leading, spacing: 8) {
-            Text("\(Day.monthName(month)) \(month.prefix(4))").font(.serif(20)).foregroundStyle(Palette.ink)
+            Text("\(Day.monthName(month).sentenceCased) \(month.prefix(4))").font(.sans(20, .bold)).foregroundStyle(Palette.text)
             ForEach(weeks, id: \.first) { week in
                 WeekRow(week: week, db: db, today: today, selected: $selected)
             }
@@ -309,11 +316,11 @@ struct MonthGrid: View {
         let comps = db.competitions
 
         VStack(alignment: .leading, spacing: 12) {
-            Text("\(Day.monthName(month)) \(month.prefix(4))").font(.serif(20)).foregroundStyle(Palette.ink)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 2) {
+            Text("\(Day.monthName(month).sentenceCased) \(month.prefix(4))").font(.sans(20, .bold)).foregroundStyle(Palette.text)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 7), spacing: 2) {
                 ForEach(cells(count: count, lead: lead), id: \.self) { cell in
                     if cell.hasPrefix("dow") {
-                        Text(String(cell.last!)).font(.mono(10)).foregroundStyle(Palette.muted).padding(.bottom, 6)
+                        Text(String(cell.last!)).font(.sans(11, .semibold)).foregroundStyle(Palette.secondary).padding(.bottom, 6)
                     } else if cell.hasPrefix("pad") {
                         Color.clear.frame(height: 46)
                     } else {
@@ -357,31 +364,24 @@ struct WeekRow: View {
         let label = week.count == 1 ? Day.pretty(week[0])
             : "\(Day.dayOfMonth(week.first!))–\(Day.dayOfMonth(week.last!)) \(Day.monthName(week.first!))"
         // Like the grid, only the phases that shade the calendar are named.
-        let parts = [phase.flatMap { $0 == .build ? nil : $0.rawValue }, logged > 0 ? "\(logged) LOGGED" : nil, planned > 0 ? "\(planned) PLANNED" : nil,
-                     range.contains(today) ? "TODAY" : nil].compactMap { $0 }
+        let parts = [phase.flatMap { $0 == .build ? nil : $0.label }, logged > 0 ? "\(logged) logged" : nil, planned > 0 ? "\(planned) planned" : nil,
+                     range.contains(today) ? "today" : nil].compactMap { $0 }
 
         Button {
             selected = comp?.date ?? (range.contains(today) ? today : week.first!)
         } label: {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(label).font(.sans(15, .semibold, relativeTo: .body)).foregroundStyle(Palette.ink)
+                    Text(label).font(.sans(15, .semibold, relativeTo: .body)).foregroundStyle(Palette.text)
                     Spacer(minLength: 8)
-                    if let comp { Text(comp.shortName).font(.sans(14, .semibold)).foregroundStyle(accent.color) }
+                    if let comp { Text(comp.displayName).font(.sans(14, .semibold)).foregroundStyle(accent.color) }
                 }
-                if !parts.isEmpty { Text(parts.joined(separator: " · ")).micro() }
+                if !parts.isEmpty { Text(parts.joined(separator: ", ").prefix(1).uppercased() + parts.joined(separator: ", ").dropFirst()).micro() }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
-            .background {
-                switch phase {
-                case .peak: Palette.track
-                case .taper: Hatch(fg: Palette.track)
-                case .compWeek: Hatch(fg: Palette.worked)
-                default: Palette.card
-                }
-            }
-            .overlay(Rectangle().strokeBorder(isSelected ? Palette.ink : Palette.rule, lineWidth: isSelected ? 2 : 1))
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(PhaseTint.color(phase) ?? Palette.raised))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Palette.text, lineWidth: isSelected ? 2 : 0))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -405,40 +405,33 @@ struct DayCell: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 5) {
+            VStack(spacing: 4) {
                 Text("\(day)")
-                    .font(.sans(15, comp != nil ? .semibold : .regular, relativeTo: .body))
-                    .foregroundStyle(comp != nil ? accent.onAccent : isSelected ? Palette.paper : Palette.ink)
-                    .frame(width: 28, height: 28)
-                    .background(comp != nil ? accent.color : isSelected ? Palette.ink : .clear)
-                    .overlay(Rectangle().strokeBorder(Palette.ink, lineWidth: isToday && comp == nil ? 1.5 : 0))
+                    .font(.sans(15, comp != nil || isSelected ? .semibold : .regular, relativeTo: .body)).monospacedDigit()
+                    .foregroundStyle(comp != nil ? accent.onAccent : Palette.text)
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(comp != nil ? accent.color : isSelected ? Palette.segment : .clear))
+                    .overlay(Circle().strokeBorder(accent.color, lineWidth: isToday && comp == nil ? 2 : 0))
                 if let comp {
-                    Text(comp.shortName.components(separatedBy: " ").prefix(2).joined(separator: " "))
-                        .font(.mono(7.5, .semibold)).foregroundStyle(accent.color).lineLimit(1).minimumScaleFactor(0.7)
+                    Text(comp.displayName.components(separatedBy: " ").prefix(2).joined(separator: " "))
+                        .font(.sans(9, .semibold)).foregroundStyle(Palette.text).lineLimit(1).minimumScaleFactor(0.7)
                 } else if let dot {
-                    Rectangle().fill(dot == .logged ? accent.color : .clear)
-                        .overlay(Rectangle().strokeBorder(accent.color, lineWidth: dot == .planned ? 1 : 0))
-                        .frame(width: 5, height: 5)
+                    Circle().fill(dot == .logged ? accent.color : .clear)
+                        .overlay(Circle().strokeBorder(accent.color, lineWidth: dot == .planned ? 1 : 0))
+                        .frame(width: 6, height: 6)
                 } else {
-                    Color.clear.frame(width: 5, height: 5)
+                    Color.clear.frame(width: 6, height: 6)
                 }
             }
             .padding(.top, 4)
-            .frame(maxWidth: .infinity, minHeight: 46, alignment: .top)
-            .background {
-                switch phase {
-                case .peak: Palette.track
-                case .taper: Hatch(fg: Palette.track)
-                case .compWeek: Hatch(fg: Palette.worked)
-                default: Color.clear
-                }
-            }
+            .frame(maxWidth: .infinity, minHeight: 50, alignment: .top)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(PhaseTint.color(phase) ?? .clear))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .sensoryFeedback(.selection, trigger: isSelected)
         .accessibilityLabel(Day.long(iso) + (comp.map { ", \($0.name)" } ?? "") + (dot == .logged ? ", session logged" : dot == .planned ? ", session planned" : ""))
-        .accessibilityValue(phase?.rawValue.lowercased() ?? "")
+        .accessibilityValue(phase?.label.lowercased() ?? "")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
@@ -448,18 +441,18 @@ struct CalendarLegend: View {
 
     var body: some View {
         ChipFlow(spacing: 14) {
-            item("logged") { Rectangle().fill(accent.color) }
-            item("planned") { Rectangle().strokeBorder(accent.color, lineWidth: 1) }
-            item("peak") { Rectangle().fill(Palette.track) }
-            item("taper") { Hatch(fg: Palette.worked) }
-            item("comp") { Rectangle().fill(accent.color) }
+            item("Logged") { Circle().fill(accent.color) }
+            item("Planned") { Circle().strokeBorder(accent.color, lineWidth: 1) }
+            item("Peak") { RoundedRectangle(cornerRadius: 2).fill(PhaseTint.color(.peak)!) }
+            item("Taper") { RoundedRectangle(cornerRadius: 2).fill(PhaseTint.color(.taper)!) }
+            item("Comp") { Circle().fill(accent.color) }
         }
     }
 
     func item<S: View>(_ label: String, @ViewBuilder swatch: () -> S) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 5) {
             swatch().frame(width: 9, height: 9)
-            Text(label).font(.sans(11)).foregroundStyle(Palette.muted)
+            Text(label).font(.sans(12)).foregroundStyle(Palette.secondary)
         }
     }
 }
@@ -479,14 +472,14 @@ struct DayCard: View {
 
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
-                Text("\(Day.long(day).components(separatedBy: " ").dropLast().joined(separator: " "))\(day == today ? " · today" : "")")
-                    .font(.sans(14, .semibold)).foregroundStyle(Palette.ink)
+                Text("\(Day.long(day).components(separatedBy: " ").dropLast().joined(separator: " "))\(day == today ? ", today" : "")")
+                    .font(.sans(17, .semibold)).foregroundStyle(Palette.text)
                 Spacer()
                 if let dp, let weekOffset {
-                    Text("\(dp.phase.rawValue)\(weekOffset < 0 ? " · WK \(weekOffset)" : "")").font(.mono(10.5)).foregroundStyle(Palette.muted)
+                    Text("\(dp.phase.label)\(weekOffset < 0 ? ", week \(weekOffset)" : "")").font(.sans(13)).foregroundStyle(Palette.secondary)
                 }
             }
-            Text(describe(sessions: sessions, comps: comps)).font(.sans(13)).foregroundStyle(Palette.muted).padding(.top, 6)
+            Text(describe(sessions: sessions, comps: comps)).font(.sans(14)).foregroundStyle(Palette.secondary).padding(.top, 6)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
                 if day >= today {
@@ -502,9 +495,6 @@ struct DayCard: View {
             }
             .padding(.top, 12)
         }
-        .padding(14)
-        .background(Palette.card)
-        .overlay(Rectangle().strokeBorder(Palette.rule, lineWidth: 1))
     }
 
     func describe(sessions: [Session], comps: [Competition]) -> String {
@@ -516,7 +506,7 @@ struct DayCard: View {
             case .planned: parts.append("Planned: \(s.intent ?? "session"), \(gym).")
             case .done:
                 let sends = Metrics.sessionSends(db.climbs, sessionId: s.id).count
-                parts.append("\(s.intent ?? "Session"), \(gym) · \(sends) sends.")
+                parts.append("\(s.intent ?? "Session"), \(gym), \(sends) sends.")
             }
         }
         if parts.isEmpty { parts.append("Nothing planned.") }

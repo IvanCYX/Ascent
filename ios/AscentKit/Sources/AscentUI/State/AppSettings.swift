@@ -49,7 +49,8 @@ public final class AppSettings {
 
     public init(defaults: UserDefaults = AppGroup.defaults) {
         self.defaults = defaults
-        appearance = Appearance(rawValue: defaults.string(forKey: SharedKey.appearance) ?? "") ?? .system
+        // r3: dark by default
+        appearance = Appearance(rawValue: defaults.string(forKey: SharedKey.appearance) ?? "") ?? .dark
         accentHex = defaults.string(forKey: SharedKey.accentHex) ?? ""
         faceIDLock = defaults.bool(forKey: SharedKey.privacyLock)
         requireInterval = RequireInterval(rawValue: defaults.integer(forKey: SharedKey.requireInterval)) ?? .immediately

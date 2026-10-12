@@ -3,36 +3,47 @@ import AscentCore
 
 /* ── Layout ─────────────────────────────────────────────────────────────── */
 
-/// A content band: 16 pt gutter, 20 pt vertical padding, hairline on top.
-struct Band<Content: View>: View {
-    var top = true
-    var bottomPadding: CGFloat = 20
+/// A rounded content card on the ground (DESIGN §7.4): radius 22, padding 18.
+struct Card<Content: View>: View {
+    var padding: CGFloat = 18
+    var fill: Color = Palette.surface
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) { content }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(padding)
+            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(fill))
+    }
+}
+
+/// A content section: a card with the 16 pt gutter, 12 pt above. (r2's hairline band, now a card.)
+struct Band<Content: View>: View {
+    var top = true
+    var bottomPadding: CGFloat = 18
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        Card { content }
             .padding(.horizontal, 16)
-            .padding(.top, 20)
-            .padding(.bottom, bottomPadding)
-            .overlay(alignment: .top) { if top { Hairline() } }
+            .padding(.top, 12)
     }
 }
 
 struct Hairline: View {
-    var color: Color = Palette.rule
+    var color: Color = Palette.hairline
     var body: some View { Rectangle().fill(color).frame(height: 1) }
 }
 
-/// Newsreader title on the left, mono caps note on the right.
+/// Card title on the left, a secondary note on the right.
 struct SectionHead<Trailing: View>: View {
     var title: String
-    var size: CGFloat = 21
+    var size: CGFloat = 17
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text(title).font(.serif(size, relativeTo: .title3)).foregroundStyle(Palette.ink)
+            Text(title).font(.sans(17, .semibold)).foregroundStyle(Palette.text)
             Spacer(minLength: 8)
             trailing
         }
@@ -41,7 +52,7 @@ struct SectionHead<Trailing: View>: View {
 }
 
 extension SectionHead where Trailing == AnyView {
-    init(_ title: String, note: String? = nil, noteColor: Color = Palette.muted, size: CGFloat = 21) {
+    init(_ title: String, note: String? = nil, noteColor: Color = Palette.secondary, size: CGFloat = 17) {
         self.title = title
         self.size = size
         self.trailing = AnyView(Group {
@@ -50,33 +61,59 @@ extension SectionHead where Trailing == AnyView {
     }
 }
 
-/// "Read:" / "Comp prep:" / "Pattern:" lines.
+/// The screen's one insight, in a tinted row.
 struct Insight: View {
     var label: String?
     var text: String
-    var color: Color = Palette.muted
+    var color: Color = Palette.text
 
     var body: some View {
-        Text("\(Text(label.map { "\($0) " } ?? "").font(.sans(13, .semibold)).foregroundStyle(color == Palette.muted ? Palette.ink : color))\(Text(text).font(.sans(13)).foregroundStyle(color))")
-            .lineSpacing(3)
+        Text("\(Text(label.map { "\($0) " } ?? "").font(.sans(14, .semibold)))\(Text(text).font(.sans(14)))")
+            .foregroundStyle(color)
+            .lineSpacing(2)
             .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14).padding(.vertical, 12)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.raised))
             .padding(.top, 14)
     }
 }
 
-/// Red inline panel — never a modal.
+/// Red inline row — never a modal.
 struct WarnPanel: View {
     var lead: String
     var text: String
+    var tone: Tone = .injury
+
+    enum Tone { case injury, caution }
 
     var body: some View {
-        Text("\(Text("\(lead) · ").font(.sans(13, .semibold)).foregroundStyle(Palette.warn))\(Text(text).font(.sans(13)).foregroundStyle(Palette.muted))")
-            .lineSpacing(3)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14).padding(.vertical, 12)
-            .background(Palette.warnBg)
-            .overlay(Rectangle().strokeBorder(Palette.warnBorder, lineWidth: 1))
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Circle().fill(tone == .injury ? Palette.injury : Palette.caution).frame(width: 6, height: 6)
+                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+            Text("\(Text("\(lead): ").font(.sans(13, .semibold)))\(Text(text).font(.sans(13)))")
+                .foregroundStyle(tone == .injury ? Palette.injuryText : Palette.cautionText)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12).padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(tone == .injury ? Palette.injuryBg : Palette.cautionBg))
+    }
+}
+
+/// `+1`, `−0.3`, `Flat` (DESIGN §0 copy rules).
+struct DeltaChip: View {
+    enum Tone { case neutral, caution, quiet }
+    var text: String
+    var tone: Tone = .neutral
+
+    var body: some View {
+        Text(text)
+            .font(.sans(12, .semibold)).monospacedDigit()
+            .foregroundStyle(tone == .caution ? Palette.cautionText : tone == .quiet ? Palette.secondary : Palette.text)
+            .padding(.horizontal, 7).frame(minHeight: 20)
+            .background(Capsule().fill(tone == .caution ? Palette.cautionBg : Palette.text.opacity(tone == .quiet ? 0.06 : 0.12)))
     }
 }
 
@@ -84,6 +121,7 @@ struct WarnPanel: View {
 
 struct Chip: View {
     enum Kind { case normal, pain, dashed }
+    @Environment(\.accent) private var accent
     var label: String
     var on = false
     var small = false
@@ -94,15 +132,16 @@ struct Chip: View {
     var body: some View {
         Button(action: action) {
             Text(label)
-                .font(.sans(small ? 13 : 14, .medium))
+                .font(.sans(small ? 14 : 15, on ? .semibold : .medium))
                 .strikethrough(blocked)
                 .lineLimit(1)
                 .foregroundStyle(foreground)
-                .padding(.horizontal, small ? 12 : 14)
+                .padding(.horizontal, 14)
                 .frame(minHeight: small ? 36 : 40)
-                .background(background)
-                .overlay(Rectangle().strokeBorder(border, style: StrokeStyle(lineWidth: 1, dash: kind == .dashed ? [4, 3] : [])))
-                .contentShape(Rectangle())
+                .background(Capsule().fill(background))
+                .overlay(Capsule().strokeBorder(Palette.hairlineStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    .opacity(kind == .dashed ? 1 : 0))
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .sensoryFeedback(.selection, trigger: on)
@@ -110,32 +149,27 @@ struct Chip: View {
     }
 
     private var foreground: Color {
-        if blocked { return Palette.faint }
+        if blocked { return Palette.tertiary }
         switch kind {
-        case .pain: return on ? .white : Palette.warn
-        default: return on ? Palette.paper : Palette.ink
+        case .pain: return on ? .white : Palette.injuryText
+        case .dashed: return Palette.secondary
+        case .normal: return on ? accent.onAccent : Palette.text
         }
     }
 
     private var background: Color {
         if kind == .dashed { return .clear }
-        if on { return kind == .pain ? Palette.warn : Palette.ink }
-        return Palette.card
-    }
-
-    private var border: Color {
-        if blocked { return Palette.rule }
+        if blocked { return Palette.raised }
         switch kind {
-        case .pain: return on ? Palette.warn : Palette.warnBorder
-        case .dashed: return Palette.ruleStrong
-        case .normal: return on ? Palette.ink : Palette.ruleChip
+        case .pain: return on ? Palette.injury : Palette.injuryBg
+        default: return on ? accent.color : Palette.raised
         }
     }
 }
 
 /// Wrapping row of chips.
 struct ChipFlow<Content: View>: View {
-    var spacing: CGFloat = 6
+    var spacing: CGFloat = 8
     @ViewBuilder var content: Content
     var body: some View {
         FlowLayout(spacing: spacing) { content }
@@ -143,7 +177,7 @@ struct ChipFlow<Content: View>: View {
 }
 
 struct FlowLayout: Layout {
-    var spacing: CGFloat = 6
+    var spacing: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? .infinity
@@ -170,22 +204,23 @@ struct FlowLayout: Layout {
     }
 }
 
-/// Square segmented control on the paper layer (`8 weeks | 6 months | Season`, `Gym | Board`…).
+/// The rounded segmented control (`8 weeks | 6 months | Season`, `Gym | Board`…).
 struct SquareSegment<T: Hashable>: View {
     var options: [(T, String)]
     @Binding var selection: T
 
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 0) {
             ForEach(options, id: \.0) { value, label in
                 let on = value == selection
-                Button { selection = value } label: {
+                Button { withAnimation(.snappy(duration: 0.2)) { selection = value } } label: {
                     Text(label)
-                        .font(.sans(13, .medium))
+                        .font(.sans(14, on ? .semibold : .medium))
                         .lineLimit(1).minimumScaleFactor(0.8)
-                        .foregroundStyle(on ? Palette.paper : Palette.muted)
-                        .frame(maxWidth: .infinity, minHeight: 38)
-                        .background(on ? Palette.ink : .clear)
+                        .foregroundStyle(on ? Palette.text : Palette.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 34)
+                        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(on ? Palette.segment : .clear)
+                            .shadow(color: .black.opacity(on ? 0.08 : 0), radius: 2, y: 1))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -193,7 +228,7 @@ struct SquareSegment<T: Hashable>: View {
             }
         }
         .padding(3)
-        .background(Palette.track)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.raised))
         .sensoryFeedback(.selection, trigger: selection)
     }
 }
@@ -203,49 +238,52 @@ struct SquareSegment<T: Hashable>: View {
 struct PrimaryButtonStyle: ButtonStyle {
     @Environment(\.accent) private var accent
     @Environment(\.isEnabled) private var enabled
-    var height: CGFloat = 50
+    var height: CGFloat = 52
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.sans(15, .semibold, relativeTo: .headline))
+            .font(.sans(16, .semibold, relativeTo: .headline))
             .lineLimit(1).minimumScaleFactor(0.8)
-            .foregroundStyle(enabled ? accent.onAccent : Palette.faint)
+            .foregroundStyle(enabled ? accent.onAccent : Palette.tertiary)
             .frame(maxWidth: .infinity, minHeight: height)
-            .padding(.horizontal, 12)
-            .background(enabled ? accent.color : Palette.track)
+            .padding(.horizontal, 14)
+            .background(Capsule().fill(enabled ? accent.color : Palette.raised))
             .opacity(configuration.isPressed ? 0.8 : 1)
-            .contentShape(Rectangle())
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(.snappy(duration: 0.15), value: configuration.isPressed)
+            .contentShape(Capsule())
     }
 }
 
 struct SecondaryButtonStyle: ButtonStyle {
-    var height: CGFloat = 50
+    var height: CGFloat = 52
     var dashed = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.sans(15, .semibold, relativeTo: .headline))
+            .font(.sans(16, .semibold, relativeTo: .headline))
             .lineLimit(1).minimumScaleFactor(0.8)
-            .foregroundStyle(Palette.ink)
+            .foregroundStyle(Palette.text)
             .frame(maxWidth: .infinity, minHeight: height)
-            .padding(.horizontal, 12)
-            .overlay(Rectangle().strokeBorder(Palette.ruleStrong, style: StrokeStyle(lineWidth: 1, dash: dashed ? [5, 3] : [])))
-            .background(configuration.isPressed ? Palette.track : .clear)
-            .contentShape(Rectangle())
+            .padding(.horizontal, 14)
+            .background(Capsule().fill(dashed ? .clear : Palette.raised))
+            .overlay(Capsule().strokeBorder(Palette.hairlineStrong, style: StrokeStyle(lineWidth: 1, dash: [5, 3])).opacity(dashed ? 1 : 0))
+            .opacity(configuration.isPressed ? 0.75 : 1)
+            .contentShape(Capsule())
     }
 }
 
-/// Underlined accent link.
+/// A plain text action in the accent.
 struct LinkButton: View {
     @Environment(\.accent) private var accent
     var title: String
     var color: Color?
-    var size: CGFloat = 13
+    var size: CGFloat = 14
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Text(title).font(.sans(size, .medium)).underline().foregroundStyle(color ?? accent.color)
+            Text(title).font(.sans(size, .semibold)).foregroundStyle(color ?? accent.color)
                 .frame(minHeight: 32).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -260,13 +298,12 @@ struct FieldRow<Trailing: View>: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(label).font(.mono(11)).tracking(0.66).foregroundStyle(Palette.muted)
+            Text(label.sentenceCased).font(.sans(14)).foregroundStyle(Palette.secondary)
             trailing
         }
         .padding(.horizontal, 14)
         .frame(minHeight: 48)
-        .background(Palette.card)
-        .overlay(Rectangle().strokeBorder(Palette.rule, lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.raised))
     }
 }
 
@@ -278,50 +315,65 @@ struct TextFieldRow: View {
     var body: some View {
         FieldRow(label: label) {
             TextField(placeholder, text: $text)
-                .font(.sans(14))
-                .foregroundStyle(Palette.ink)
+                .font(.sans(15))
+                .foregroundStyle(Palette.text)
                 .textFieldStyle(.plain)
         }
     }
 }
 
-/// Dashed note box.
 struct NoteBox: View {
     var placeholder: String
     @Binding var text: String
 
     var body: some View {
         TextField(placeholder, text: $text, axis: .vertical)
-            .font(.sans(13.5))
-            .foregroundStyle(Palette.ink)
+            .font(.sans(15))
+            .foregroundStyle(Palette.text)
             .lineLimit(3...8)
             .textFieldStyle(.plain)
             .padding(.horizontal, 14).padding(.vertical, 13)
             .frame(minHeight: 64, alignment: .topLeading)
-            .overlay(Rectangle().strokeBorder(Palette.ruleStrong, style: StrokeStyle(lineWidth: 1, dash: [5, 3])))
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.raised))
     }
 }
 
-/// − value + stepper as two square buttons.
+/// − value + stepper.
 struct SquareStepper: View {
     var value: String
     var decrement: () -> Void
     var increment: () -> Void
 
     var body: some View {
-        HStack(spacing: 14) {
-            Text(value).font(.serif(20)).foregroundStyle(Palette.ink).monospacedDigit()
-            HStack(spacing: 2) {
-                ForEach([("−", decrement), ("+", increment)], id: \.0) { label, action in
-                    Button(action: action) {
-                        Text(label).font(.sans(17, .medium)).foregroundStyle(Palette.ink)
-                            .frame(width: 46, height: 36).background(Palette.track).contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(label == "+" ? "Increase" : "Decrease")
-                }
-            }
+        HStack(spacing: 6) {
+            StepButton(systemName: "minus", label: "Decrease", action: decrement)
+            Text(value).font(.num(18)).foregroundStyle(Palette.text).frame(minWidth: 40)
+                .contentTransition(.numericText())
+            StepButton(systemName: "plus", label: "Increase", action: increment)
         }
+    }
+}
+
+struct StepButton: View {
+    var systemName: String
+    var label: String
+    var size: CGFloat = 40
+    var fill: Color = Palette.surface
+    var disabled = false
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName).font(.system(size: 15, weight: .bold))
+                .foregroundStyle(disabled ? Palette.tertiary : Palette.text)
+                .frame(width: size, height: size)
+                .background(Circle().fill(fill))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .accessibilityLabel(label)
     }
 }
 
@@ -331,14 +383,14 @@ struct Meter: View {
     @Environment(\.accent) private var accent
     var pct: Double
     var warn = false
-    var height: CGFloat = 6
+    var height: CGFloat = 8
 
     var body: some View {
         GeometryReader { g in
             ZStack(alignment: .leading) {
-                Rectangle().fill(Palette.track)
-                Rectangle().fill(warn ? Palette.warn : accent.color)
-                    .frame(width: g.size.width * min(1, max(0, pct / 100)))
+                Capsule().fill(Palette.track)
+                Capsule().fill(warn ? Palette.caution : accent.color)
+                    .frame(width: max(height, g.size.width * min(1, max(0, pct / 100))))
             }
         }
         .frame(height: height)
@@ -354,42 +406,42 @@ struct LoadBar: View {
     var body: some View {
         GeometryReader { g in
             ZStack(alignment: .leading) {
-                Rectangle().fill(Palette.track).frame(height: 6)
-                Rectangle().fill(accent.color).frame(width: g.size.width * min(1, max(0, fill)), height: 6)
-                Rectangle().fill(Palette.ink).frame(width: 1.5, height: 12)
-                    .offset(x: min(g.size.width - 1.5, g.size.width * tick))
+                Capsule().fill(Palette.track).frame(height: 8)
+                Capsule().fill(accent.color).frame(width: max(8, g.size.width * min(1, max(0, fill))), height: 8)
+                Capsule().fill(Palette.text).frame(width: 3, height: 16)
+                    .offset(x: min(g.size.width - 3, g.size.width * tick))
             }
             .frame(maxHeight: .infinity)
         }
-        .frame(height: 12)
-        .padding(.top, 5)
+        .frame(height: 16)
+        .padding(.top, 8)
     }
 }
 
-/// A hold/tag colour square. Black and white get an inner hairline.
+/// A hold/tag colour dot. Black and white get an inner hairline.
 struct Swatch: View {
     var colour: String?
-    var size: CGFloat = 15
+    var size: CGFloat = 14
 
     var body: some View {
-        Rectangle()
+        Circle()
             .fill(colour == nil ? Palette.track : Palette.hold(colour))
             .frame(width: size, height: size)
-            .overlay(Rectangle().strokeBorder(Palette.ruleStrong, lineWidth: Palette.needsHairline(colour) || colour == nil ? 1 : 0))
+            .overlay(Circle().strokeBorder(Palette.hairlineStrong, lineWidth: Palette.needsHairline(colour) || colour == nil ? 1 : 0))
             .accessibilityLabel(Vocab.colourLabel(colour))
     }
 }
 
-/// Top grades cell — Camp5 never shows numbers.
+/// Top grades — Camp5 never shows numbers.
 struct TopGradesView: View {
     var top: Metrics.TopGrades
 
     var body: some View {
         switch top {
         case .tag(let tags):
-            HStack(spacing: 4) {
-                ForEach(tags, id: \.self) { Swatch(colour: $0, size: 14) }
-                Text(tags.map(Vocab.colourCode).joined(separator: " · ")).font(.mono(10.5)).foregroundStyle(Palette.muted)
+            HStack(spacing: 5) {
+                ForEach(tags, id: \.self) { Swatch(colour: $0, size: 12) }
+                Text(tags.map(Vocab.colourLabel).joined(separator: ", ")).font(.sans(13)).foregroundStyle(Palette.secondary)
             }
         case .number(let xs):
             gradeChips(xs.map(String.init))
@@ -400,12 +452,12 @@ struct TopGradesView: View {
 
     func gradeChips(_ values: [String]) -> some View {
         HStack(spacing: 4) {
-            if values.isEmpty { Text("—").font(.mono(10)).foregroundStyle(Palette.faint) }
+            if values.isEmpty { Text("–").font(.sans(13)).foregroundStyle(Palette.tertiary) }
             ForEach(Array(values.enumerated()), id: \.offset) { i, v in
-                Text(v).font(.mono(10.5, .medium))
-                    .foregroundStyle(i == 0 ? Palette.paper : Palette.ink)
-                    .padding(.horizontal, 6).padding(.vertical, 4)
-                    .background(i == 0 ? Palette.ink : Palette.track)
+                Text(v).font(.num(12))
+                    .foregroundStyle(i == 0 ? Palette.text : Palette.secondary)
+                    .padding(.horizontal, 7).padding(.vertical, 4)
+                    .background(Capsule().fill(Palette.raised))
             }
         }
     }
@@ -421,7 +473,7 @@ struct GlassIconButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemName).font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.ink)
+            Image(systemName: systemName).font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.text)
                 .frame(width: 44, height: 44)
         }
         .buttonStyle(.plain)
@@ -430,7 +482,7 @@ struct GlassIconButton: View {
     }
 }
 
-/// The glass toast: `✓ Sent · 12 blue · 3 tries   Undo`
+/// The toast: `Logged 11, Flash   Undo`
 struct ToastView: View {
     @Environment(\.accent) private var accent
     var toast: Toast
@@ -438,18 +490,19 @@ struct ToastView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "checkmark").font(.system(size: 14, weight: .semibold))
-            Text("\(Text(toast.title).font(.sans(14, .semibold)))\(Text(toast.detail.isEmpty ? "" : " · \(toast.detail)").font(.sans(14, .medium)))")
+            Text("\(Text(toast.title).font(.sans(15, .semibold)))\(Text(toast.detail.isEmpty ? "" : ", \(toast.detail)").font(.sans(15)))")
                 .lineLimit(1)
             if let undo = toast.undo {
-                Button("Undo") { undo(); dismiss() }
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(accent.color)
-                    .padding(.horizontal, 6)
+                Button { undo(); dismiss() } label: {
+                    Text("Undo").font(.sans(14, .semibold)).foregroundStyle(Palette.text)
+                        .padding(.horizontal, 14).frame(height: 34)
+                        .background(Capsule().fill(Palette.text.opacity(0.1)))
+                }
+                .buttonStyle(.plain)
             }
         }
-        .foregroundStyle(Palette.ink)
-        .padding(.leading, 18).padding(.trailing, toast.undo == nil ? 18 : 8)
+        .foregroundStyle(Palette.text)
+        .padding(.leading, 18).padding(.trailing, toast.undo == nil ? 18 : 7)
         .frame(height: 48)
         .glassEffect(.regular, in: .capsule)
         .accessibilityElement(children: .combine)
@@ -459,14 +512,12 @@ struct ToastView: View {
 /* ── Formatting ─────────────────────────────────────────────────────────── */
 
 func climbDetail(_ c: Climb) -> String {
-    [c.styles.isEmpty ? nil : c.styles.joined(separator: " + "),
-     c.tickType == .flash ? "flash" : "\(c.attempts) tries",
-     c.location].compactMap { $0 }.joined(separator: " · ")
+    [Vocab.attemptsLabel(c), c.styles.isEmpty ? nil : c.styles.joined(separator: ", "), c.location]
+        .compactMap { $0 }.joined(separator: ", ")
 }
 
 func boardDetail(_ c: Climb) -> String {
-    [c.name, c.angle.map { "\($0)°" }, c.tickType == .flash ? "flash" : "\(c.attempts) tries"]
-        .compactMap { $0 }.joined(separator: " · ")
+    [Vocab.attemptsLabel(c), c.angle.map { "\($0)°" }, c.name].compactMap { $0 }.joined(separator: ", ")
 }
 
 func gradeLabel(_ c: Climb) -> String {
@@ -482,4 +533,13 @@ func spokenDuration(from start: Date, now: Date = .now) -> String {
     let mins = max(0, Int(now.timeIntervalSince(start) / 60))
     let h = mins / 60, m = mins % 60
     return [h > 0 ? "\(h) hour\(h == 1 ? "" : "s")" : nil, "\(m) minute\(m == 1 ? "" : "s")"].compactMap { $0 }.joined(separator: " ")
+}
+
+extension String {
+    /// "PHYSIO NEXT" → "Physio next"; mixed-case strings are left alone.
+    var sentenceCased: String {
+        guard self == uppercased(), contains(where: \.isLetter) else { return self }
+        let lower = lowercased()
+        return lower.prefix(1).uppercased() + lower.dropFirst()
+    }
 }

@@ -22,7 +22,7 @@ import AscentCore
             .environment(\.accent, AccentTheme(hex: accent))
             .environment(\.colorScheme, dark ? .dark : .light)
             .frame(width: width, height: height)
-            .background(Palette.paper)
+            .background(Palette.ground)
     }
 
     func write<V: View>(_ name: String, _ view: V, dark: Bool = false) {
@@ -54,7 +54,10 @@ import AscentCore
             write("history-\(sfx)", env(HistoryView(), dark: dark, height: 1600), dark: dark)
             write("body-\(sfx)", env(BodyView(), dark: dark, height: 2600), dark: dark)
             write("settings-\(sfx)", env(SettingsView(), dark: dark, height: 1500), dark: dark)
-            write("quickadd-\(sfx)", env(QuickAddSheet(), dark: dark, height: 452), dark: dark)
+            write("quickadd-\(sfx)", env(QuickAddSheet(), dark: dark, height: 500), dark: dark)
+            write("load-\(sfx)", env(LoadDetailView(), dark: dark, height: 1400), dark: dark)
+            write("progress-\(sfx)", env(ProgressDetailView(), dark: dark, height: 2200), dark: dark)
+            write("normalgrade-\(sfx)", env(NormalGradeView(), dark: dark, height: 1000), dark: dark)
             write("log-\(sfx)", env(LoggingSheet(start: false, step: .log(.gym)), dark: dark, height: 1400), dark: dark)
             write("review-\(sfx)", env(LoggingSheet(start: false, step: .review), dark: dark, height: 1500), dark: dark)
             write("lock-\(sfx)", env(LockView(autoPrompt: false), dark: dark, height: 852), dark: dark)
@@ -68,7 +71,7 @@ import AscentCore
             for locked in [false, true] {
                 let v = AscentWidgetView(kind: kind, summary: summary, privacyLock: true, accent: AccentTheme(hex: ""))
                     .redacted(reason: locked ? .privacy : [])
-                    .padding(16).frame(width: w, height: h).background(Palette.paper)
+                    .padding(16).frame(width: w, height: h).background(Palette.ground)
                 write("widget-\(kind)-\(locked ? "locked" : "open")", v)
             }
         }
@@ -79,7 +82,7 @@ import AscentCore
 @Suite struct LockSnapshot {
     @Test func lockParts() {
         let s = Snapshots()
-        s.write("lockexp-noGlass", s.env(ZStack { Palette.paper; VStack { Text("ASCENT"); Text("Your log is locked").font(.serif(30)) } }, dark: false, height: 400))
+        s.write("lockexp-noGlass", s.env(ZStack { Palette.ground; VStack { Text("Ascent"); Text("Your log is locked").font(.sans(28, .bold)) } }, dark: false, height: 400))
         s.write("lockexp-full", s.env(LockView(autoPrompt: false), dark: false, height: 852))
         s.write("lockexp-cover", s.env(PrivacyCover(), dark: false, height: 400))
     }

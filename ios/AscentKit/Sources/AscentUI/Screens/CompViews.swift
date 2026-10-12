@@ -26,11 +26,11 @@ struct CompEditorSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    TextFieldRow(label: "NAME", placeholder: "KL Open · Bouldering", text: $name).padding(.bottom, 8)
+                    TextFieldRow(label: "Name", placeholder: "KL Open · Bouldering", text: $name).padding(.bottom, 8)
 
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
-                            Text("DATE").font(.mono(11)).tracking(0.66).foregroundStyle(Palette.muted)
+                            Text("Date").font(.sans(14)).foregroundStyle(Palette.secondary)
                             Spacer()
                             Text(Day.long(Day.iso(date))).font(.sans(14, .medium))
                         }
@@ -38,28 +38,28 @@ struct CompEditorSheet: View {
                             .datePickerStyle(.graphical).labelsHidden().tint(accent.color)
                     }
                     .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 6)
-                    .background(Palette.card).overlay(Rectangle().strokeBorder(Palette.rule, lineWidth: 1))
+                    .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Palette.raised))
                     .padding(.bottom, 8)
 
-                    FieldRow(label: "MULTI-DAY") { Spacer(); Toggle("Multi-day", isOn: $multiDay).labelsHidden().tint(accent.color) }
+                    FieldRow(label: "Multi-day") { Spacer(); Toggle("Multi-day", isOn: $multiDay).labelsHidden().tint(accent.color) }
                         .padding(.bottom, 8)
                     if multiDay {
-                        FieldRow(label: "ENDS") {
+                        FieldRow(label: "Ends") {
                             Spacer()
                             DatePicker("Ends", selection: $endDate, in: date..., displayedComponents: .date).labelsHidden()
                         }
                         .padding(.bottom, 8)
                     }
 
-                    FieldRow(label: "WHERE") {
-                        TextField("Bukit Jalil, Kuala Lumpur", text: $location).font(.sans(14)).textFieldStyle(.plain)
+                    FieldRow(label: "Where") {
+                        TextField("Bukit Jalil, Kuala Lumpur", text: $location).font(.sans(15)).textFieldStyle(.plain)
                         Menu {
                             ForEach(store.db.gyms) { g in
                                 Button(g.name) { gymId = g.id; location = g.name }
                             }
                             if gymId != nil { Button("Not a saved gym") { gymId = nil } }
                         } label: {
-                            Image(systemName: "building.2").foregroundStyle(Palette.ink).frame(width: 36, height: 36)
+                            Image(systemName: "building.2").foregroundStyle(Palette.text).frame(width: 36, height: 36)
                         }
                         .accessibilityLabel("Pick a saved gym")
                     }
@@ -79,22 +79,22 @@ struct CompEditorSheet: View {
                         }
                     }
 
-                    Text("Priority").micro().padding(.bottom, 9)
+                    FieldLabel(title: "Priority")
                     SquareSegment(options: [(CompPriority.a, "A"), (.b, "B"), (.c, "C")], selection: $priority)
                     Text(priority == .a ? "2-week taper." : priority == .b ? "1 lighter week." : "No taper. Rest the day before.")
-                        .font(.sans(12)).foregroundStyle(Palette.muted).padding(.top, 8).padding(.bottom, 12)
+                        .font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 8).padding(.bottom, 14)
 
                     NoteBox(placeholder: "Notes", text: $notes)
                 }
                 .padding(.horizontal, 16).padding(.bottom, 120)
             }
-            .background(Palette.paper)
+            .background(Palette.sheet)
             .safeAreaInset(edge: .bottom) {
                 Button(compId == nil ? "Add comp" : "Save") { save() }
                     .buttonStyle(PrimaryButtonStyle())
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                     .padding(.horizontal, 16).padding(.vertical, 12)
-                    .background(Palette.paper)
+                    .background(Palette.sheet)
             }
             .navigationTitle(compId == nil ? "New comp" : "Edit comp")
             .inlineTitle()
@@ -111,8 +111,8 @@ struct CompEditorSheet: View {
     }
 
     @ViewBuilder func group<C: View>(_ title: String, @ViewBuilder chips: () -> C) -> some View {
-        Text(title).micro().padding(.bottom, 9)
-        ChipFlow { chips() }.padding(.bottom, 14)
+        FieldLabel(title: title)
+        ChipFlow { chips() }.padding(.bottom, 16)
     }
 
     private func load() {
@@ -157,22 +157,22 @@ struct CompDetailView: View {
             let today = store.today
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("\(comp.effectivePriority.rawValue) · \(Taper.phase(of: comp, on: today)?.rawValue ?? "DONE")").micro()
-                        Text(comp.name).font(.serif(32, relativeTo: .largeTitle)).fixedSize(horizontal: false, vertical: true)
-                        Text(Day.long(comp.date) + (comp.endDate.map { " – \(Day.long($0))" } ?? "")).font(.sans(14)).foregroundStyle(Palette.muted)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(comp.effectivePriority.rawValue) priority, \(Taper.phase(of: comp, on: today)?.label.lowercased() ?? "done")").micro()
+                        Text(comp.name).font(.sans(28, .bold)).foregroundStyle(Palette.text).fixedSize(horizontal: false, vertical: true)
+                        Text(Day.long(comp.date) + (comp.endDate.map { " to \(Day.long($0))" } ?? "")).font(.sans(15)).foregroundStyle(Palette.secondary)
                     }
-                    .padding(.horizontal, 16).padding(.bottom, 16)
+                    .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 4)
 
-                    PhaseBar(comp: comp, today: today).padding(.horizontal, 16).padding(.bottom, 20)
+                    Card { PhaseBar(comp: comp, today: today) }.padding(.horizontal, 16).padding(.top, 12)
 
                     Band {
-                        detail("WHERE", comp.location)
-                        detail("CATEGORY", comp.category)
-                        detail("FORMAT", comp.format)
-                        detail("ROUNDS", comp.rounds?.joined(separator: " → "))
-                        detail("TAPER", Taper.summary(comp, all: store.db.competitions).components(separatedBy: " · ").last)
-                        if let t = Taper.taperStart(comp) { detail("TAPER STARTS", Day.long(t)) }
+                        detail("Where", comp.location)
+                        detail("Category", comp.category)
+                        detail("Format", comp.format)
+                        detail("Rounds", comp.rounds?.joined(separator: ", "))
+                        detail("Taper", Taper.summary(comp, all: store.db.competitions).components(separatedBy: " · ").last?.sentenceCased)
+                        if let t = Taper.taperStart(comp) { detail("Taper starts", Day.long(t)) }
                     }
 
                     Band {
@@ -183,8 +183,8 @@ struct CompDetailView: View {
 
                     if comp.date <= today {
                         Band {
-                            SectionHead("Result", note: "OPTIONAL")
-                            TextFieldRow(label: "RESULT", placeholder: "Semi-final · 3T 5Z", text: $result)
+                            SectionHead("Result", note: "Optional")
+                            TextFieldRow(label: "Result", placeholder: "Semi-final, 3T 5Z", text: $result)
                                 .onChange(of: result) { _, v in store.saveCompetition(with(comp) { $0.result = v.isEmpty ? nil : v }) }
                         }
                     }
@@ -192,12 +192,11 @@ struct CompDetailView: View {
                     Band {
                         Button("Delete comp", role: .destructive) { confirmDelete = true }
                             .buttonStyle(SecondaryButtonStyle())
-                            .foregroundStyle(Palette.warn)
                     }
-                    .padding(.bottom, 80)
+                    .padding(.bottom, 96)
                 }
             }
-            .background(Palette.paper)
+            .background(Palette.ground)
             .navigationTitle(comp.displayName)
             .inlineTitle()
             .toolbar {
@@ -212,8 +211,8 @@ struct CompDetailView: View {
                 Text("Its taper plan is removed too.")
             }
         } else {
-            Text("This comp was deleted.").font(.sans(14)).foregroundStyle(Palette.muted).frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Palette.paper)
+            Text("This comp was deleted.").font(.sans(14)).foregroundStyle(Palette.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Palette.ground)
         }
     }
 
@@ -226,8 +225,8 @@ struct CompDetailView: View {
     @ViewBuilder func detail(_ label: String, _ value: String?) -> some View {
         if let value, !value.isEmpty {
             HStack(alignment: .firstTextBaseline) {
-                Text(label).font(.mono(11)).tracking(0.66).foregroundStyle(Palette.muted).frame(width: 110, alignment: .leading)
-                Text(value).font(.sans(14)).foregroundStyle(Palette.ink)
+                Text(label).font(.sans(14)).foregroundStyle(Palette.secondary).frame(width: 110, alignment: .leading)
+                Text(value).font(.sans(15)).foregroundStyle(Palette.text)
                 Spacer()
             }
             .padding(.vertical, 10)

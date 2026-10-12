@@ -11,6 +11,10 @@ public enum Route: Hashable {
     case comp(String)
     case planDay(String)
     case gyms
+    /// r3 pillar detail screens and the normal-grade setting
+    case load
+    case progress
+    case normalGrade
 }
 
 /// Steps inside the logging sheet's own stack.

@@ -1,4 +1,175 @@
-# Handoff: Ascent iOS port
+# Handoff: Ascent r3 redesign (read this first)
+
+**For:** the next agent, who will finish and ship the r3 UI/UX redesign.
+**Written:** 12 Oct 2026, when the user asked to stop mid-session.
+**Status in one line:** r3 is **built and running** on the iOS Simulator on branch `r3-redesign`, and all tests pass.
+Nothing is committed yet. A few doc updates and checks are still open (§R6).
+
+The original iOS-port handoff (Sep 2026) is kept below the line at the end of this section. Its machine notes are out
+of date (§R2).
+
+## R1. What the user asked for and decided
+
+The goal was a UI/UX redesign so the app looks less AI-generated and more like current apps such as **Whoop**, with
+smooth UX. It was decided in a long Q&A with the user and approved from a design canvas before any code was written.
+
+- **Spec:** `design/DESIGN.md`, now r3. r2 (paper and ink) is in git history.
+- **Approved design canvas (13 screens):** https://claude.ai/artifact/JzmnogQNGYm7oxoZesVzAp
+  - It is private to the user's account.
+  - The "Log a send · dark" board is clickable.
+  - Its background colours were later changed. The canvas dark ground is still the old `#0A0A0A` palette, which is
+    right. Ignore any navy or charcoal values you may see in its history.
+
+Decisions (don't re-litigate):
+
+| Area | Decision |
+|---|---|
+| **Look** | Whoop-style structure. Dark is the default appearance; light is kept. Rounded cards (radius 22), no hairline bands, no square boxes. Hold colours are the only rainbow. |
+| **Grounds** | Dark `#0A0A0A` (near-black neutral grey; the user tried navy and charcoal and came back to this). Light `#F5F5F4`, with white cards. |
+| **Type** | SF Pro for all text. Numbers use Archivo bold at width 125, from the variable font's `wdth` axis via CoreText. Newsreader and IBM Plex Mono are removed. |
+| **Colour roles** | The accent draws normal state and all chart marks. Amber `#F5A524` means caution. Injury red means warnings and anything body-related. There is no green "good" state. |
+| **Today** | Short screen: 3 pillar rings (Load, Progress, Body), the live session card, the last 7 days, one insight, up next. The deep charts moved to a Progress detail screen. |
+| **Load** | Each climb scores `attempts × 2^((grade − normal)/2)`. Not-sent attempts count too. **Last 7 days ÷ (the 28 days before ÷ 4).** Under 80 % = light, over 130 % = amber "Spiking". With less than 4 weeks of history it shows "Building baseline N/4". |
+| **Normal grade** | Set per scale (numbered 1–15, Camp5 tag, board V) in Settings › Training › Your normal grade. Defaults to the median of the last 28 days of sends. |
+| **Camp5** | New order from the user's chart: Pink VB–V1, Blue V0–2, Yellow V1–3, Orange V2–4, Green V3–5, Purple V4–6, Red V5–7, Black V6–8+. **One tag step = 2.5 grade steps** in the Load weight (`Load.camp5StepGrades`). |
+| **Progress pillar** | Top grade in the centre with a delta chip. The ring is hard sends (10+) against the previous period, with a second lap when you beat it. |
+| **Body pillar** | Latest pain in the centre. The ring is rehab days done in the **last 7 days, rolling**. Red if a load rule is used up; amber if pain is rising or a rule has one use left. "Clear" when there's no active injury. |
+| **The `+`** | Unchanged: same position, size and behaviour as r2. The user was explicit about this. |
+| **Logging** | Real attempt counts. A pinned bar `[ − n + ] label …… [Send]`: 1 = Flash, 2 = 2nd go, 3+ = "N tries". "Not sent" switch, then the button reads "Log". The form **resets to Flash (1) after every save**. Colour is optional at numbered gyms. Haptic and an undo toast on save. The Camp5 tally and the board log use the same bar. |
+| **Copy** | Sentence case, no spaced mono caps labels, few "·" chains, one insight per screen, deltas as small chips. |
+| **Motion** | Rings draw in, numbers roll, haptics on every write, zoom from the Load and Progress pillars into their screens. |
+| **Confirmed** | Ochre stays a preset, with a near-amber warning. Comp readiness moved to Progress detail. Recent sessions are in History only. |
+
+The user wants a **spec plus visual draft, approved, before any new UI work**. There is a memory note for this.
+
+## R2. Machine facts (these changed since the port handoff)
+
+- The Mac is now **Apple Silicon (arm64)** with **Xcode 27** at `/Applications/Xcode.app`, already selected.
+  `xcode-select -p` returns `/Applications/Xcode.app/Contents/Developer`. iOS 27 Simulators are available.
+- **Plain `swift test` works now.** `ios/AscentKit/test.sh` was updated to use it when Xcode is selected, and falls
+  back to the old Command Line Tools flags otherwise.
+- Simulator used: **iPhone 18 Pro**, UDID `5A58AC60-4806-4B3F-B21E-C156C1DD4788`. It is currently booted, with the
+  app installed.
+  - **The app is currently set to Light appearance** (left that way while checking light mode). Set it back to Dark
+    in Settings › Appearance; Dark is the user's default.
+- **Build the app:**
+  ```bash
+  cd ios && xcodebuild -project Ascent.xcodeproj -scheme Ascent -destination 'id=5A58AC60-4806-4B3F-B21E-C156C1DD4788' -derivedDataPath /tmp/ascent-dd build
+  ```
+  The `.app` ends up in `/tmp/ascent-dd/Build/Products/Debug-iphonesimulator/Ascent.app`. No `xcodegen` was needed:
+  new files live in the local Swift package.
+- **Simulator automation quirks:**
+  - Taps often need `duration` 0.15–0.25 s to register.
+  - A tap during a scroll bounce or a sheet animation is dropped.
+  - The first cold launch can take several seconds and look like a crash. It isn't.
+
+## R3. What was built (all uncommitted, on `r3-redesign`)
+
+`git status` shows 33 files changed, about +2.1k and −1.7k lines. Key pieces:
+
+- **Core (`ios/AscentKit/Sources/AscentCore`):**
+  - `Pillars.swift` (new) holds `NormalGrades`, `Load` (`climbLoad`, `window`, `daily`, `weekly`, `sessions`,
+    `suggestedNormals`, `normals`), `Pillars.progress`, `Pillars.body` and `Insights.today`.
+  - `Vocab`: the new `camp5Tags` order, `camp5Ranges`, `tickType(attempts:sent:)`, `attemptsLabel(...)`.
+    "Attempt only" is now "Not sent".
+  - `Database.rerankTags()` runs inside `normalise()`. Logs saved with the old yellow-first order get the ranked
+    gym's tag list and each tag climb's ordinal re-ranked from the tag id. It is idempotent.
+  - `Settings` gains `normalNumbered`, `normalTag` and `normalV`, persisted as settings rows so they travel in the
+    backup. `AscentStore.setNormal…` setters were added.
+  - `Day.fullDate`, `Day.relative` and `Day.weekdayShort` were added. `Phase.label` and `Taper.seasonText` add
+    sentence-case versions. `Metrics.watchChips` is now public.
+  - The seed's `tagWeights` were reordered to match the new tag order.
+- **Theme:**
+  - `Palette.swift` has the r3 tokens: `ground`, `surface`, `raised`, `track`, `tile`, `sheet`, `segment`, `text`,
+    `secondary`, `tertiary`, `hairline`, `caution*` and `injury*`. All old token names were renamed across the code.
+  - `AccentTheme` resolves contrast against `surface` and gains `isNearCaution`.
+  - `Typography.swift` provides `Font.sans` (SF Pro at the nearest text style, so Dynamic Type works) and
+    `Font.num` (Archivo, width 125). `.serif` and `.mono` remain as shims mapped onto these.
+  - Only `Archivo.ttf` is bundled now. The OFL notice now credits Archivo; it wrongly named Newsreader before.
+- **Components and charts:**
+  - `Components.swift`: `Card`; `Band` (now a card); chips; `SquareSegment` (rounded now, name kept); buttons;
+    fields; `StepButton`; `DeltaChip`; `String.sentenceCased`.
+  - `Charts.swift`: `PillarRing` (animated, second lap with a cut-out, laps under 2 % skipped); `StatGrid`; and
+    every r2 chart restyled.
+- **Screens:**
+  - `TodayView` (rewritten).
+  - `PillarDetails.swift` (new): `LoadDetailView`, `ProgressDetailView`, `NormalGradeView`.
+  - Router routes `.load`, `.progress` and `.normalGrade`. The zoom transition uses a `zoomNamespace` environment
+    value set in `RootView`.
+  - `LoggingSheet`: `AttemptBar`, `NotSentRow`, `HoldStrip` dots, tally rows with V ranges.
+  - Quick add is sized to its content via `onGeometryChange`.
+  - Plan, Season (tints instead of hatching), History (weekly groups), Body, Settings (Training section), comps and
+    the lock screen were all restyled.
+  - `AppSettings` defaults to `.dark`. Nav bars are back to system SF Pro.
+- **Widgets and Live Activity:** sentence-case copy and rounded marks. `AscentWidgets.swift` uses `Palette.surface`.
+- **Tests:**
+  - `Tests/AscentCoreTests/PillarsTests.swift` (new): attempts, Camp5 order and re-ranking, Load weights and
+    windows, normals, body states.
+  - The snapshot test was updated for r3 and renders Load, Progress and Normal grade too.
+  - **29 core and 2 snapshot tests pass** (`cd ios/AscentKit && ./test.sh`).
+
+**Verified in the Simulator (dark):**
+- Today, Load detail, Progress detail, Quick add, Log a send. Pick 11, step to 3: it logged "11, 3 tries" and reset
+  to Flash.
+- Plan, Season, History, Body, Settings, Your normal grade.
+- The zoom transition back from Load.
+- Camp5 shows Pink → Black on the existing log after re-ranking.
+
+**Verified in light:** Today and Settings.
+
+**Via snapshots:** widgets small, medium and large, locked and open.
+
+## R4. Known issues and small things noticed
+
+- **Widget pyramid labels wrapped** ("1" over "3"). Fixed in `WidgetViews.swift:98` (`.num(11)`, width 22,
+  `fixedSize`), but **not yet re-rendered**. Re-run the snapshots to confirm:
+  ```bash
+  cd ios/AscentKit && SNAPSHOT_DIR=/tmp/snaps ./test.sh --filter Snapshots
+  ```
+- **The Review screen's pain chip** (`Menu` wrapping a `Chip`) rendered as a square bordered button in the macOS
+  snapshot. Check it on iOS; if it looks wrong, give the Menu label a plain button style.
+- **A Load ring just over 100 %** (for example 104 %) shows a short second lap with a notch at 12 o'clock. This is
+  intended (Activity style); laps under 2 % are hidden.
+- Not checked visually: the accessory widgets (circular, rectangular, inline), the Dynamic Island and Lock Screen
+  Live Activity, the Face ID lock screen, the comp editor, the Gyms and boards screen, and light mode on screens
+  other than Today and Settings.
+- `Taper.seasonLine` (the old upper-case version) is still used where `seasonText` wasn't swapped in. A `grep` will
+  show the call sites.
+- `Competition.shortName` is still upper case ("KL OPEN"). UI views were switched to `displayName`. Any other caller
+  still shows upper case.
+
+## R5. How to work
+
+- Keep tests green with `cd ios/AscentKit && ./test.sh`. `swift build` from `ios/AscentKit` is a fast compile check.
+  The full app needs `xcodebuild` (see §R2). The widget extension target compiles only there.
+- Copy style: short, sentence case, at a glance (Whoop or Google Health style). See DESIGN.md §0.
+- **Don't commit or push unless the user asks.** The work sits on branch `r3-redesign`, branched from `main`.
+
+## R6. Open to-dos, in order
+
+1. **Finish `design/DESIGN.md`.** A scripted edit failed and changed nothing, so these are still stale:
+   - The status line still says "DRAFT". It should say approved and built on `r3-redesign`.
+   - §4.3: the rehab ring is the **last 7 days, rolling**, not the ISO week.
+   - §4.1: a Camp5 step is **2.5 grade steps**.
+   - §5.2: normal grades live in the **log's settings rows** (exported with the backup), not in App Group defaults.
+   - Add the **Camp5 order and V ranges** and the re-ranking on load.
+   - Point §5.3 at `Pillars.swift`.
+   - Replace §10 "Open items" with the confirmed decisions in §R1.
+2. **Update `README.md`:**
+   - The Today row of the tab table should describe the pillars, live card, last 7 days, insight and up next.
+     Pyramid, Camp5, boards, heatmap and comp readiness are now in Progress detail.
+   - Line 78 says Camp5 goes "from yellow to black". It should say **pink to black**, with the V ranges.
+   - Mention attempt counts and Load.
+3. Re-render the snapshots to confirm the widget label fix (§R4). Check the Review pain chip on iOS.
+4. Walk the screens not yet checked (§R4), especially light mode across the app, the accessory widgets and the Live
+   Activity.
+5. Set the Simulator app back to **Dark** appearance.
+6. Show the user, then commit when they ask. Suggested message: "r3 redesign: Whoop-style UI, Load/Progress/Body
+   pillars, real attempt counts".
+
+---
+
+# Handoff: Ascent iOS port (Sep 2026, historical)
 
 **For:** the next agent, who will build, run and polish the iOS app.
 **Written:** 29 Sep 2026, at the end of the first implementation session.

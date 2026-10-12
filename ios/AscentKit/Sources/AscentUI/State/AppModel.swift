@@ -50,16 +50,11 @@ public final class AppModel {
         }
     }
 
-    /// Large titles in Newsreader 36, inline titles in Archivo SemiBold 16 (DESIGN §3).
+    /// r3: system bars in SF Pro (large titles bold 34, inline semibold 17); only the colours follow the tokens.
     static func styleNavigationBars() {
         #if canImport(UIKit)
-        let serif = UIFontDescriptor(fontAttributes: [.family: "Newsreader"])
-        let sans = UIFontDescriptor(fontAttributes: [.family: "Archivo"])
-            .addingAttributes([.traits: [UIFontDescriptor.TraitKey.weight: UIFont.Weight.semibold]])
-        let large = UIFontMetrics(forTextStyle: .largeTitle).scaledFont(for: UIFont(descriptor: serif, size: 36))
-        let inline = UIFontMetrics(forTextStyle: .headline).scaledFont(for: UIFont(descriptor: sans, size: 16))
-        UINavigationBar.appearance().largeTitleTextAttributes = [.font: large]
-        UINavigationBar.appearance().titleTextAttributes = [.font: inline]
+        UINavigationBar.appearance().largeTitleTextAttributes = [:]
+        UINavigationBar.appearance().titleTextAttributes = [:]
         #endif
     }
 }

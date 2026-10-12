@@ -337,6 +337,10 @@ public struct Settings: Sendable, Hashable {
     public var weeklyTarget: Int = 4
     /// iOS r2 — "Use full plan" pressed for this day
     public var taperOverrideDay: String?
+    /// iOS r3 — your normal grade per scale; nil = use the suggestion from recent sends
+    public var normalNumbered: Int?
+    public var normalTag: String?
+    public var normalV: Int?
 
     public init() {}
 }

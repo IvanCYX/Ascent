@@ -17,37 +17,35 @@ struct HistoryView: View {
             .filter { intentFilter == nil || $0.intent == intentFilter }
             .filter { !ratedOnly || db.review(for: $0.id) != nil }
             .sorted { $0.date > $1.date }
-        let months = Dictionary(grouping: sessions, by: { Day.monthKey($0.date) }).sorted { $0.key > $1.key }
+        let weeks = Dictionary(grouping: sessions, by: { Day.weekStart($0.date) }).sorted { $0.key > $1.key }
+        let live = db.activeSession
 
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0, pinnedViews: []) {
-                Band(top: false) { ChipTrendPanel(rows: trends, pattern: Metrics.chipPattern(trends)) }
+                Band { ChipTrendPanel(rows: trends, pattern: Metrics.chipPattern(trends)) }
                 if isFiltered {
                     HStack {
-                        Text(filterLabel(db)).micro(Palette.ink)
+                        Text(filterLabel(db)).micro(Palette.text)
                         Spacer()
                         LinkButton(title: "Clear") { gymFilter = nil; intentFilter = nil; ratedOnly = false }
                     }
-                    .padding(.horizontal, 16).padding(.vertical, 8)
-                    .overlay(alignment: .top) { Hairline() }
+                    .padding(.horizontal, 20).padding(.top, 14)
                 }
-                ForEach(months, id: \.key) { month, rows in
-                    Band {
-                        Text("\(Day.monthName(month + "-01")) \(month.prefix(4))").micro().padding(.bottom, 4)
-                        ForEach(rows) { s in
-                            NavigationLink(value: Route.session(s.id)) { LedgerRow(session: s, db: db) }.buttonStyle(.plain)
-                        }
-                    }
+                if let live, !isFiltered {
+                    group("Now", [live], db: db)
+                }
+                ForEach(weeks, id: \.key) { week, rows in
+                    group(weekLabel(week), rows, db: db)
                 }
                 if sessions.isEmpty {
-                    Text("No sessions match.").font(.sans(13)).foregroundStyle(Palette.muted).padding(16)
+                    Text("No sessions match.").font(.sans(14)).foregroundStyle(Palette.secondary).padding(20)
                 }
             }
-            .padding(.bottom, 80)
+            .padding(.bottom, 96)
         }
-        .background(Palette.paper)
+        .background(Palette.ground)
         .navigationTitle("History")
-        .navigationSubtitle("\(sessions.count) SESSIONS")
+        .navigationSubtitle("\(sessions.count) session\(sessions.count == 1 ? "" : "s")")
         .largeTitle()
         .toolbar {
             ToolbarItem(placement: .trailing) {
@@ -71,8 +69,27 @@ struct HistoryView: View {
 
     var isFiltered: Bool { gymFilter != nil || intentFilter != nil || ratedOnly }
 
+    @ViewBuilder func group(_ label: String, _ rows: [Session], db: Database) -> some View {
+        Text(label).micro().padding(.horizontal, 20).padding(.top, 22).padding(.bottom, 6)
+        Card(padding: 0) {
+            ForEach(Array(rows.enumerated()), id: \.element.id) { i, s in
+                NavigationLink(value: Route.session(s.id)) { LedgerRow(session: s, db: db, showDivider: i < rows.count - 1) }
+                    .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.leading, 0)
+    }
+
+    func weekLabel(_ start: String) -> String {
+        let thisWeek = Day.weekStart(store.today)
+        if start == thisWeek { return "This week" }
+        if start == Day.add(thisWeek, -7) { return "Last week" }
+        return "Week of \(Day.pretty(start))"
+    }
+
     func filterLabel(_ db: Database) -> String {
-        [db.gym(gymFilter)?.name, intentFilter, ratedOnly ? "rated" : nil].compactMap { $0 }.joined(separator: " · ")
+        [db.gym(gymFilter)?.name, intentFilter, ratedOnly ? "rated" : nil].compactMap { $0 }.joined(separator: ", ")
     }
 }
 
@@ -98,18 +115,18 @@ struct SessionDetailView: View {
 
             List {
                 Group {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text([db.gym(s.gymId)?.name, s.intent, duration].compactMap { $0 }.joined(separator: " · ")).micro()
-                        Text(Day.long(s.date).components(separatedBy: " ").dropLast().joined(separator: " "))
-                            .font(.serif(32, relativeTo: .largeTitle))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(Day.fullDate(s.date)).font(.sans(28, .bold)).foregroundStyle(Palette.text)
+                        Text([db.gym(s.gymId)?.name, s.intent, duration].compactMap { $0 }.joined(separator: ", "))
+                            .font(.sans(15)).foregroundStyle(Palette.secondary)
                     }
-                    .padding(.horizontal, 16).padding(.bottom, 12)
+                    .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 14)
 
-                    KpiGrid(kpis: detailKpis(sends: sends, review: review, avg: avg))
+                    KpiGrid(kpis: detailKpis(sends: sends, review: review, avg: avg)).padding(.horizontal, 16)
 
                     if let review {
                         Band {
-                            Text("Review").micro().padding(.bottom, 10)
+                            SectionHead("Review")
                             ChipFlow {
                                 ForEach(review.chips, id: \.self) { c in
                                     Chip(label: c, on: true, small: true, kind: c.contains("/10") ? .pain : .normal) {}
@@ -117,7 +134,7 @@ struct SessionDetailView: View {
                                 }
                             }
                             if let note = review.note {
-                                Text("“\(note)”").font(.serif(16, italic: true)).foregroundStyle(Palette.ink).padding(.top, 14)
+                                Text("“\(note)”").font(.sans(15).italic()).foregroundStyle(Palette.text).padding(.top, 14)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
@@ -133,7 +150,7 @@ struct SessionDetailView: View {
                     }
                 }
                 if !boardClimbs.isEmpty {
-                    sectionHead("Board climbs", note: Set(boardClimbs.compactMap { db.board($0.boardId)?.name }).sorted().joined(separator: " · "))
+                    sectionHead("Board climbs", note: Set(boardClimbs.compactMap { db.board($0.boardId)?.name }).sorted().joined(separator: ", "))
                     ForEach(boardClimbs) { c in
                         ClimbRow(climb: c).plainRow(horizontal: 16)
                             .swipeActions { Button("Delete", role: .destructive) { pendingDelete = c } }
@@ -141,24 +158,24 @@ struct SessionDetailView: View {
                 }
                 if let blocks = s.plannedBlocks, !blocks.isEmpty {
                     Band {
-                        SectionHead("Plan", note: "\(blocks.reduce(0) { $0 + $1.durationMin }) MIN")
-                        Text(blocks.map { $0.description.components(separatedBy: " · ").first ?? $0.description }.joined(separator: " · "))
-                            .font(.sans(13)).foregroundStyle(Palette.muted)
+                        SectionHead("Plan", note: "\(blocks.reduce(0) { $0 + $1.durationMin }) min")
+                        Text(blocks.map { $0.description.components(separatedBy: " · ").first ?? $0.description }.joined(separator: ", "))
+                            .font(.sans(14)).foregroundStyle(Palette.secondary)
                     }
                     .plainRow()
                 }
                 Band {
                     Button("Delete session", role: .destructive) { confirmSessionDelete = true }
-                        .buttonStyle(SecondaryButtonStyle()).foregroundStyle(Palette.warn)
+                        .buttonStyle(SecondaryButtonStyle())
                 }
                 .plainRow()
                 .padding(.bottom, 60)
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
-            .background(Palette.paper)
+            .background(Palette.ground)
             .environment(\.defaultMinListRowHeight, 0)
-            .navigationTitle(Day.plan(s.date).capitalized)
+            .navigationTitle(Day.weekdayShort(s.date) + " " + Day.pretty(s.date))
             .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .trailing) {
@@ -177,8 +194,8 @@ struct SessionDetailView: View {
                 Text("Its climbs, review and pain entries are deleted too.")
             }
         } else {
-            Text("This session was deleted.").font(.sans(14)).foregroundStyle(Palette.muted)
-                .frame(maxWidth: .infinity, maxHeight: .infinity).background(Palette.paper)
+            Text("This session was deleted.").font(.sans(14)).foregroundStyle(Palette.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity).background(Palette.ground)
         }
     }
 
@@ -187,15 +204,14 @@ struct SessionDetailView: View {
         let felt: String = review.map { String(format: "%.1f", $0.overallScore) } ?? "—"
         let avgText: String = avg.map { String(format: "avg %.1f", $0) } ?? ""
         return [
-            Metrics.Kpi(label: "SENDS", value: "\(sends.count)", caption: "\(flashed) flashed", delta: "", deltaStrong: false),
-            Metrics.Kpi(label: "FELT", value: felt, caption: avgText, delta: "", deltaStrong: false),
+            Metrics.Kpi(label: "Sends", value: "\(sends.count)", caption: "\(flashed) flashed", delta: "", deltaStrong: false),
+            Metrics.Kpi(label: "Felt", value: felt, caption: avgText.isEmpty ? "" : avgText.replacingOccurrences(of: "avg", with: "Average"), delta: "", deltaStrong: false),
         ]
     }
 
     func sectionHead(_ title: String, note: String?) -> some View {
         SectionHead(title, note: note)
-            .padding(.horizontal, 16).padding(.top, 20)
-            .overlay(alignment: .top) { Hairline() }
+            .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, -6)
             .plainRow()
     }
 }
@@ -205,15 +221,16 @@ struct ClimbRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(gradeLabel(climb)).font(.serif(16)).frame(width: 30, alignment: .leading)
-            if climb.gradeKind != .v { Swatch(colour: climb.holdColour ?? climb.tagId, size: 15) }
-            Text(climb.gradeKind == .v ? boardDetail(climb) : climbDetail(climb).ifEmpty(Vocab.colourLabel(climb.tagId)))
-                .font(.sans(13)).foregroundStyle(Palette.muted).lineLimit(1)
+            Text(gradeLabel(climb).ifEmpty(Vocab.colourCode(climb.tagId))).font(.num(15)).foregroundStyle(Palette.text)
+                .frame(width: 44, height: 32).background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.raised))
+            Swatch(colour: climb.gradeKind == .v ? nil : climb.holdColour ?? climb.tagId, size: 12)
+                .opacity(climb.gradeKind == .v || (climb.holdColour ?? climb.tagId) == nil ? 0 : 1)
+            Text(climb.gradeKind == .v ? boardDetail(climb) : climbDetail(climb))
+                .font(.sans(15)).foregroundStyle(Palette.text).lineLimit(1)
             Spacer()
-            Text(Day.timeOfDay(climb.createdAt)).font(.mono(11)).foregroundStyle(Palette.faint)
+            Text(Day.timeOfDay(climb.createdAt)).font(.sans(13)).monospacedDigit().foregroundStyle(Palette.secondary)
         }
-        .foregroundStyle(Palette.ink)
-        .padding(.vertical, 9)
+        .padding(.vertical, 10)
         .accessibilityElement(children: .combine)
     }
 }
@@ -223,6 +240,6 @@ extension View {
     func plainRow(horizontal: CGFloat = 0) -> some View {
         listRowInsets(EdgeInsets(top: 0, leading: horizontal, bottom: 0, trailing: horizontal))
             .listRowSeparator(.hidden)
-            .listRowBackground(Palette.paper)
+            .listRowBackground(Palette.ground)
     }
 }

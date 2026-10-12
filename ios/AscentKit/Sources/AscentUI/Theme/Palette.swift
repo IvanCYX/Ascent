@@ -111,30 +111,47 @@ nonisolated extension Color {
     }
 }
 
-/// The paper palette, light and dark (DESIGN §7). Ink is the only data colour until the user picks an accent.
+/// r3 tokens (DESIGN §7): near-black neutral greys in dark, warm stone in light. Hold colours stay the only rainbow.
 nonisolated public enum Palette {
-    public static let paperLight = RGB(hex: "#f5f2ea")!, paperDark = RGB(hex: "#12110e")!
-    public static let inkLight = RGB(hex: "#17150f")!, inkDark = RGB(hex: "#ece6d8")!
-    public static let warnLight = RGB(hex: "#c0392b")!, warnDark = RGB(hex: "#e5594c")!
+    public static let groundLight = RGB(hex: "#f5f5f4")!, groundDark = RGB(hex: "#0a0a0a")!
+    public static let surfaceLight = RGB(hex: "#ffffff")!, surfaceDark = RGB(hex: "#161616")!
+    public static let textLight = RGB(hex: "#0e1013")!, textDark = RGB(hex: "#f2f3f5")!
+    public static let injuryLight = RGB(hex: "#c0392b")!, injuryDark = RGB(hex: "#e5594c")!
+    public static let cautionLight = RGB(hex: "#b86e00")!, cautionDark = RGB(hex: "#f5a524")!
 
-    public static let paper = Color.dynamic(light: paperLight, dark: paperDark)
-    public static let card = Color.dynamic(light: RGB(hex: "#ffffff")!, dark: RGB(hex: "#1d1b17")!)
-    public static let ink = Color.dynamic(light: inkLight, dark: inkDark)
-    public static let muted = Color.dynamic(light: RGB(hex: "#6f6a5e")!, dark: RGB(hex: "#a39c8c")!)
-    public static let faint = Color.dynamic(light: RGB(hex: "#a09a8c")!, dark: RGB(hex: "#6e6859")!)
-    public static let rule = Color.dynamic(light: inkLight, dark: inkDark, lightAlpha: 0.12, darkAlpha: 0.12)
-    public static let ruleStrong = Color.dynamic(light: inkLight, dark: inkDark, lightAlpha: 0.22, darkAlpha: 0.24)
-    public static let ruleChip = Color.dynamic(light: inkLight, dark: inkDark, lightAlpha: 0.16, darkAlpha: 0.18)
-    public static let track = Color.dynamic(light: inkLight, dark: inkDark, lightAlpha: 0.06, darkAlpha: 0.07)
-    public static let worked = Color.dynamic(light: inkLight, dark: inkDark, lightAlpha: 0.20, darkAlpha: 0.26)
-    public static let warn = Color.dynamic(light: warnLight, dark: warnDark)
-    public static let warnBg = Color.dynamic(light: warnLight, dark: warnDark, lightAlpha: 0.07, darkAlpha: 0.12)
-    public static let warnBorder = Color.dynamic(light: warnLight, dark: warnDark, lightAlpha: 0.40, darkAlpha: 0.50)
-    public static let warnSoft = Color.dynamic(light: warnLight, dark: warnDark, lightAlpha: 0.28, darkAlpha: 0.30)
-    public static let warnMid = Color.dynamic(light: warnLight, dark: warnDark, lightAlpha: 0.55, darkAlpha: 0.60)
-    public static let watch = Color(hex: "#f2c744")
-    public static let grouped = Color.dynamic(light: RGB(hex: "#ece8de")!, dark: RGB(hex: "#0d0c0a")!)
-    public static let groupedRow = Color.dynamic(light: RGB(hex: "#fbfaf6")!, dark: RGB(hex: "#1d1b17")!)
+    /// Screen background
+    public static let ground = Color.dynamic(light: groundLight, dark: groundDark)
+    /// Cards, widgets, the Live Activity
+    public static let surface = Color.dynamic(light: surfaceLight, dark: surfaceDark)
+    /// Segments, grade tiles, inputs, insight rows
+    public static let raised = Color.dynamic(light: RGB(hex: "#ecebe8")!, dark: RGB(hex: "#1f1f1f")!)
+    /// Empty ring and bar tracks
+    public static let track = Color.dynamic(light: RGB(hex: "#e7e6e3")!, dark: RGB(hex: "#262626")!)
+    /// Quick-add tiles, the toast
+    public static let tile = Color.dynamic(light: RGB(hex: "#ecebe8")!, dark: RGB(hex: "#2a2a2a")!)
+    /// The log sheet
+    public static let sheet = Color.dynamic(light: RGB(hex: "#fafaf9")!, dark: RGB(hex: "#121212")!)
+    /// The selected segment
+    public static let segment = Color.dynamic(light: RGB(hex: "#ffffff")!, dark: RGB(hex: "#3a3a3a")!)
+    public static let text = Color.dynamic(light: textLight, dark: textDark)
+    public static let secondary = Color.dynamic(light: RGB(hex: "#5f5e5a")!, dark: RGB(hex: "#a1a1a1")!)
+    public static let tertiary = Color.dynamic(light: RGB(hex: "#a3a29c")!, dark: RGB(hex: "#6e6e6e")!)
+    /// Row separators inside cards only
+    public static let hairline = Color.dynamic(light: textLight, dark: textDark, lightAlpha: 0.07, darkAlpha: 0.07)
+    public static let hairlineStrong = Color.dynamic(light: textLight, dark: textDark, lightAlpha: 0.16, darkAlpha: 0.2)
+    /// Non-max bars where the accent would be too loud
+    public static let worked = Color.dynamic(light: textLight, dark: textDark, lightAlpha: 0.18, darkAlpha: 0.22)
+    /// Amber: spiking load, rising pain, worse deltas, readiness under 55, watching injuries
+    public static let caution = Color.dynamic(light: cautionLight, dark: cautionDark)
+    public static let cautionText = Color.dynamic(light: cautionLight, dark: RGB(hex: "#f5b850")!)
+    public static let cautionBg = Color.dynamic(light: cautionLight, dark: cautionDark, lightAlpha: 0.1, darkAlpha: 0.16)
+    /// Injury red: anything body or warning
+    public static let injury = Color.dynamic(light: injuryLight, dark: injuryDark)
+    public static let injuryText = Color.dynamic(light: RGB(hex: "#a8301f")!, dark: RGB(hex: "#f08a80")!)
+    public static let injuryBg = Color.dynamic(light: injuryLight, dark: injuryDark, lightAlpha: 0.08, darkAlpha: 0.14)
+    public static let injuryBorder = Color.dynamic(light: injuryLight, dark: injuryDark, lightAlpha: 0.4, darkAlpha: 0.5)
+    public static let injurySoft = Color.dynamic(light: injuryLight, dark: injuryDark, lightAlpha: 0.3, darkAlpha: 0.35)
+    public static let injuryMid = Color.dynamic(light: injuryLight, dark: injuryDark, lightAlpha: 0.6, darkAlpha: 0.6)
 
     public static func hold(_ id: String?) -> Color { Color(hex: Vocab.colourHex(id) ?? "#00000020") }
     public static func needsHairline(_ id: String?) -> Bool { id == "white" || id == "black" }
@@ -160,9 +177,9 @@ nonisolated public struct AccentTheme: Hashable, Sendable {
 
     /// Lift in dark, darken in light, until contrast against paper is at least 3:1.
     public func resolved(dark: Bool) -> RGB {
-        if isInk { return dark ? Palette.inkDark : Palette.inkLight }
+        if isInk { return dark ? Palette.textDark : Palette.textLight }
         let base = RGB(hex: hex)!
-        let paper = dark ? Palette.paperDark : Palette.paperLight
+        let paper = dark ? Palette.surfaceDark : Palette.surfaceLight
         let toward = dark ? RGB(1, 1, 1) : RGB(0, 0, 0)
         var c = base
         var t = 0.0
@@ -177,18 +194,24 @@ nonisolated public struct AccentTheme: Hashable, Sendable {
         .dynamic(light: resolved(dark: false), dark: resolved(dark: true))
     }
 
-    /// ink when the accent is light, otherwise white (Ink itself takes paper, like the web's primary button).
+    /// Dark text on a light accent, otherwise white (Ink itself takes the ground colour).
     public var onAccent: Color {
-        if isInk { return Palette.paper }
+        if isInk { return Palette.ground }
         let l = resolved(dark: false), d = resolved(dark: true)
-        return .dynamic(light: l.luminance > 0.42 ? Palette.inkLight : RGB(1, 1, 1),
-                        dark: d.luminance > 0.42 ? Palette.inkLight : RGB(1, 1, 1))
+        return .dynamic(light: l.luminance > 0.42 ? Palette.textLight : RGB(1, 1, 1),
+                        dark: d.luminance > 0.42 ? Palette.textLight : RGB(1, 1, 1))
     }
 
     /// CIEDE2000 against the injury red below 20 → the red footer in Settings.
     public var isNearInjuryRed: Bool {
         guard !isInk, let c = RGB(hex: hex) else { return false }
-        return c.deltaE2000(Palette.warnLight) < 20
+        return c.deltaE2000(Palette.injuryLight) < 20
+    }
+
+    /// CIEDE2000 against the caution amber below 20 → the amber footer in Settings.
+    public var isNearCaution: Bool {
+        guard !isInk, let c = RGB(hex: hex) else { return false }
+        return c.deltaE2000(Palette.cautionLight) < 20 || c.deltaE2000(Palette.cautionDark) < 20
     }
 }
 

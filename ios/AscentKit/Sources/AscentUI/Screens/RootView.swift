@@ -56,6 +56,7 @@ struct RootView: View {
                           clearsTabBar: true)
             .ignoresSafeArea(.keyboard)
             .environment(\.hasDynamicIsland, hasIsland)
+            .environment(\.zoomNamespace, ns)
         }
         .sheet(item: $router.sheet) { route in
             sheet(route)
@@ -99,6 +100,9 @@ struct RootView: View {
                         case .comp(let id): CompDetailView(compId: id)
                         case .planDay(let day): PlanDayScreen(date: day)
                         case .gyms: GymsView()
+                        case .load: LoadDetailView().zoomDestination("load", in: ns)
+                        case .progress: ProgressDetailView().zoomDestination("progress", in: ns)
+                        case .normalGrade: NormalGradeView()
                         }
                     }
                     .tracksBarScroll()
@@ -163,8 +167,8 @@ struct PlusButton: View {
                         HStack(spacing: 6) {
                             Circle().fill(accent.color).frame(width: 6, height: 6)
                             Text(timerInterval: start...Date.distantFuture, countsDown: false)
-                                .font(.mono(11, .semibold)).monospacedDigit()
-                                .foregroundStyle(Palette.ink)
+                                .font(.num(12)).monospacedDigit()
+                                .foregroundStyle(Palette.text)
                         }
                         .padding(.horizontal, 10).frame(height: 26)
                     }
@@ -317,7 +321,7 @@ final class OverlayWindowController {
         w.rootViewController = host
         w.isHidden = true
         window = w
-        setStyle(Appearance(rawValue: AppGroup.defaults.string(forKey: SharedKey.appearance) ?? "") ?? .system)
+        setStyle(Appearance(rawValue: AppGroup.defaults.string(forKey: SharedKey.appearance) ?? "") ?? .dark)
     }
 
     func setVisible(_ visible: Bool) {
