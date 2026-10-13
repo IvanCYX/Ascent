@@ -136,7 +136,7 @@ struct SmallWidget: View {
             } else {
                 WidgetLabel(text: "This week · top")
                 Text(s.topGrade ?? "—").font(.serif(52)).padding(.top, 8).privacySensitive()
-                Text([s.topGym, s.topDelta].compactMap { $0 }.joined(separator: " · ").ifEmpty("no numbered sends yet"))
+                Text([s.topGym, s.topDelta].compactMap { $0 }.joined(separator: " · ").ifEmpty("No numbered sends yet"))
                     .font(.sans(12, .medium)).lineLimit(1).privacySensitive()
                 Text("\(s.sessionsThisWeek) sessions, \(s.sendsThisWeek) sends").font(.sans(11)).foregroundStyle(Palette.secondary).padding(.top, 8)
                     .lineLimit(1).minimumScaleFactor(0.8)
@@ -173,7 +173,7 @@ struct MediumWidget: View {
                 } else {
                     WidgetLabel(text: "This week")
                     HStack(spacing: 14) {
-                        stat(s.topGrade ?? "–", "Top \(s.topDelta?.replacingOccurrences(of: " ", with: "") ?? "")")
+                        stat(s.topGrade ?? "–", ["Top", s.topDelta == "Flat" ? nil : s.topDelta].compactMap { $0 }.joined(separator: " "))
                         stat(s.flashRate.map { "\($0)%" } ?? "–", "Flash")
                     }
                     .padding(.top, 8)

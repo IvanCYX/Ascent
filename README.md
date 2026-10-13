@@ -14,15 +14,18 @@ no iCloud.
 
 | Tab | What it is |
 |---|---|
-| **Today** | Dashboard: KPIs, send pyramid, Camp5 colour tally, board grades, injury watch, comp readiness, style × grade heatmap, recent sessions |
+| **Today** | A short summary: three pillar rings (Load, Progress, Body), the live session, the last 7 days, one insight and up next. Load opens Load detail (weekly load and what counted). Progress opens Progress detail: key numbers, send pyramid, Camp5 colours, boards, style × grade heatmap and comp readiness |
 | **Plan** | *Today*: session intent picks the blocks, load rules strike out blocked focus styles, and the plan shortens automatically in a taper. *Season*: calendar, competitions, the taper plan and the weekly session target |
 | **History** | Chip trends over the last 12 sessions, plus the full session ledger with session detail |
 | **Body** | Injury and rehab: body map, pain trend, adherence, rehab protocol, load rules |
-| **Settings** | Appearance, accent colour, Face ID lock, gyms and boards, backup export and import |
+| **Settings** | Appearance, accent colour, training (your normal grade per scale, weekly target), Face ID lock, gyms and boards, backup export and import |
 
 **Quick add.** A floating `+` above the Liquid Glass tab bar opens a selector for the next action:
 start a session, log a gym or board send, end and rate the session, check in pain, tick off rehab, or
 open the plan. Logging a send, the Camp5 tally, board climbs and the review all live in one sheet.
+Each climb records a real attempt count from a pinned `[ − n + ]` bar: 1 is a flash, 2 a second go,
+3 or more "N tries". Turn on "Not sent" to log attempts on a climb you didn't top. The bar resets to
+Flash after every save.
 
 **On the phone:**
 - A Live Activity runs during a session, in the Dynamic Island and on the Lock Screen.
@@ -62,29 +65,31 @@ cd ios/AscentKit && ./test.sh
 | `ios/AscentKit/Sources/AscentWidgetsUI` | Widget views and the Live Activity views |
 | `ios/Ascent`, `ios/AscentWidgets` | The app target and the widget extension |
 | `ios/project.yml` | XcodeGen spec; `xcodegen generate` rebuilds `Ascent.xcodeproj` |
-| `design/` | The approved iOS design spec (`DESIGN.md`) and the HTML draft of every screen |
+| `design/` | The approved r3 design spec (`DESIGN.md`, which links the design canvas). `draft.html` and `BRIEF.md` are the r2 draft |
 
 **Storage.** One JSON file lives in the App Group container, so the widgets read the same log as the
 app. `Settings → Export backup` saves that file, and `Import backup` restores it.
 
-**Status.** The app builds and runs on the iOS 26 Simulator. Face ID, the widgets and the Live
-Activity views still need a check on a real device. `HANDOFF.md` lists what's done and what's open.
+**Status.** The app builds and runs in the iOS Simulator with the r3 design. Face ID, the widgets and
+the Live Activity views still need a check on a real device. `HANDOFF.md` lists what's done and what's open.
 
 ## The domain rules that matter
 
 - **Numbered gyms share a 1–15 spine.** Batuu runs 1–15, Bump PBJ/J1/SSQ run 1–12 on one scale across
   the three gyms, and BHUB runs 1–10. Each gym carries a soft/hard offset (BHUB is −0.5), so BHUB 10
   and Batuu 10 are not treated as the same climb in aggregate.
-- **Camp5 Eco City is ranked, not numbered.** It has eight colour tags, from yellow to black. No
-  number ever appears for Camp5: not in logging, tables, charts or export. Sorting uses the tag's
-  position in that order.
+- **Camp5 Eco City is ranked, not numbered.** It has eight colour tags, easiest first: pink (VB–V1),
+  blue (V0–V2), yellow (V1–V3), orange (V2–V4), green (V3–V5), purple (V4–V6), red (V5–V7) and
+  black (V6–V8+). No 1–15 number ever appears for Camp5: not in logging, tables, charts or export.
+  Sorting uses the tag's position in that order, and logs saved with the old yellow-first order are
+  re-ranked when they load.
 - **Boards never merge into the gym pyramid.** They have their own panel and their own max-grade
   metric, and an angle is required.
 - **Load rules** are checked both when planning a session and when logging a climb whose style
   matches a rule. Usage is counted per ISO week over *sessions*, not climbs, so one crimpy session
   counts as one use. The warning is always shown inline, never as a pop-up.
-- **Pain chips in the review write pain entries** against the injury. The dashboard sparkline and the
-  body log chart both read from them.
+- **Pain chips in the review write pain entries** against the injury. The Body pillar on Today and the
+  pain chart on the Body tab both read from them.
 - **Competitions drive a taper.**
   - An A comp gets PEAK (90%), TAPER (70%) and COMP WK (50%) weeks.
   - A B comp gets one 70% week.
@@ -93,14 +98,24 @@ Activity views still need a check on a real device. `HANDOFF.md` lists what's do
 
 ## Derived metrics
 
-Everything is recomputed from the log; nothing is stored pre-aggregated. The dashboard range
-(8 weeks / 6 months / Season) refilters every panel.
+Everything is recomputed from the log; nothing is stored pre-aggregated. The Progress range
+(8 weeks / 6 months / Season) refilters Progress detail and the Progress pillar.
+
+- **Load**: each climb scores `attempts × 2^((grade − normal) / 2)` against your normal grade on its own
+  scale (numbered, Camp5 tag, or board V), and not-sent attempts count too. One Camp5 tag step counts
+  as 2.5 grade steps. Load is the last 7 days ÷ (the 28 days before ÷ 4): under 80% is light, over
+  130% is spiking. With less than 4 weeks of history it shows "Building baseline N/4". Your normal
+  grade per scale is set in Settings and defaults to the median of the last 28 days of sends.
+- **Progress pillar**: the top grade in the Progress range with its change, and a ring of hard sends
+  (10+) against the previous range.
+- **Body pillar**: the latest pain, and a ring of rehab days done in the last 7 days. Red when a load
+  rule is used up, amber when pain is rising or a rule has one use left.
 
 - **Max grade sent**: highest grade with at least one send in range, offset adjusted.
 - **Flash rate**: flashed ÷ total sends, grade 8+.
 - **Attempts per send**: mean attempts over sends at grade 10+.
 - **Volume at 10+**: sends at grade 10 or above in range.
-- **Style send rate**: sends ÷ (sends + attempt-only) per style × grade band. A `—` means nothing was
+- **Style send rate**: sends ÷ (sends + not sent) per style × grade band. A `—` means nothing was
   attempted in that cell.
 - **Comp readiness (0–100)**: per style, `0.5 × send rate at your top two occupied bands` (normalised
   against 75%), plus `0.25 × how recently you trained that style`, plus `0.25 × signal from review chips`.
@@ -117,6 +132,7 @@ log. Export a backup first if you've logged anything real.
 
 ## Design
 
-Content is paper and ink: square corners, hairline rules, no shadows, and the Newsreader, Archivo
-and IBM Plex Mono typefaces. Controls and navigation use Liquid Glass. `#c0392b` is reserved
-for injury and body, and hold and tag colours never change. See `design/DESIGN.md` for the full spec.
+Whoop-style and dark by default, on a near-black neutral grey, with a warm stone light mode. Content
+sits in rounded cards. Text is SF Pro and numbers use Archivo at 125% width. Controls and navigation
+use Liquid Glass. Your accent draws every chart, amber means caution, injury red is kept for the body
+and warnings, and hold and tag colours are the only rainbow. See `design/DESIGN.md` for the full spec.

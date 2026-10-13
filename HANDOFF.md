@@ -1,9 +1,9 @@
 # Handoff: Ascent r3 redesign (read this first)
 
 **For:** the next agent, who will finish and ship the r3 UI/UX redesign.
-**Written:** 12 Oct 2026, when the user asked to stop mid-session.
-**Status in one line:** r3 is **built and running** on the iOS Simulator on branch `r3-redesign`, and all tests pass.
-Nothing is committed yet. A few doc updates and checks are still open (§R6).
+**Written:** 12 Oct 2026, when the user asked to stop mid-session. **Updated 13 Oct 2026** (§R7).
+**Status in one line:** r3 is **built, committed (`0ea6423`) and pushed** on branch `r3-redesign`, and all tests pass.
+The §R6 doc updates and checks are done; §R7 lists the follow-up fixes (uncommitted) and what's still open.
 
 The original iOS-port handoff (Sep 2026) is kept below the line at the end of this section. Its machine notes are out
 of date (§R2).
@@ -50,8 +50,7 @@ The user wants a **spec plus visual draft, approved, before any new UI work**. T
   back to the old Command Line Tools flags otherwise.
 - Simulator used: **iPhone 18 Pro**, UDID `5A58AC60-4806-4B3F-B21E-C156C1DD4788`. It is currently booted, with the
   app installed.
-  - **The app is currently set to Light appearance** (left that way while checking light mode). Set it back to Dark
-    in Settings › Appearance; Dark is the user's default.
+  - The app is set to **Dark** appearance (the user's default) again.
 - **Build the app:**
   ```bash
   cd ios && xcodebuild -project Ascent.xcodeproj -scheme Ascent -destination 'id=5A58AC60-4806-4B3F-B21E-C156C1DD4788' -derivedDataPath /tmp/ascent-dd build
@@ -166,6 +165,47 @@ The user wants a **spec plus visual draft, approved, before any new UI work**. T
 5. Set the Simulator app back to **Dark** appearance.
 6. Show the user, then commit when they ask. Suggested message: "r3 redesign: Whoop-style UI, Load/Progress/Body
    pillars, real attempt counts".
+
+## R7. Session 13 Oct 2026
+
+**Done from §R6 (uncommitted):**
+1. `design/DESIGN.md`: status says approved and built; §4.1 Camp5 step = 2.5 grade steps; §4.3 rehab ring is the last
+   7 days, rolling; §5.2 normal grades live in the log's settings rows; §5.3 points at `Pillars.swift`; new §5.4 for
+   the Camp5 order, V bands and re-ranking; §10 is now the confirmed decisions.
+2. `README.md`: Today row (pillars, live card, last 7 days, insight, up next; deep charts in Progress detail), Settings
+   training row, attempt counts, Load and the pillars under derived metrics, Camp5 pink to black with V bands, the r3
+   design paragraph.
+3. Snapshots re-rendered: the widget pyramid labels sit on one line now. The Review pain chip is a proper red capsule
+   on iOS; the square look was only the macOS snapshot.
+4. Walked in the Simulator in light: Today, Plan, Season, the comp editor, History, Body, Settings, Gyms and boards,
+   Review. Load, Progress, Log, Normal grade and Quick add were checked in the light snapshots.
+5. The app is back on Dark.
+
+**Fixed along the way:**
+- **Dynamic Island content was invisible** (Ink resolved to near-black on the black island whenever the system was in
+  light). Every island region now forces a dark colour scheme (`island()` in `LiveActivityViews.swift`), and the keyline
+  uses the dark accent.
+- **The expanded island clipped its buttons.** Dropped the "since 15:50" line (the timer already shows it), tightened
+  the gaps and used 36 pt buttons on the island (44 pt stays on the Lock Screen card). The 30 pt timer can scale to 60 %.
+- Live Activity Lock Screen card uses `surface`, as the spec says (was `ground`).
+- Widget delta copy: `+2`, `−1`, `Flat` instead of `▲ +2` (DESIGN §0 copy rules). "No numbered sends yet" is
+  capitalised.
+- Snapshot test also renders the rectangular and inline Lock Screen widgets. The circular gauge style is iOS-only.
+
+**Still open:**
+- **Gyms and boards** still uses the r2 structure: rows with hairlines on the ground, not cards, and the dashed
+  "No 11–15, soft" placeholder is clipped. Restyling it needs the user's go-ahead (draft before build).
+- **Face ID lock screen** is still unverified on iOS. The macOS snapshot draws blank (glass), and headless Face ID times
+  out; enrol Face ID from Simulator.app's Features menu, or test on a device.
+- The circular accessory widget and the widgets on a real locked phone are not yet seen on iOS.
+- Body's rehab note says "N of 7 this week" but counts the last 7 days, rolling.
+- `Taper.seasonLine` and `Competition.shortName` are now used only by `seasonLine()` in the tests; no UI shows them.
+- The demo's live session started at seed time, so after a day its timer runs past 24 h (the compact island then
+  truncates it). Real sessions are fine.
+- iOS showed "Allow Live Activities from Ascent?" on the Lock Screen; it was left for the user.
+- **V and French route scales** (TensionHouse in V, Batuu rope area in French routes): designed in `design/DESIGN.md` §11 and the canvas row "Gyms and grade
+  scales", awaiting the user's approval. No code yet. The user wants this settled before committing.
+
 
 ---
 

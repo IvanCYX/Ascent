@@ -75,6 +75,17 @@ import AscentCore
                 write("widget-\(kind)-\(locked ? "locked" : "open")", v)
             }
         }
+        // Lock Screen text families, white on black like the system draws them (iPhone Pro sizes). The circular
+        // gauge style is iOS-only, so it is checked in the Simulator instead.
+        for (kind, w, h) in [(AscentWidgetKind.rectangular, 172.0, 76.0), (.inline, 257, 26)] {
+            for locked in [false, true] {
+                let v = AscentWidgetView(kind: kind, summary: summary, privacyLock: true, accent: AccentTheme(hex: ""))
+                    .redacted(reason: locked ? .privacy : [])
+                    .environment(\.colorScheme, .dark)
+                    .frame(width: w, height: h).padding(8).background(Color.black)
+                write("widget-\(kind)-\(locked ? "locked" : "open")", v, dark: true)
+            }
+        }
     }
 }
 

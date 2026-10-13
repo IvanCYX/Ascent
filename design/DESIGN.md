@@ -1,7 +1,8 @@
 # Ascent iOS: Design Spec (r3)
 
-> **Status: DRAFT, for review.** Decided with the user on 12 Oct 2026. Nothing in this revision is built yet.
-> r2 (paper and ink, approved 29 Sep 2026) is in git history; this file replaces it.
+> **Status: approved and built.** Decided with the user and approved from the canvas on 12 Oct 2026; built on
+> branch `r3-redesign`. r2 (paper and ink, approved 29 Sep 2026) is in git history; this file replaces it.
+> **§11 (V and French route scales) is a draft for review**, drawn in the canvas row "Gyms and grade scales".
 
 Build from this spec and the r3 design canvas (Artifact: https://claude.ai/artifact/JzmnogQNGYm7oxoZesVzAp).
 Board names (`Today · dark`, `Load detail`, …) refer to the canvas. Target **iOS 26, SwiftUI, iPhone portrait
@@ -186,7 +187,8 @@ top with a 3 pt cut-out at its tip (Apple Activity style), capped at 200 %. Ring
 - **Per climb**: `load = attempts × 2^((g − normal) / 2)`, where `g` and `normal` are on the climb's own scale:
   - numbered gyms: the gym-adjusted grade (`Metrics.adjustedGrade`, so BHUB's −0.5 offset holds) vs the
     numbered normal grade
-  - Camp5: the tag's index in `Vocab.camp5Tags` vs the normal tag's index (one tag counts as one step)
+  - Camp5: the tag's index in `Vocab.camp5Tags` vs the normal tag's index. Tags overlap and each spans about
+    three V grades, so **one tag step counts as 2.5 grade steps** (`Load.camp5StepGrades`)
   - boards: V number vs the normal V grade
 
   Normal = 1×, 2 above = 2×, 2 below = 0.5×. **Not-sent attempts count too.**
@@ -207,7 +209,8 @@ top with a 3 pt cut-out at its tip (Apple Activity style), capped at 200 %. Ring
 
 ### 4.3 Body
 - Centre: the latest pain entry of the active injury ("2/10"). With several active injuries, use the worst state.
-- Ring: rehab adherence this ISO week (done ÷ due). Caption "Rehab N of M".
+- Ring: days with rehab done in the **last 7 days, rolling** (today included), out of 7. Caption "Rehab N of 7".
+  Rolling, not the ISO week, so the ring doesn't empty every Monday.
 - Colour: **red** if any load rule for the injury is used up this week; otherwise **amber** if the latest pain is
   higher than the entry before it, or a rule has one use left; otherwise accent.
 - No active injury: centre "Clear", full accent ring, caption "No active injury".
@@ -224,16 +227,34 @@ top with a 3 pt cut-out at its tip (Apple Activity style), capped at 200 %. Ring
 - **Existing data is left alone**: old climbs keep their inferred 1/2/3 counts. Nothing is migrated destructively.
 
 ### 5.2 Normal grades
-- App Group defaults: `normalNumbered: Int?`, `normalTag: String?` (a Camp5 tag id), `normalV: Int?`.
+- `Settings.normalNumbered: Int?`, `normalTag: String?` (a Camp5 tag id), `normalV: Int?`, stored as rows in the
+  log's `settings` table (keys `normalNumbered`, `normalTag`, `normalV`), so they travel in Export backup.
+  A row is written only when the value is set.
 - Suggestion = the median sent grade on that scale over the last 28 days, rounded. Unset values use the
   suggestion. With no sends on a scale, its climbs are skipped for Load until it has a value, and the row reads
   "Not set".
-- Included in Export backup as an optional `settings` block. Import accepts files with or without it.
+- Import accepts files with or without these rows; missing rows fall back to the suggestion.
 
-### 5.3 New metrics in `Metrics`
-`climbLoad`, `loadWindow(today:)` → `{acute, baseline?, pct?, weeksOfBaseline}`, `weeklyLoad(weeks:)`,
-`progressPillar(range:)`, `bodyPillar(today:)`, `suggestedNormal(scale:)`. Unit-test each against the demo seed,
-including the baseline-building case and Camp5 tag steps.
+### 5.3 New metrics (`AscentCore/Pillars.swift`)
+- `NormalGrades` holds the three normals.
+- `Load`: `suggestedNormals`, `normals` (the user's choice, else the suggestion), `stepsAboveNormal`, `climbLoad`,
+  `window(_:today:)` → `{acute, baseline?, ratio?, weeksOfBaseline, band}`, `daily` (the Last 7 days bars),
+  `weekly` (rolling 7-day blocks with their own baselines) and `sessions` (What counted).
+- `Pillars.progress` and `Pillars.body`; `Insights.today` picks the one insight on Today.
+- Tests: `Tests/AscentCoreTests/PillarsTests.swift` covers attempts, Camp5 order and re-ranking, Load weights and
+  windows, normals and body states.
+
+### 5.4 Camp5 order
+- `Vocab.camp5Tags`, easiest first, from the user's chart, with Camp5's own V bands (`Vocab.camp5Ranges`):
+
+  | Pink | Blue | Yellow | Orange | Green | Purple | Red | Black |
+  |---|---|---|---|---|---|---|---|
+  | VB–V1 | V0–V2 | V1–V3 | V2–V4 | V3–V5 | V4–V6 | V5–V7 | V6–V8+ |
+
+- The V band shows beside each tag in the log sheet's Camp5 tally and in the Normal grade picker. Still **no 1–15 number** for a tag.
+- **Re-ranking on load**: logs saved before r3 ranked yellow first. `Database.rerankTags()` runs inside
+  `normalise()`: a ranked gym whose tag list holds the standard eight in another order gets the new order, and each
+  tag climb's ordinal is reset from its tag id. It is idempotent, so it runs on every load and on import.
 
 ## 6. Motion and haptics
 - Rings draw from 0 on first appear per launch (`.smooth(duration: 0.9)`, staggered 80 ms), numbers use
@@ -306,10 +327,93 @@ Taper engine and phase table, Add comp sheet fields, comp detail, Session detail
 sheets (pain check-in, rehab today), deep links, storage (one Codable JSON file in the App Group, no cloud), and
 the resolved decisions in r2 §9. See r2 in git history for their full text.
 
-## 10. Open items for the user
-1. **Load window.** The spec uses the last 7 days rather than the calendar week, so Load doesn't drop to near
-   zero every Monday.
-2. **Camp5 tag weighting.** One tag step counts as one grade step in the Load weight. It may need to be 1.5 or 2
-   if tags span more than one grade.
-3. **Ochre vs amber.** Ochre stays a preset, with a near-amber warning. The alternative is to replace it.
-4. **Removed from Today:** comp readiness (now in Progress detail) and recent sessions (History only).
+## 10. Confirmed decisions
+1. **Load window.** The last 7 days, rolling, against the 28 days before ÷ 4, so Load doesn't drop to near zero
+   every Monday.
+2. **Camp5 tag weighting.** One tag step counts as 2.5 grade steps (§4.1), because each tag spans about three V
+   grades.
+3. **Ochre vs amber.** Ochre stays a preset, with a near-amber warning.
+4. **Removed from Today.** Comp readiness is in Progress detail; recent sessions are in History only.
+5. **Grounds.** Dark `#0A0A0A`; the user tried navy and charcoal and came back to it. Light `#F5F5F4`.
+6. **The `+`.** Same position, size and behaviour as r2.
+
+## 11. Gym grade scales: V and French routes (draft, 13 Oct 2026)
+
+TensionHouse grades in V, and Batuu's rope area grades its rope climbs in French route grades (5a, 5b+, 6a …), so a
+gym can be set up on the scale it uses. Camp5's ropes and lead walls use its colour tags, so they need nothing new.
+No gym uses the capital Font bouldering scale (6A+), so it is not added. Where this section differs from §3.3, §4.1,
+§4.2 or §5.2, this section wins. Canvas boards: `Settings › Gyms and boards`, `Add gym`,
+`Log a send · TensionHouse`, `Log a send · Batuu rope area`, `Progress detail · by scale`,
+`Progress pillar · by scale`, `Settings › Your normal grade · all scales`.
+
+### 11.1 Scales
+| Scale | Grades | Stored as | Shown as |
+|---|---|---|---|
+| Numbers (unchanged) | 1 to the gym's top grade, on the shared 1–15 spine, with a soft or hard offset | the number | `11` |
+| Colour tags (unchanged) | Camp5 order, pink to black | tag id + ordinal | the colour, never a number |
+| **V** | VB, V0 to V17; the gym sets its easiest and hardest grade | V number (VB = −1) | `V5` |
+| **French routes** | 4a, 4b, 4c, 5a, 5a+, 5b … 8c+, 9a; the gym sets its easiest and hardest grade | position in `Vocab.frenchGrades` | `6b+`, never a number |
+
+- Lowercase, the route convention.
+- A rope climb is logged like a boulder: the same attempt bar, sends and tries. No lead or top rope, for now.
+- Batuu's rope area is its own gym ("Batuu rope area"), separate from Batuu's numbered boulders.
+- Nothing is converted between scales. Offsets apply only to numbered gyms.
+- A gym's scale is fixed once it has climbs.
+- Boards keep their own V scale and never merge with V gyms.
+
+### 11.2 Gyms and boards, Add gym
+- **Gyms and boards** (push from Settings › Places): a "Gyms" header with "Sends" on the right, then one card per gym:
+  name, a scale line ("French routes, 5a to 8b+"), sends in Archivo, and a strip of the gym's grades with sent grades
+  filled in the accent. Camp5 shows its eight tag swatches. Bump PBJ, J1 and SSQ stay one card; Batuu rope area sits
+  under Batuu. Then a Boards card, and a short footer on scales. No hairline bands; the r2 dashed "No 11–15"
+  placeholder is gone (the scale line says it). Toolbar: **Add** (opens the Add gym sheet).
+- **Add gym** sheet: Name; **Grades** as four option tiles with centred text (Numbers "1 to 15", Colour tags "Pink to
+  black", V scale "VB to V17", French routes "4a to 9a"); then per scale:
+  - Numbers: Hardest grade stepper and Against Batuu (−1 to +1 in halves, "Softer gyms go below 0").
+  - Colour tags: one line, "Tags follow the Camp5 order, pink to black."
+  - V and French routes: Easiest grade and Hardest grade steppers (defaults VB to V10, 5a to 8b+).
+  - A Preview strip of the resulting grades, "The scale is fixed once the gym has climbs.", and a pinned **Add**
+    button.
+
+### 11.3 Logging
+The Log a send sheet is unchanged except the Grade grid, which follows the gym's scale:
+- V: every grade in the gym's range (VB to V10 is 12 tiles, 6 per row); right note "VB to V10".
+- French routes: ten grades around your normal grade (5 per row) and "Show 5a to 8b+" for the full range (6 per row).
+- Colour is optional, as at numbered gyms. The attempt bar, Not sent and the toast ("Logged 6b+, 3 tries") are
+  unchanged.
+
+### 11.4 Progress detail and the Progress pillar
+- A **scale switch** under the range: `1–15 | V | French | Camp5`, capsule chips, showing only scales with climbs in
+  the range. The first time it picks your main scale (most climbs in the range); after that it remembers the choice
+  (`progressScale`, persisted like `dashboardRange`).
+- 1–15, V and French each show Key numbers, Send pyramid, Where you send and Comp readiness in their own notation.
+  Camp5 shows its colour tally. Boards are shown under every scale.
+- Thresholds: 1–15 keeps flash rate at 8+ and hard at 10+. V and French take theirs from your normal grade: flash rate
+  counts your normal and up; tries per send and hard sends count 2 grade steps above normal and up (V+2; French +4
+  steps, e.g. 6b → 7a). Each Key number card names its threshold ("V5 and up").
+- Heatmap bands: 1–15 `6–7 … 14–15`; V `V0–1, V2–3, V4–5, V6–7, V8+`; French `5, 6a, 6b, 6c, 7a+` (each letter with
+  its +).
+- The **Progress pillar** on Today follows the selected scale: top grade in its notation (`13`, `V6`, `7a`) with a
+  delta chip in grades, and the ring is hard sends on that scale against the previous range. With Camp5 selected,
+  the pillar uses the main numbered, V or French scale instead.
+
+### 11.5 Load and normal grades
+- New normals `normalGymV` and `normalFrench`, stored as settings rows like the others and suggested the same way
+  (median of the last 28 days of sends on that scale).
+- Step sizes in `2^(steps / 2)`: one V grade = 1 step (as boards); one French step (6a → 6a+) = 0.5 step; a Camp5 tag
+  stays 2.5 steps; numbered grades stay 1.
+- A rope climb counts one attempt like a boulder attempt. Routes are longer, so Load may undercount rope days; revisit
+  once there is real data.
+- **Your normal grade** shows a card per scale you have a gym or board for: Numbered gyms, Camp5 tags, V gyms,
+  French routes, Boards. The Settings row shows the main scale's normal and the count of the rest ("V3 and 4 more").
+
+### 11.6 Data and tests
+- `ScaleType` gains `v` and `french`; `GradeKind` gains `french`. Gym V climbs use `GradeKind.v` with a `gymId`;
+  board climbs keep `boardId`. `Gym` gains an easiest grade for V and French (`minGrade`); `maxGrade` is the hardest.
+- Existing logs and older backups load unchanged; backups with the new scales need this version.
+- Tests: grade labels and order per scale, Load step sizes (V 1, French 0.5), thresholds from normals, main-scale
+  pick, pyramid and heatmap bands per scale, backup round trip with V and French gyms.
+
+### 11.7 Not in this change
+The Font bouldering scale; lead or top rope; converting between scales; offsets between V or French gyms; editing a
+gym's scale after it has climbs.

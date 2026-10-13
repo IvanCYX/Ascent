@@ -31,7 +31,7 @@ public struct WidgetSummary: Sendable, Hashable {
 
     public static let placeholder = WidgetSummary(
         sessionsThisWeek: 3, weekStrip: [true, false, true, false, false, true, false], todayIndex: 6, streakWeeks: 5,
-        weeklyTarget: 4, weeksToComp: 6, topGrade: "12", topGym: "Batuu", topDelta: "▲ +1", sendsThisWeek: 21,
+        weeklyTarget: 4, weeksToComp: 6, topGrade: "12", topGym: "Batuu", topDelta: "+1", sendsThisWeek: 21,
         flashRate: 38, pyramid: [], camp5: [], kpis: [], injuryShort: "L ring", painNow: 2, rehabStreak: 9, rehabDue: 2,
         compName: "KL Open", weakest: "Compression 42", liveGym: nil)
 
@@ -61,7 +61,7 @@ public struct WidgetSummary: Sendable, Hashable {
         let prevTop = Metrics.maxGradeSent(lastWeekClimbs, gyms: db.gyms)
         var delta: String?
         if let t = top.grade, let p = prevTop.grade {
-            delta = t > p ? "▲ +\(t - p)" : t < p ? "▼ \(t - p)" : "— level"
+            delta = t > p ? "+\(t - p)" : t < p ? "−\(p - t)" : "Flat"
         }
 
         let w = db.settings.dashboardRange.windows(today: today)
