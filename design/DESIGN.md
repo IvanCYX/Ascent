@@ -1,7 +1,8 @@
 # Ascent iOS: Design Spec (r3)
 
 > **Status: approved and built.** Decided with the user and approved from the canvas on 12 Oct 2026; built on
-> branch `r3-redesign`. r2 (paper and ink, approved 29 Sep 2026) is in git history; this file replaces it.
+> branch `r3-redesign` and merged to `main`. r2 (paper and ink, approved 29 Sep 2026) is in git history; this file
+> replaces it.
 > §11 (V and French route scales) was approved from the canvas row "Gyms and grade scales" on 13 Oct 2026 and is
 > built.
 

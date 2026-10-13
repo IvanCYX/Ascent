@@ -2,8 +2,9 @@
 
 **For:** the next agent, who will finish and ship the r3 UI/UX redesign.
 **Written:** 12 Oct 2026, when the user asked to stop mid-session. **Updated 13 Oct 2026** (§R7, §R8).
-**Status in one line:** r3 plus V and French route gym scales are **built, committed and pushed** on branch
-`r3-redesign`, and all tests pass (46 core, 2 snapshot suites). §R8 is the latest work; §R7 lists what's still open.
+**Status in one line:** r3 plus V and French route gym scales are **built and merged to `main`** (pull requests #1
+and #2 from `r3-redesign`), and all tests pass (46 core, 2 snapshot suites). §R8 is the latest work; §R7 lists what's
+still open.
 
 The original iOS-port handoff (Sep 2026) is kept below the line at the end of this section. Its machine notes are out
 of date (§R2).
@@ -142,7 +143,8 @@ The user wants a **spec plus visual draft, approved, before any new UI work**. T
 - Keep tests green with `cd ios/AscentKit && ./test.sh`. `swift build` from `ios/AscentKit` is a fast compile check.
   The full app needs `xcodebuild` (see §R2). The widget extension target compiles only there.
 - Copy style: short, sentence case, at a glance (Whoop or Google Health style). See DESIGN.md §0.
-- **Don't commit or push unless the user asks.** The work sits on branch `r3-redesign`, branched from `main`.
+- **Don't commit or push unless the user asks.** The work was done on branch `r3-redesign` and is merged to `main`;
+  start new work on a fresh branch from `main`.
 
 ## R6. Open to-dos, in order
 
