@@ -95,7 +95,7 @@ struct MiniPyramid: View {
         VStack(spacing: 4) {
             ForEach(rows, id: \.grade) { r in
                 HStack(spacing: 6) {
-                    Text("\(r.grade)").font(.num(11)).lineLimit(1).fixedSize().frame(width: 22, alignment: .trailing)
+                    Text(r.label).font(.num(11)).lineLimit(1).fixedSize().frame(width: 26, alignment: .trailing)
                     GeometryReader { g in
                         ZStack(alignment: .leading) {
                             Rectangle().fill(Palette.track)
@@ -111,9 +111,9 @@ struct MiniPyramid: View {
     }
 }
 
-/// Re-normalises widths for a slice of the pyramid.
-func slice(_ rows: [Metrics.PyramidRow], from top: Int, to bottom: Int) -> [Metrics.PyramidRow] {
-    let s = rows.filter { $0.grade <= top && $0.grade >= bottom }
+/// The hardest `count` rows of the pyramid, widths re-normalised.
+func slice(_ rows: [Metrics.PyramidRow], top count: Int) -> [Metrics.PyramidRow] {
+    let s = Array(rows.prefix(count))
     let m = max(1, s.map(\.count).max() ?? 0)
     return s.map { var r = $0; r.width = Double(r.count) / Double(m); return r }
 }
@@ -136,7 +136,7 @@ struct SmallWidget: View {
             } else {
                 WidgetLabel(text: "This week · top")
                 Text(s.topGrade ?? "—").font(.serif(52)).padding(.top, 8).privacySensitive()
-                Text([s.topGym, s.topDelta].compactMap { $0 }.joined(separator: " · ").ifEmpty("no numbered sends yet"))
+                Text([s.topGym, s.topDelta].compactMap { $0 }.joined(separator: " · ").ifEmpty("No numbered sends yet"))
                     .font(.sans(12, .medium)).lineLimit(1).privacySensitive()
                 Text("\(s.sessionsThisWeek) sessions, \(s.sendsThisWeek) sends").font(.sans(11)).foregroundStyle(Palette.secondary).padding(.top, 8)
                     .lineLimit(1).minimumScaleFactor(0.8)
@@ -173,7 +173,7 @@ struct MediumWidget: View {
                 } else {
                     WidgetLabel(text: "This week")
                     HStack(spacing: 14) {
-                        stat(s.topGrade ?? "–", "Top \(s.topDelta?.replacingOccurrences(of: " ", with: "") ?? "")")
+                        stat(s.topGrade ?? "–", ["Top", s.topDelta == "Flat" ? nil : s.topDelta].compactMap { $0 }.joined(separator: " "))
                         stat(s.flashRate.map { "\($0)%" } ?? "–", "Flash")
                     }
                     .padding(.top, 8)
@@ -196,7 +196,7 @@ struct MediumWidget: View {
                     Spacer(minLength: 0)
                 } else {
                     Spacer(minLength: 0)
-                    MiniPyramid(rows: slice(s.pyramid, from: 13, to: 9))
+                    MiniPyramid(rows: slice(s.pyramid, top: 5))
                     if let inj = s.injuryShort {
                         Text("\(inj) \(s.painNow.map { "\($0)/10" } ?? "")\(s.rehabStreak.map { ", \($0)-day rehab" } ?? "")")
                             .font(.sans(11, .medium)).foregroundStyle(Palette.injuryText).lineLimit(1).minimumScaleFactor(0.7).padding(.top, 4)
@@ -254,12 +254,12 @@ struct LargeWidget: View {
                     ForEach(Array(s.kpis.prefix(3).enumerated()), id: \.offset) { i, k in
                         VStack(alignment: .leading, spacing: 4) {
                             Text(k.value).font(.serif(32))
-                            Text(["Top", "Flash 8+", "Tries/send"][i]).font(.sans(11)).foregroundStyle(Palette.secondary)
+                            Text(["Top", s.scale == .number ? "Flash 8+" : "Flash", "Tries/send"][i]).font(.sans(11)).foregroundStyle(Palette.secondary)
                         }
                     }
                 }
                 .padding(.top, 10)
-                MiniPyramid(rows: slice(s.pyramid, from: 13, to: 8), counts: true).padding(.top, 14)
+                MiniPyramid(rows: slice(s.pyramid, top: 6), counts: true).padding(.top, 14)
                 HStack(alignment: .bottom, spacing: 3) {
                     let maxCount = max(1, s.camp5.map(\.count).max() ?? 0)
                     ForEach(s.camp5, id: \.tagId) { b in

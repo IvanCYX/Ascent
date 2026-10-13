@@ -29,11 +29,31 @@ public enum Metrics {
     public static let flashRateThreshold = 8
     public static let hardGradeThreshold = 10
 
+    public struct Thresholds: Sendable, Hashable {
+        /// Flash rate counts sends at this grade and up
+        public var flash: Int
+        /// Tries per send and hard sends count from here up
+        public var hard: Int
+        public init(flash: Int, hard: Int) { self.flash = flash; self.hard = hard }
+    }
+
+    /// The spine keeps 8+ and 10+. V and French take theirs from your normal grade: flash from normal,
+    /// hard from two grade steps above it (DESIGN §11.4). Nil when that scale has no normal yet.
+    public static func thresholds(_ kind: GradeKind, normals: NormalGrades) -> Thresholds? {
+        switch kind {
+        case .number: Thresholds(flash: flashRateThreshold, hard: hardGradeThreshold)
+        case .gymV: normals.gymV.map { Thresholds(flash: $0, hard: $0 + 2) }
+        case .french: normals.french.map { Thresholds(flash: $0, hard: $0 + Int((2 / Load.stepGrades(.french)).rounded())) }
+        case .v: normals.v.map { Thresholds(flash: $0, hard: $0 + 2) }
+        case .tag: nil
+        }
+    }
+
     public struct MaxGrade: Sendable { public var grade: Int?; public var gymName: String; public var date: String }
 
-    /// Highest grade with ≥1 send in range, on the numbered-gym spine, offset adjusted.
-    public static func maxGradeSent(_ climbs: [Climb], gyms: [Gym]) -> MaxGrade {
-        let pool = climbs.filter { isNumeric($0) && isSend($0) }
+    /// Highest grade with ≥1 send in range on one scale; the numbered spine is offset adjusted.
+    public static func maxGradeSent(_ climbs: [Climb], gyms: [Gym], kind: GradeKind = .number) -> MaxGrade {
+        let pool = climbs.filter { $0.gradeKind == kind && isSend($0) }
         guard var best = pool.first else { return .init(grade: nil, gymName: "", date: "") }
         var bestAdj = adjustedGrade(best, gyms: gyms)
         for c in pool {
@@ -46,23 +66,23 @@ public enum Metrics {
         return .init(grade: best.grade, gymName: gyms.first { $0.id == best.gymId }?.name ?? "", date: best.day)
     }
 
-    /// Flashed sends ÷ total sends, restricted to grade 8+ on the numbered spine.
-    public static func flashRate(_ climbs: [Climb], threshold: Int = flashRateThreshold) -> Double? {
-        let sends = climbs.filter { isNumeric($0) && isSend($0) && $0.grade >= threshold }
+    /// Flashed sends ÷ total sends at the threshold and up (grade 8+ on the numbered spine).
+    public static func flashRate(_ climbs: [Climb], threshold: Int = flashRateThreshold, kind: GradeKind = .number) -> Double? {
+        let sends = climbs.filter { $0.gradeKind == kind && isSend($0) && $0.grade >= threshold }
         guard !sends.isEmpty else { return nil }
         return Double(sends.filter(isFlash).count) / Double(sends.count) * 100
     }
 
-    /// Mean attempts over sends at grade 10+.
-    public static func attemptsPerSend(_ climbs: [Climb], threshold: Int = hardGradeThreshold) -> Double? {
-        let sends = climbs.filter { isNumeric($0) && isSend($0) && $0.grade >= threshold }
+    /// Mean attempts over sends at the hard threshold and up (grade 10+ on the numbered spine).
+    public static func attemptsPerSend(_ climbs: [Climb], threshold: Int = hardGradeThreshold, kind: GradeKind = .number) -> Double? {
+        let sends = climbs.filter { $0.gradeKind == kind && isSend($0) && $0.grade >= threshold }
         guard !sends.isEmpty else { return nil }
         return mean(sends.map { Double($0.attempts) })
     }
 
-    /// Count of sends at grade ≥10 in range.
-    public static func volumeAtHard(_ climbs: [Climb], threshold: Int = hardGradeThreshold) -> Int {
-        climbs.filter { isNumeric($0) && isSend($0) && $0.grade >= threshold }.count
+    /// Count of sends at the hard threshold and up (grade 10+ on the numbered spine).
+    public static func volumeAtHard(_ climbs: [Climb], threshold: Int = hardGradeThreshold, kind: GradeKind = .number) -> Int {
+        climbs.filter { $0.gradeKind == kind && isSend($0) && $0.grade >= threshold }.count
     }
 
     public struct Kpi: Sendable, Hashable {
@@ -77,14 +97,16 @@ public enum Metrics {
         }
     }
 
-    public static func buildKpis(cur: [Climb], prev: [Climb], gyms: [Gym], sessionCount: Int, rangeLabel: String) -> [Kpi] {
-        let max = maxGradeSent(cur, gyms: gyms)
-        let maxPrev = maxGradeSent(prev, gyms: gyms)
+    public static func buildKpis(cur: [Climb], prev: [Climb], gyms: [Gym], sessionCount: Int, rangeLabel: String,
+                                 kind: GradeKind = .number,
+                                 thresholds t: Thresholds = Thresholds(flash: flashRateThreshold, hard: hardGradeThreshold)) -> [Kpi] {
+        let max = maxGradeSent(cur, gyms: gyms, kind: kind)
+        let maxPrev = maxGradeSent(prev, gyms: gyms, kind: kind)
         let maxDelta: Int? = (max.grade != nil && maxPrev.grade != nil) ? max.grade! - maxPrev.grade! : nil
 
-        let fr = flashRate(cur), frPrev = flashRate(prev)
-        let aps = attemptsPerSend(cur), apsPrev = attemptsPerSend(prev)
-        let vol = volumeAtHard(cur)
+        let fr = flashRate(cur, threshold: t.flash, kind: kind), frPrev = flashRate(prev, threshold: t.flash, kind: kind)
+        let aps = attemptsPerSend(cur, threshold: t.hard, kind: kind), apsPrev = attemptsPerSend(prev, threshold: t.hard, kind: kind)
+        let vol = volumeAtHard(cur, threshold: t.hard, kind: kind)
 
         let maxDeltaText: String = {
             guard let d = maxDelta else { return "— no earlier data" }
@@ -109,7 +131,7 @@ public enum Metrics {
 
         return [
             Kpi(label: "MAX GRADE SENT",
-                value: max.grade.map(String.init) ?? "—",
+                value: max.grade.map { Vocab.gradeLabel(kind, $0) } ?? "—",
                 caption: max.grade == nil ? "no sends in range" : "\(max.gymName) · \(fmtDay(max.date))",
                 delta: maxDeltaText,
                 deltaStrong: maxDelta != nil && maxDelta != 0),
@@ -138,10 +160,12 @@ public enum Metrics {
         return "\(p[2]) \(months[p[1] - 1])"
     }
 
-    /* ── Send pyramid (numbered gyms only) ───────────────────────────── */
+    /* ── Send pyramid ────────────────────────────────────────────────── */
 
     public struct PyramidRow: Sendable, Hashable {
         public var grade: Int
+        /// How the grade reads on its scale
+        public var label: String
         public var count: Int
         public var flashed: Int
         /// 0–1 of the widest row
@@ -150,32 +174,42 @@ public enum Metrics {
         public var flashShare: Double
     }
 
-    public static func sendPyramid(_ climbs: [Climb], top: Int = 13, bottom: Int = 7) -> [PyramidRow] {
-        let sends = climbs.filter { isNumeric($0) && isSend($0) }
+    /// The numbered spine runs 13 down to 7. Other scales show seven grades down from the top send.
+    public static func sendPyramid(_ climbs: [Climb], kind: GradeKind = .number) -> [PyramidRow] {
+        let sends = climbs.filter { $0.gradeKind == kind && isSend($0) }
+        let top: Int, bottom: Int
+        if kind == .number {
+            top = 13; bottom = 7
+        } else {
+            guard let hi = sends.map(\.grade).max() else { return [] }
+            top = hi; bottom = Swift.max(Vocab.lowestGrade(kind), hi - 6)
+        }
         var rows: [PyramidRow] = []
         for g in stride(from: top, through: bottom, by: -1) {
             let at = sends.filter { $0.grade == g }
             let flashed = at.filter(isFlash).count
-            rows.append(.init(grade: g, count: at.count, flashed: flashed, width: 0,
+            rows.append(.init(grade: g, label: Vocab.gradeLabel(kind, g), count: at.count, flashed: flashed, width: 0,
                               flashShare: at.isEmpty ? 0 : Double(flashed) / Double(at.count)))
         }
         let maxCount = Swift.max(1, rows.map(\.count).max() ?? 0)
         return rows.map { var r = $0; r.width = Double(r.count) / Double(maxCount); return r }
     }
 
-    public static func pyramidRead(_ rows: [PyramidRow]) -> String {
+    public static func pyramidRead(_ rows: [PyramidRow], kind: GradeKind = .number) -> String {
         let nonEmpty = rows.filter { $0.count > 0 }
         guard nonEmpty.count >= 2 else { return "Not enough sends yet." }
         let widest = nonEmpty.dropFirst().reduce(nonEmpty[0]) { $1.count > $0.count ? $1 : $0 }
         let top = nonEmpty[0]
         let consolidating = nonEmpty.first { $0.grade < top.grade && $0.count >= 5 }
-        var parts = ["Most sends at \(widest.grade)."]
+        // "11s" and "V5s" read naturally; French labels end in letters or +, so they take a colon instead
+        let plural = { (r: PyramidRow) in kind == .french ? r.label : r.label + "s" }
+        var parts = ["Most sends at \(widest.label)."]
         if let c = consolidating {
-            parts.append("\(c.grade)s: \(c.count) sends, \(c.flashed > 0 ? "\(c.flashed)" : "none") flashed.")
+            parts.append("\(plural(c)): \(c.count) sends, \(c.flashed > 0 ? "\(c.flashed)" : "none") flashed.")
         }
         parts.append(top.count <= 2
-            ? "Only \(top.count) at \(top.grade)."
-            : "\(top.count) sends at \(top.grade).")
+            ? "Only \(top.count) at \(top.label)."
+            : "\(top.count) sends at \(top.label).")
         return parts.joined(separator: " ")
     }
 
@@ -245,17 +279,19 @@ public enum Metrics {
     public static let heatmapStyles = ["Slopey", "Coordination", "Slab", "Compression", "Crimpy"]
 
     /// Style send rate = sends ÷ (sends + attempt-only) per style × grade band.
-    public static func styleSendRate(_ climbs: [Climb], style: String, min: Int, max: Int) -> (pct: Double?, attempts: Int) {
-        let pool = climbs.filter { isNumeric($0) && $0.styles.contains(style) && $0.grade >= min && $0.grade <= max }
+    public static func styleSendRate(_ climbs: [Climb], style: String, min: Int, max: Int,
+                                     kind: GradeKind = .number) -> (pct: Double?, attempts: Int) {
+        let pool = climbs.filter { $0.gradeKind == kind && $0.styles.contains(style) && $0.grade >= min && $0.grade <= max }
         guard !pool.isEmpty else { return (nil, 0) }
         return (Double(pool.filter(isSend).count) / Double(pool.count) * 100, pool.count)
     }
 
-    public static func styleGradeMatrix(_ climbs: [Climb]) -> [HeatRow] {
+    public static func styleGradeMatrix(_ climbs: [Climb], kind: GradeKind = .number) -> [HeatRow] {
         struct Raw { var style: String; var cells: [HeatCell]; var weak: Bool; var zeroIdx: Int }
+        let bands = Vocab.gradeBands(kind)
         let rows: [Raw] = heatmapStyles.map { style in
-            let cells = Vocab.gradeBands.map { b -> HeatCell in
-                let r = styleSendRate(climbs, style: style, min: b.min, max: b.max)
+            let cells = bands.map { b -> HeatCell in
+                let r = styleSendRate(climbs, style: style, min: b.min, max: b.max, kind: kind)
                 return HeatCell(band: b.label, pct: r.pct.map { Int($0.rounded()) }, attempts: r.attempts)
             }
             // a zero cell above the easy bands is a gap, not just a bad night
@@ -278,7 +314,7 @@ public enum Metrics {
         return rows.map { r in
             var comment = "steady"
             if r.weak {
-                comment = "gap: nothing above \(Vocab.gradeBands[Swift.max(0, r.zeroIdx - 1)].max)"
+                comment = "gap: nothing above \(Vocab.gradeLabel(kind, bands[Swift.max(0, r.zeroIdx - 1)].max))"
             } else if strongest?.style == r.style {
                 comment = "strongest"
             } else if (r.cells[1].pct ?? 0) >= 75 {
@@ -395,12 +431,15 @@ public enum Metrics {
 
     /// 0–100 per style — normalised blend of send rate at the top two occupied grade bands,
     /// recency of exposure, and review-chip signal. Below 55 is flagged warn.
-    public static func compReadiness(_ climbs: [Climb], reviews: [SessionReview], today: String) -> [ReadinessRow] {
+    public static func compReadiness(_ climbs: [Climb], reviews: [SessionReview], today: String,
+                                     kind: GradeKind = .number) -> [ReadinessRow] {
         let rows = Vocab.readinessRows.map { label -> ReadinessRow in
             let style = readinessStyle[label]!
 
             // send rate across the two highest bands that actually have attempts
-            let bandStats = Vocab.gradeBands.compactMap { styleSendRate(climbs, style: style, min: $0.min, max: $0.max).pct }
+            let bandStats = Vocab.gradeBands(kind).compactMap {
+                styleSendRate(climbs, style: style, min: $0.min, max: $0.max, kind: kind).pct
+            }
             let topTwo = bandStats.suffix(2)
             let rate = topTwo.isEmpty ? 0 : topTwo.reduce(0, +) / Double(topTwo.count) / 100
             // a 75% send rate at your top two bands is already comp-ready, so that is the ceiling
@@ -532,12 +571,13 @@ public enum Metrics {
     }
 
     public enum TopGrades: Sendable, Hashable {
-        case number([Int]), v([String]), tag([String])
+        /// `labels` carries ready-to-show grades for boards, V gyms and French routes
+        case number([Int]), labels([String]), tag([String])
 
         public var isEmpty: Bool {
             switch self {
             case .number(let xs): xs.isEmpty
-            case .v(let xs), .tag(let xs): xs.isEmpty
+            case .labels(let xs), .tag(let xs): xs.isEmpty
             }
         }
     }
@@ -555,11 +595,26 @@ public enum Metrics {
             }
             return .tag(Array(ordered.prefix(2)))
         }
-        let boards = sends.filter(isBoard)
-        if Double(boards.count) >= half {
-            return .v(Set(boards.map(\.grade)).sorted(by: >).prefix(2).map { "V\($0)" })
+        for kind in [GradeKind.v, .gymV, .french] {
+            let on = sends.filter { $0.gradeKind == kind }
+            if Double(on.count) >= half {
+                return .labels(Set(on.map(\.grade)).sorted(by: >).prefix(2).map { Vocab.gradeLabel(kind, $0) })
+            }
         }
         return .number(Array(Set(sends.filter(isNumeric).map(\.grade)).sorted(by: >).prefix(3)))
+    }
+
+    /// A session's top grade on its gym's own scale ("12", "V5", "6b+"); a Camp5 tag stays a tag ("PUR").
+    public static func sessionHigh(_ sends: [Climb], gym: Gym?) -> String? {
+        let tagged = sends.filter(isTag)
+        if gym?.isRanked == true, let best = tagged.max(by: { $0.grade < $1.grade }) { return Vocab.colourCode(best.tagId) }
+        // the gym's own scale first, then any other gym scale climbed this session
+        for kind in [gym?.gradeKind ?? .number, .number, .gymV, .french] where kind != .tag {
+            if let g = sends.filter({ $0.gradeKind == kind }).map(\.grade).max() { return Vocab.gradeLabel(kind, g) }
+        }
+        if let best = tagged.max(by: { $0.grade < $1.grade }) { return Vocab.colourCode(best.tagId) }
+        if let v = sends.filter(isBoard).map(\.grade).max() { return Vocab.gradeLabel(.v, v) }
+        return nil
     }
 
     public static func weeksOut(today: String, compDate: String) -> Int {

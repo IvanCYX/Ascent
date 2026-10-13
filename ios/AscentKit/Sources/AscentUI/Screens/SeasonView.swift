@@ -37,7 +37,8 @@ struct SeasonView: View {
                 Band {
                     SectionHead("Taper plan", note: "\(comp.displayName), \(comp.effectivePriority.rawValue)")
                     let weakest = Metrics.compReadiness(Metrics.climbsInRange(db.climbs, from: Day.add(today, -55), to: today),
-                                                        reviews: db.reviews, today: today).last
+                                                        reviews: db.reviews, today: today,
+                                                        kind: Pillars.gradedScale(db, today: today)).last
                     ForEach(Taper.planRows(db, comp: comp, today: today, weakest: weakest)) { row in TaperRow(row: row) }
                     if let check = injuryCheck(db, comp: comp) {
                         WarnPanel(lead: "Injury", text: check).padding(.top, 14)

@@ -7,7 +7,7 @@ import ActivityKit
 public struct LiveSessionState: Codable, Hashable, Sendable {
     public var startedAt: Date
     public var sends: Int
-    /// "12", or "PUR" for a Camp5 tag — never a number for Camp5
+    /// "12", "V5", "6b+", or "PUR" for a Camp5 tag — never a number for Camp5
     public var high: String
     public var flashed: Int
     public var gymName: String
@@ -24,15 +24,7 @@ public struct LiveSessionState: Codable, Hashable, Sendable {
         guard let s = db.activeSession else { return nil }
         let sends = Metrics.sessionSends(db.climbs, sessionId: s.id)
         let gym = db.gym(s.gymId)
-        let high: String = {
-            let tagged = sends.filter { $0.gradeKind == .tag }
-            if gym?.isRanked == true, let best = tagged.max(by: { $0.grade < $1.grade }) { return Vocab.colourCode(best.tagId) }
-            if let n = sends.filter({ $0.gradeKind == .number }).map(\.grade).max() { return "\(n)" }
-            if let best = tagged.max(by: { $0.grade < $1.grade }) { return Vocab.colourCode(best.tagId) }
-            if let v = sends.filter({ $0.gradeKind == .v }).map(\.grade).max() { return "V\(v)" }
-            return "—"
-        }()
-        return LiveSessionState(startedAt: s.startedAt ?? .now, sends: sends.count, high: high,
+        return LiveSessionState(startedAt: s.startedAt ?? .now, sends: sends.count, high: Metrics.sessionHigh(sends, gym: gym) ?? "—",
                                 flashed: sends.filter(Metrics.isFlash).count, gymName: gym?.name ?? "Session",
                                 intent: s.intent, privacyLock: privacyLock)
     }

@@ -105,11 +105,13 @@ struct PyramidView: View {
     var showCounts = true
 
     var body: some View {
+        // "6c+" and "V10" need more room than the spine's two digits
+        let wide = rows.contains { $0.label.count > 2 }
         VStack(spacing: barHeight > 14 ? 8 : 4) {
             ForEach(rows, id: \.grade) { r in
                 HStack(spacing: 10) {
-                    Text("\(r.grade)").font(.num(barHeight > 14 ? 14 : 11)).foregroundStyle(Palette.text)
-                        .frame(width: barHeight > 14 ? 24 : 16, alignment: .trailing)
+                    Text(r.label).font(.num(barHeight > 14 ? 14 : 11)).foregroundStyle(Palette.text).lineLimit(1).fixedSize()
+                        .frame(width: (barHeight > 14 ? 24 : 16) + (wide ? 12 : 0), alignment: .trailing)
                     GeometryReader { g in
                         ZStack(alignment: .leading) {
                             Rectangle().fill(Palette.track)
@@ -124,7 +126,7 @@ struct PyramidView: View {
                     }
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Grade \(r.grade): \(r.count) sends, \(r.flashed) flashed")
+                .accessibilityLabel("Grade \(r.label): \(r.count) sends, \(r.flashed) flashed")
             }
         }
     }
@@ -264,8 +266,8 @@ struct HeatmapView: View {
         Grid(horizontalSpacing: 4, verticalSpacing: 4) {
             GridRow {
                 Color.clear.frame(width: 92, height: 12)
-                ForEach(Vocab.gradeBands, id: \.label) { b in
-                    Text(b.label).font(.sans(11)).foregroundStyle(Palette.secondary).frame(maxWidth: .infinity)
+                ForEach(rows.first?.cells.map(\.band) ?? Vocab.gradeBands.map(\.label), id: \.self) { band in
+                    Text(band).font(.sans(11)).foregroundStyle(Palette.secondary).frame(maxWidth: .infinity)
                 }
             }
             ForEach(rows, id: \.style) { row in

@@ -114,6 +114,9 @@ extension Database: Codable {
             case "normalNumbered": s.normalNumbered = row.value.int
             case "normalTag": s.normalTag = row.value.string
             case "normalV": s.normalV = row.value.int
+            case "normalGymV": s.normalGymV = row.value.int
+            case "normalFrench": s.normalFrench = row.value.int
+            case "progressScale": s.progressScale = row.value.string.flatMap(GradeKind.init)
             case let key where key.hasPrefix("template:"):
                 if let blocks = try? row.value.decode([PlanBlock].self) {
                     s.templates[String(key.dropFirst("template:".count))] = blocks
@@ -151,6 +154,9 @@ extension Database: Codable {
         if let v = settings.normalNumbered { rows.append(.init(key: "normalNumbered", value: .number(Double(v)))) }
         if let v = settings.normalTag { rows.append(.init(key: "normalTag", value: .string(v))) }
         if let v = settings.normalV { rows.append(.init(key: "normalV", value: .number(Double(v)))) }
+        if let v = settings.normalGymV { rows.append(.init(key: "normalGymV", value: .number(Double(v)))) }
+        if let v = settings.normalFrench { rows.append(.init(key: "normalFrench", value: .number(Double(v)))) }
+        if let v = settings.progressScale { rows.append(.init(key: "progressScale", value: .string(v.rawValue))) }
         for (intent, blocks) in settings.templates.sorted(by: { $0.key < $1.key }) {
             rows.append(.init(key: "template:\(intent)", value: try JSONValue(encoding: blocks)))
         }

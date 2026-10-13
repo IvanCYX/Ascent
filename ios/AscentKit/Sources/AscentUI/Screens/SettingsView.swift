@@ -50,7 +50,9 @@ struct SettingsView: View {
 
             Section {
                 NavigationLink(value: Route.normalGrade) {
-                    LabeledContent("Your normal grade", value: NormalGradeView.summary(Load.normals(db, today: store.today)))
+                    LabeledContent("Your normal grade", value: NormalGradeView.summary(Load.normals(db, today: store.today),
+                                                                                      main: Pillars.mainScale(db, today: store.today),
+                                                                                      scales: NormalGradeView.scales(db)))
                 }
                 Stepper(value: Binding(get: { db.settings.weeklyTarget }, set: { store.setWeeklyTarget($0) }), in: 1...7) {
                     LabeledContent("Weekly target", value: "\(db.settings.weeklyTarget) session\(db.settings.weeklyTarget == 1 ? "" : "s")")
@@ -246,7 +248,7 @@ struct BackupDocument: FileDocument {
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper { FileWrapper(regularFileWithContents: data) }
 }
 
-/* ── Gyms & boards (web /gyms) ──────────────────────────────────────────── */
+/* ── Gyms and boards (DESIGN §11.2) ────────────────────────────────────── */
 
 struct GymsView: View {
     @Environment(AscentStore.self) private var store
@@ -254,44 +256,70 @@ struct GymsView: View {
 
     var body: some View {
         let db = store.db
-        let sendsByGym = Dictionary(grouping: db.climbs.filter { $0.gymId != nil && Metrics.isSend($0) }, by: { $0.gymId! }).mapValues(\.count)
-        let rows = Self.groupedRows(db.gyms)
+        let sends = db.climbs.filter(Metrics.isSend)
+        let byGym = Dictionary(grouping: sends.filter { $0.gymId != nil }, by: { $0.gymId! }).mapValues(\.count)
+        let byBoard = Dictionary(grouping: sends.filter { $0.boardId != nil }, by: { $0.boardId! }).mapValues(\.count)
 
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(rows, id: \.first!.id) { group in GymRow(gyms: group, sends: group.reduce(0) { $0 + (sendsByGym[$1.id] ?? 0) }) }
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .firstTextBaseline) {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Boards").font(.sans(16, .semibold))
-                            Text("V-scale, never merged").font(.sans(13)).foregroundStyle(Palette.secondary)
-                        }
-                        Spacer()
-                        Text("\(db.climbs.filter { $0.boardId != nil && Metrics.isSend($0) }.count)").font(.num(20))
-                    }
-                    ChipFlow {
-                        ForEach(db.boards) { b in Chip(label: "\(b.name), \(b.angles.map(String.init).joined(separator: "/"))°", small: true) {} }
-                    }
+            VStack(alignment: .leading, spacing: 12) {
+                header("Gyms")
+                ForEach(Self.groupedRows(db.gyms), id: \.first!.id) { group in
+                    GymCard(gyms: group, sends: group.reduce(0) { $0 + (byGym[$1.id] ?? 0) })
                 }
-                .padding(.vertical, 14)
 
-                Text("\(Text("Two kinds of scale. ").bold().foregroundStyle(Palette.text))Numbered gyms share the 1 to 15 spine with a soft or hard offset, so BHUB 10 and Batuu 10 are not counted as the same climb. Camp5 is ranked, not numbered: its tags stay tags, ordered pink to black, and chart in their own column.")
-                    .font(.sans(14)).foregroundStyle(Palette.secondary)
-                    .padding(16).background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Palette.surface))
-                    .padding(.top, 10)
+                header("Boards").padding(.top, 10)
+                Card(padding: 0) {
+                    VStack(spacing: 0) {
+                        ForEach(Array(db.boards.enumerated()), id: \.element.id) { i, b in
+                            HStack(spacing: 14) {
+                                Text(b.code).font(.sans(13, .bold)).foregroundStyle(Palette.text)
+                                    .frame(width: 40, height: 40)
+                                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.raised))
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(b.name).font(.sans(15, .semibold)).foregroundStyle(Palette.text)
+                                    Text(Self.angles(b.angles)).font(.sans(13)).foregroundStyle(Palette.secondary)
+                                }
+                                Spacer()
+                                Text("\(byBoard[b.id] ?? 0)").font(.num(20)).foregroundStyle(Palette.text)
+                            }
+                            .padding(.vertical, 12)
+                            .overlay(alignment: .bottom) { if i < db.boards.count - 1 { Hairline() } }
+                            .accessibilityElement(children: .combine)
+                        }
+                    }
+                    .padding(.horizontal, 18).padding(.vertical, 4)
+                }
+
+                Text("Numbered gyms share one 1 to 15 scale. V, French and colour tags keep their own grades and are never converted. Boards stay on V and never mix with gyms.")
+                    .font(.sans(13)).foregroundStyle(Palette.secondary).padding(.horizontal, 4).padding(.top, 2)
             }
-            .padding(.horizontal, 16).padding(.bottom, 100)
+            .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 100)
         }
         .background(Palette.ground)
         .navigationTitle("Gyms and boards")
-        .navigationSubtitle("\(db.gyms.count) gyms, \(db.boards.count) boards, \(db.climbs.count.formatted()) climbs")
-        .largeTitle()
-        .toolbar { ToolbarItem(placement: .trailing) { Button("Add gym") { router.sheet = .addGym } } }
+        .inlineTitle()
+        .toolbar { ToolbarItem(placement: .trailing) { Button("Add") { router.sheet = .addGym } } }
+    }
+
+    func header(_ title: String) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Text("Sends")
+        }
+        .font(.sans(13, .semibold)).foregroundStyle(Palette.secondary).padding(.horizontal, 4)
+    }
+
+    /// "25, 30, 40 and 45°"
+    static func angles(_ xs: [Int]) -> String {
+        let s = xs.map(String.init)
+        guard let last = s.last else { return "" }
+        return s.count == 1 ? "\(last)°" : s.dropLast().joined(separator: ", ") + " and \(last)°"
     }
 }
 
 extension GymsView {
-    /// Bump PBJ / J1 / SSQ share one scale — one row for the three.
+    /// Bump PBJ / J1 / SSQ share one scale — one card for the three.
     static func groupedRows(_ gyms: [Gym]) -> [[Gym]] {
         let bump = gyms.filter { $0.name.hasPrefix("Bump") }
         var rows = gyms.filter { !$0.name.hasPrefix("Bump") }.map { [$0] }
@@ -300,106 +328,263 @@ extension GymsView {
     }
 }
 
-struct GymRow: View {
+/// One gym (or the Bump trio): name, scale line, sends, and its grades with the sent ones filled.
+struct GymCard: View {
     @Environment(AscentStore.self) private var store
+    @Environment(\.accent) private var accent
     var gyms: [Gym]
     var sends: Int
 
     var body: some View {
         let first = gyms[0]
-        let sent = Set(store.db.climbs.filter { c in gyms.contains { $0.id == c.gymId } && c.gradeKind == .number && Metrics.isSend(c) }.map(\.grade))
-        let label = gyms.count > 1 ? "Bump " + gyms.map { $0.name.replacingOccurrences(of: "Bump ", with: "") }.joined(separator: " · ") : first.name
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(label).font(.sans(16, .semibold))
-                    Text(meta(first, shared: gyms.count > 1)).font(.sans(13)).foregroundStyle(Palette.secondary)
+        let kind = first.gradeKind
+        let ids = Set(gyms.map(\.id))
+        let sent = Set(store.db.climbs.filter { ids.contains($0.gymId ?? "") && $0.gradeKind == kind && Metrics.isSend($0) }.map(\.grade))
+        Card(padding: 0) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(Self.name(gyms)).font(.sans(16, .semibold)).foregroundStyle(Palette.text)
+                        Text(Self.meta(first, shared: gyms.count > 1)).font(.sans(13)).foregroundStyle(Palette.secondary)
+                    }
+                    Spacer()
+                    Text("\(sends)").font(.num(20)).foregroundStyle(Palette.text)
                 }
-                Spacer()
-                Text("\(sends)").font(.num(20))
-            }
-            if first.isRanked {
-                HStack(spacing: 4) {
-                    Text("Easy").font(.sans(11)).foregroundStyle(Palette.secondary)
-                    ForEach(first.tags ?? [], id: \.self) { t in
-                        VStack(spacing: 4) {
-                            RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Palette.hold(t)).frame(height: 18)
-                                .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous).strokeBorder(Palette.hairlineStrong, lineWidth: Palette.needsHairline(t) ? 1 : 0))
-                            Text(Vocab.colourCode(t)).font(.sans(10, .semibold)).foregroundStyle(Palette.secondary)
+                if first.isRanked {
+                    HStack(spacing: 6) {
+                        ForEach(first.tags ?? Vocab.camp5Tags, id: \.self) { t in
+                            VStack(spacing: 5) {
+                                RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Palette.hold(t)).frame(height: 18)
+                                    .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                        .strokeBorder(Palette.hairlineStrong, lineWidth: Palette.needsHairline(t) ? 1 : 0))
+                                Text(Vocab.colourCode(t)).font(.sans(10, .semibold)).foregroundStyle(Palette.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
                         }
                     }
-                    Text("Hard").font(.sans(11)).foregroundStyle(Palette.secondary)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Tags pink to black")
+                } else {
+                    let grades = first.grades
+                    let cols = kind == .gymV ? 6 : kind == .french ? 8 : grades.count
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 3), count: max(1, cols)), spacing: 3) {
+                        ForEach(grades, id: \.self) { g in
+                            let on = sent.contains(g)
+                            Text(Vocab.gradeLabel(kind, g))
+                                .font(.num(grades.count > 12 && kind == .number ? 10 : kind == .french ? 11 : 12))
+                                .lineLimit(1).minimumScaleFactor(0.6)
+                                .foregroundStyle(on ? accent.onAccent : Palette.secondary)
+                                .frame(maxWidth: .infinity, minHeight: 26)
+                                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(on ? accent.color : Palette.raised))
+                        }
+                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(sent.count) of \(grades.count) grades sent")
                 }
-            } else {
-                let max = first.maxGrade ?? 12
-                HStack(spacing: 2) {
-                    ForEach(1...max, id: \.self) { g in
-                        Text("\(g)").font(.num(11)).lineLimit(1).minimumScaleFactor(0.6)
-                            .foregroundStyle(sent.contains(g) ? Palette.ground : Palette.text)
-                            .frame(maxWidth: .infinity, minHeight: 28)
-                            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(sent.contains(g) ? Palette.text : Palette.raised))
-                    }
-                    if max < 15 {
-                        Text("No \(max + 1)–15\(first.offset < 0 ? ", soft" : first.offset > 0 ? ", hard" : "")")
-                            .font(.sans(10)).foregroundStyle(Palette.tertiary).lineLimit(1).minimumScaleFactor(0.5)
-                            .frame(maxWidth: .infinity, minHeight: 28)
-                            .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Palette.hairlineStrong, style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
-                            .layoutPriority(-1)
-                            .frame(width: nil)
-                    }
+                if gyms.count == 1 && sends == 0 {
+                    LinkButton(title: "Remove", color: Palette.tertiary) { store.deleteGym(first.id) }
                 }
             }
-            if gyms.count == 1 && sends == 0 {
-                LinkButton(title: "Remove", color: Palette.tertiary) { store.deleteGym(first.id) }
-            }
+            .padding(.horizontal, 18).padding(.vertical, 16)
         }
-        .padding(.vertical, 14)
-        .overlay(alignment: .bottom) { Hairline() }
     }
 
-    func meta(_ g: Gym, shared: Bool) -> String {
-        if g.isRanked { return "Colour tags only" }
-        var parts = ["Numbers to \(g.maxGrade ?? 12)"]
-        if shared { parts.append("one shared scale") }
-        else if g.offset != 0 { parts.append("offset \(g.offset > 0 ? "+" : "−")\(abs(g.offset).formatted())") }
-        else if g.id == "batuu" { parts.append("reference") }
-        return parts.joined(separator: ", ")
+    /// "Bump PBJ, J1 and SSQ"
+    static func name(_ gyms: [Gym]) -> String {
+        guard gyms.count > 1 else { return gyms[0].name }
+        let short = gyms.map { $0.name.replacingOccurrences(of: "Bump ", with: "") }
+        return "Bump " + short.dropLast().joined(separator: ", ") + " and " + short.last!
+    }
+
+    static func meta(_ g: Gym, shared: Bool) -> String {
+        let kind = g.gradeKind
+        let grades = g.grades
+        let span = "\(Vocab.gradeLabel(kind, grades.first ?? 0)) to \(Vocab.gradeLabel(kind, grades.last ?? 0))"
+        switch g.scaleType {
+        case .rankedColour: return "Colour tags, pink to black"
+        case .v: return "V scale, \(span)"
+        case .french: return "French routes, \(span)"
+        case .numeric:
+            var parts = ["Numbers", span]
+            if shared { parts.append("one scale for all three") }
+            else if g.offset != 0 {
+                let size = abs(g.offset) == 0.5 ? "half a grade" : abs(g.offset) == 1 ? "a grade" : "\(abs(g.offset).formatted()) grades"
+                parts.append("\(size) \(g.offset < 0 ? "soft" : "hard")")
+            } else if g.id == "batuu" { parts.append("the reference") }
+            return parts.joined(separator: ", ")
+        }
     }
 }
+
+/* ── Add gym (DESIGN §11.2) ─────────────────────────────────────────────── */
 
 struct AddGymSheet: View {
     @Environment(AscentStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
-    @State private var ranked = false
+    @State private var scale: ScaleType = .numeric
     @State private var maxGrade = 12
     @State private var offset = 0.0
+    @State private var vLow = -1
+    @State private var vHigh = 10
+    @State private var frenchLow = Vocab.frenchDefaultRange.lowerBound
+    @State private var frenchHigh = Vocab.frenchDefaultRange.upperBound
+
+    static let options: [(scale: ScaleType, title: String, example: String)] = [
+        (.numeric, "Numbers", "1 to 15"), (.rankedColour, "Colour tags", "Pink to black"),
+        (.v, "V scale", "VB to V17"), (.french, "French routes", "4a to 9a"),
+    ]
+
+    var trimmed: String { name.trimmingCharacters(in: .whitespaces) }
+
+    /// The gym as it would be saved.
+    var draft: Gym {
+        Gym(id: uid(), name: trimmed, shortName: trimmed, scaleType: scale,
+            minGrade: scale == .v ? vLow : scale == .french ? frenchLow : nil,
+            maxGrade: scale == .v ? vHigh : scale == .french ? frenchHigh : scale == .numeric ? maxGrade : nil,
+            tags: scale == .rankedColour ? Vocab.camp5Tags : nil,
+            offset: scale == .numeric ? offset : 0, sortOrder: store.db.gyms.count + 1)
+    }
 
     var body: some View {
-        SheetScaffold(title: "New gym", action: "Done", actionEnabled: !name.trimmingCharacters(in: .whitespaces).isEmpty) {
-            let n = name.trimmingCharacters(in: .whitespaces)
-            store.saveGym(Gym(id: uid(), name: n, shortName: n, scaleType: ranked ? .rankedColour : .numeric,
-                              maxGrade: ranked ? nil : maxGrade, tags: ranked ? Vocab.camp5Tags : nil,
-                              offset: offset, sortOrder: store.db.gyms.count + 1))
-            dismiss()
-        } content: {
-            TextFieldRow(label: "Name", placeholder: "Camp5 KL Gateway", text: $name).padding(.bottom, 16)
-            FieldLabel(title: "Grades")
-            SquareSegment(options: [(false, "Numbers"), (true, "Colour tags")], selection: $ranked).padding(.bottom, 16)
-            if !ranked {
-                FieldRow(label: "Max grade") {
-                    Spacer()
-                    SquareStepper(value: "\(maxGrade)", decrement: { maxGrade = max(1, maxGrade - 1) }, increment: { maxGrade = min(20, maxGrade + 1) })
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    TextFieldRow(label: "Name", placeholder: "Gym name", text: $name).padding(.bottom, 20)
+
+                    FieldLabel(title: "Grades")
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                        ForEach(Self.options, id: \.scale) { o in
+                            ScaleOption(title: o.title, example: o.example, on: scale == o.scale) { scale = o.scale }
+                        }
+                    }
+                    .padding(.bottom, 16)
+
+                    controls
+
+                    FieldLabel(title: "Preview").padding(.top, 20)
+                    preview
+
+                    Text("The scale is fixed once the gym has climbs.")
+                        .font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 16)
                 }
-                .padding(.bottom, 8)
+                .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 120)
             }
-            FieldRow(label: "Offset vs Batuu") {
-                Spacer()
-                SquareStepper(value: offset == 0 ? "0" : "\(offset > 0 ? "+" : "−")\(abs(offset).formatted())",
-                              decrement: { offset = max(-1, offset - 0.5) }, increment: { offset = min(1, offset + 0.5) })
+            .background(Palette.sheet)
+            .safeAreaInset(edge: .bottom) {
+                Button("Add") { save() }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(trimmed.isEmpty)
+                    .padding(.horizontal, 16).padding(.vertical, 12)
+                    .background(Palette.sheet)
             }
-            Text("Grade correction vs Batuu, −1 to +1. Softer gyms get a negative offset.")
-                .font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 10)
+            .navigationTitle("New gym")
+            .inlineTitle()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { dismiss() } label: { Image(systemName: "xmark") }.accessibilityLabel("Close")
+                }
+            }
+            .sensoryFeedback(.selection, trigger: scale)
         }
+    }
+
+    @ViewBuilder var controls: some View {
+        switch scale {
+        case .numeric:
+            VStack(alignment: .leading, spacing: 8) {
+                FieldRow(label: "Hardest grade") {
+                    Spacer()
+                    SquareStepper(value: "\(maxGrade)", decrement: { maxGrade = max(4, maxGrade - 1) },
+                                  increment: { maxGrade = min(20, maxGrade + 1) })
+                }
+                FieldRow(label: "Against Batuu") {
+                    Spacer()
+                    SquareStepper(value: offset == 0 ? "0" : "\(offset > 0 ? "+" : "−")\(abs(offset).formatted())",
+                                  decrement: { offset = max(-1, offset - 0.5) }, increment: { offset = min(1, offset + 0.5) })
+                }
+                Text("Softer gyms go below 0.").font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 2)
+            }
+        case .rankedColour:
+            Text("Tags follow the Camp5 order, pink to black.")
+                .font(.sans(14)).foregroundStyle(Palette.text)
+                .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.raised))
+        case .v:
+            rangeRows(.gymV, low: $vLow, high: $vHigh, bounds: Vocab.vGrades)
+        case .french:
+            rangeRows(.french, low: $frenchLow, high: $frenchHigh, bounds: 0...(Vocab.frenchGrades.count - 1))
+        }
+    }
+
+    func rangeRows(_ kind: GradeKind, low: Binding<Int>, high: Binding<Int>, bounds: ClosedRange<Int>) -> some View {
+        VStack(spacing: 8) {
+            FieldRow(label: "Easiest grade") {
+                Spacer()
+                SquareStepper(value: Vocab.gradeLabel(kind, low.wrappedValue),
+                              decrement: { low.wrappedValue = max(bounds.lowerBound, low.wrappedValue - 1) },
+                              increment: { low.wrappedValue = min(high.wrappedValue - 1, low.wrappedValue + 1) })
+            }
+            FieldRow(label: "Hardest grade") {
+                Spacer()
+                SquareStepper(value: Vocab.gradeLabel(kind, high.wrappedValue),
+                              decrement: { high.wrappedValue = max(low.wrappedValue + 1, high.wrappedValue - 1) },
+                              increment: { high.wrappedValue = min(bounds.upperBound, high.wrappedValue + 1) })
+            }
+        }
+    }
+
+    @ViewBuilder var preview: some View {
+        if scale == .rankedColour {
+            HStack(spacing: 6) {
+                ForEach(Vocab.camp5Tags, id: \.self) { t in
+                    RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Palette.hold(t)).frame(height: 28)
+                        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(Palette.hairlineStrong, lineWidth: Palette.needsHairline(t) ? 1 : 0))
+                }
+            }
+            .accessibilityHidden(true)
+        } else {
+            let gym = draft
+            ChipFlow(spacing: 4) {
+                ForEach(gym.grades, id: \.self) { g in
+                    Text(Vocab.gradeLabel(gym.gradeKind, g)).font(.num(13)).foregroundStyle(Palette.text)
+                        .padding(.horizontal, 6).frame(minWidth: 38, minHeight: 30)
+                        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Palette.raised))
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(gym.grades.count) grades")
+        }
+    }
+
+    func save() {
+        store.saveGym(draft)
+        dismiss()
+    }
+}
+
+/// One of the four scale tiles in Add gym; both lines centred.
+struct ScaleOption: View {
+    @Environment(\.accent) private var accent
+    var title: String
+    var example: String
+    var on: Bool
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                Text(title).font(.sans(16, .semibold))
+                Text(example).font(.sans(13)).opacity(0.7)
+            }
+            .multilineTextAlignment(.center)
+            .foregroundStyle(on ? accent.onAccent : Palette.text)
+            .frame(maxWidth: .infinity, minHeight: 72)
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(on ? accent.color : Palette.raised))
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 }

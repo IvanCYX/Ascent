@@ -10,15 +10,29 @@ public struct NormalGrades: Sendable, Hashable {
     public var tag: String?
     /// The V-scale, for boards
     public var v: Int?
+    /// V-grade gyms, kept apart from boards
+    public var gymV: Int?
+    /// French routes, an index into `Vocab.frenchGrades`
+    public var french: Int?
 
-    public init(numbered: Int? = nil, tag: String? = nil, v: Int? = nil) {
-        self.numbered = numbered; self.tag = tag; self.v = v
+    public init(numbered: Int? = nil, tag: String? = nil, v: Int? = nil, gymV: Int? = nil, french: Int? = nil) {
+        self.numbered = numbered; self.tag = tag; self.v = v; self.gymV = gymV; self.french = french
     }
 }
 
 public enum Load {
     /// One Camp5 tag spans about three V grades, so a step between tags counts as 2.5 grade steps.
     public static let camp5StepGrades = 2.5
+
+    /// Grade steps one unit of a climb's `grade` is worth in the Load weight. A French step (6a → 6a+) is about
+    /// half a V grade.
+    public static func stepGrades(_ kind: GradeKind) -> Double {
+        switch kind {
+        case .number, .v, .gymV: 1
+        case .tag: camp5StepGrades
+        case .french: 0.5
+        }
+    }
     public static let lightBelow = 0.8
     public static let spikeAbove = 1.3
     /// Days of history the baseline needs (the 4 weeks before the last 7 days).
@@ -37,10 +51,12 @@ public enum Load {
         }
         let numbered = median(sends.filter(Metrics.isNumeric).map { Metrics.adjustedGrade($0, gyms: db.gyms) })
         let tagIndex = median(sends.filter(Metrics.isTag).compactMap { c in c.tagId.flatMap { Vocab.camp5Tags.firstIndex(of: $0) }.map(Double.init) })
-        let v = median(sends.filter(Metrics.isBoard).map { Double($0.grade) })
+        func median(_ kind: GradeKind) -> Int? {
+            median(sends.filter { $0.gradeKind == kind }.map { Double($0.grade) }).map { Int($0.rounded()) }
+        }
         return NormalGrades(numbered: numbered.map { Int($0.rounded()) },
                             tag: tagIndex.map { Vocab.camp5Tags[min(Vocab.camp5Tags.count - 1, Int($0.rounded()))] },
-                            v: v.map { Int($0.rounded()) })
+                            v: median(.v), gymV: median(.gymV), french: median(.french))
     }
 
     /// The user's choice per scale, else the suggestion.
@@ -49,7 +65,9 @@ public enum Load {
         let suggested = suggestedNormals(db, today: today)
         return NormalGrades(numbered: s.normalNumbered ?? suggested.numbered,
                             tag: s.normalTag ?? suggested.tag,
-                            v: s.normalV ?? suggested.v)
+                            v: s.normalV ?? suggested.v,
+                            gymV: s.normalGymV ?? suggested.gymV,
+                            french: s.normalFrench ?? suggested.french)
     }
 
     /* ── Per climb ───────────────────────────────────────────────────── */
@@ -67,6 +85,12 @@ public enum Load {
         case .v:
             guard let n = normals.v else { return nil }
             return Double(c.grade - n)
+        case .gymV:
+            guard let n = normals.gymV else { return nil }
+            return Double(c.grade - n)
+        case .french:
+            guard let n = normals.french else { return nil }
+            return Double(c.grade - n) * stepGrades(.french)
         }
     }
 
@@ -179,9 +203,51 @@ public enum Load {
 /* ── Progress and Body ─────────────────────────────────────────────────────── */
 
 public enum Pillars {
+    /// Scales that can carry the Progress pillar, in the order the scale switch shows them.
+    static let pillarScales: [GradeKind] = [.number, .gymV, .french]
+
+    /// Scales with climbs in the Progress range: 1–15, V, French, then Camp5.
+    public static func scales(_ db: Database, today: String) -> [GradeKind] {
+        let w = db.settings.dashboardRange.windows(today: today)
+        let kinds = Set(Metrics.climbsInRange(db.climbs, from: w.from, to: w.to).map(\.gradeKind))
+        return (pillarScales + [.tag]).filter(kinds.contains)
+    }
+
+    /// The scale with the most climbs (1–15 wins ties and empty logs).
+    public static func mainScale(_ climbs: [Climb]) -> GradeKind {
+        let counts = Dictionary(grouping: climbs, by: \.gradeKind).mapValues(\.count)
+        return pillarScales.reduce(GradeKind.number) { best, kind in
+            (counts[kind] ?? 0) > (counts[best] ?? 0) ? kind : best
+        }
+    }
+
+    public static func mainScale(_ db: Database, today: String) -> GradeKind {
+        let w = db.settings.dashboardRange.windows(today: today)
+        return mainScale(Metrics.climbsInRange(db.climbs, from: w.from, to: w.to))
+    }
+
+    /// The scale Progress detail shows: your pick while it has climbs in range, else your main scale.
+    public static func progressScale(_ db: Database, today: String) -> GradeKind {
+        let available = scales(db, today: today)
+        if let picked = db.settings.progressScale, available.contains(picked) { return picked }
+        let main = mainScale(db, today: today)
+        // a Camp5-only range opens on Camp5 rather than an empty 1–15
+        return available.isEmpty || available.contains(main) ? main : available[0]
+    }
+
+    /// The Progress scale for anything that needs grades (the pillar, readiness, widgets): Camp5 falls back to your
+    /// main scale.
+    public static func gradedScale(_ db: Database, today: String) -> GradeKind {
+        let picked = progressScale(db, today: today)
+        return picked == .tag ? mainScale(db, today: today) : picked
+    }
+
     public struct Progress: Sendable, Hashable {
-        /// Top numbered grade sent in the range
+        /// The scale the pillar reads; Camp5 in Progress detail leaves it on the main scale
+        public var scale: GradeKind
+        /// Top grade sent in the range, on that scale
         public var top: Int?
+        public var topLabel: String?
         /// top − the previous range's top
         public var delta: Int?
         public var hardSends: Int
@@ -190,15 +256,19 @@ public enum Pillars {
         public var ratio: Double?
     }
 
-    /// Uses the Progress range (`settings.dashboardRange`).
+    /// Uses the Progress range (`settings.dashboardRange`) and scale (`progressScale`).
     public static func progress(_ db: Database, today: String) -> Progress {
+        let kind = gradedScale(db, today: today)
         let w = db.settings.dashboardRange.windows(today: today)
         let cur = Metrics.climbsInRange(db.climbs, from: w.from, to: w.to)
         let prev = Metrics.climbsInRange(db.climbs, from: w.prevFrom, to: w.prevTo)
-        let top = Metrics.maxGradeSent(cur, gyms: db.gyms).grade
-        let prevTop = Metrics.maxGradeSent(prev, gyms: db.gyms).grade
-        let hard = Metrics.volumeAtHard(cur), prevHard = Metrics.volumeAtHard(prev)
-        return Progress(top: top, delta: top.flatMap { t in prevTop.map { t - $0 } }, hardSends: hard, previousHardSends: prevHard,
+        let top = Metrics.maxGradeSent(cur, gyms: db.gyms, kind: kind).grade
+        let prevTop = Metrics.maxGradeSent(prev, gyms: db.gyms, kind: kind).grade
+        let hardFrom = Metrics.thresholds(kind, normals: Load.normals(db, today: today))?.hard ?? Int.max
+        let hard = Metrics.volumeAtHard(cur, threshold: hardFrom, kind: kind)
+        let prevHard = Metrics.volumeAtHard(prev, threshold: hardFrom, kind: kind)
+        return Progress(scale: kind, top: top, topLabel: top.map { Vocab.gradeLabel(kind, $0) },
+                        delta: top.flatMap { t in prevTop.map { t - $0 } }, hardSends: hard, previousHardSends: prevHard,
                         ratio: prevHard > 0 ? Double(hard) / Double(prevHard) : (hard > 0 ? 1 : nil))
     }
 
@@ -266,10 +336,13 @@ public enum Insights {
     public static func today(_ db: Database, today: String) -> Insight? {
         let w = RangeID.eightWeeks.windows(today: today)
         let cur = Metrics.climbsInRange(db.climbs, from: w.from, to: w.to)
-        let rows = Metrics.sendPyramid(cur)
+        let kind = Pillars.mainScale(cur)
+        let rows = Metrics.sendPyramid(cur, kind: kind)
         if let row = rows.filter({ $0.count >= 5 && $0.flashed == 0 }).max(by: { $0.grade < $1.grade }) {
-            let rate = Metrics.flashRate(cur).map { "Your flash rate is \(Int($0.rounded()))% overall" } ?? "Worth a flash attempt"
-            return Insight(headline: "\(row.count) sends at \(row.grade), none flashed", detail: rate, destination: .progress)
+            let flashFrom = Metrics.thresholds(kind, normals: Load.normals(db, today: today))?.flash
+            let rate = flashFrom.flatMap { Metrics.flashRate(cur, threshold: $0, kind: kind) }
+                .map { "Your flash rate is \(Int($0.rounded()))% overall" } ?? "Worth a flash attempt"
+            return Insight(headline: "\(row.count) sends at \(row.label), none flashed", detail: rate, destination: .progress)
         }
         let trends = Metrics.chipTrends(db.reviews, sessions: db.sessions)
         if let pattern = Metrics.chipPattern(trends) {

@@ -119,6 +119,24 @@ struct DeltaChip: View {
 
 /* ── Chips & selection ──────────────────────────────────────────────────── */
 
+/// Progress detail's scale chips: 1–15, V, French, Camp5 (DESIGN §11.4).
+struct ScaleSwitch: View {
+    var scales: [GradeKind]
+    var selection: GradeKind
+    var pick: (GradeKind) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(scales, id: \.self) { kind in
+                Chip(label: Vocab.scaleName(kind), on: kind == selection, small: true) { pick(kind) }
+                    .accessibilityAddTraits(kind == selection ? .isSelected : [])
+            }
+            Spacer(minLength: 0)
+        }
+        .sensoryFeedback(.selection, trigger: selection)
+    }
+}
+
 struct Chip: View {
     enum Kind { case normal, pain, dashed }
     @Environment(\.accent) private var accent
@@ -445,7 +463,7 @@ struct TopGradesView: View {
             }
         case .number(let xs):
             gradeChips(xs.map(String.init))
-        case .v(let xs):
+        case .labels(let xs):
             gradeChips(xs)
         }
     }
@@ -520,12 +538,9 @@ func boardDetail(_ c: Climb) -> String {
     [Vocab.attemptsLabel(c), c.angle.map { "\($0)°" }, c.name].compactMap { $0 }.joined(separator: ", ")
 }
 
+/// The climb's grade on its own scale; empty for Camp5 tags, which show their colour instead.
 func gradeLabel(_ c: Climb) -> String {
-    switch c.gradeKind {
-    case .tag: ""
-    case .v: "V\(c.grade)"
-    case .number: "\(c.grade)"
-    }
+    c.gradeKind == .tag ? "" : Vocab.gradeLabel(c.gradeKind, c.grade)
 }
 
 /// "1h 12m" → "1 hour 12 minutes" for VoiceOver

@@ -13,7 +13,7 @@ public struct LiveSessionActivity: Widget {
     public var body: some WidgetConfiguration {
         ActivityConfiguration(for: LiveSessionAttributes.self) { context in
             LockScreenLiveView(state: context.state, stale: context.isStale)
-                .activityBackgroundTint(Palette.ground)
+                .activityBackgroundTint(Palette.surface)
                 .activitySystemActionForegroundColor(Palette.text)
                 .environment(\.accent, SharedAccent.current)
         } dynamicIsland: { context in
@@ -27,70 +27,79 @@ public struct LiveSessionActivity: Widget {
                         if let intent = s.intent { Text(intent).font(.system(size: 13)).opacity(0.7) }
                     }
                     .privacySensitive(s.privacyLock)
+                    .island()
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    VStack(alignment: .trailing, spacing: 5) {
-                        Text(timerInterval: s.startedAt...Date.distantFuture, countsDown: false)
-                            .font(.system(size: 30, weight: .semibold)).monospacedDigit().foregroundStyle(accent.color)
-                            .multilineTextAlignment(.trailing)
-                        Text("since \(Day.timeOfDay(s.startedAt))").font(.system(size: 12)).opacity(0.6)
-                    }
+                    Text(timerInterval: s.startedAt...Date.distantFuture, countsDown: false)
+                        .font(.system(size: 30, weight: .semibold)).monospacedDigit().foregroundStyle(accent.color)
+                        .multilineTextAlignment(.trailing).lineLimit(1).minimumScaleFactor(0.6)
+                        .island()
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(spacing: 14) {
+                    // The expanded island is capped at about 160 pt, so this stays tight.
+                    VStack(spacing: 10) {
                         HStack(spacing: 22) {
                             stat("\(s.sends)", "sends")
                             stat(s.high, "high").privacySensitive(s.privacyLock)
                             stat("\(s.flashed)", "flashed").privacySensitive(s.privacyLock)
                             Spacer()
                         }
-                        LiveButtons(accent: accent)
+                        LiveButtons(accent: accent, height: 36)
                     }
-                    .padding(.top, 6)
+                    .island()
                 }
             } compactLeading: {
                 HStack(spacing: 5) {
                     Image(systemName: "hand.raised.fingers.spread.fill").foregroundStyle(accent.color)
                     Text(s.high).font(.system(size: 15, weight: .bold)).privacySensitive(s.privacyLock)
                 }
+                .island()
             } compactTrailing: {
                 Text(timerInterval: s.startedAt...Date.distantFuture, countsDown: false)
                     .font(.system(size: 15, weight: .semibold)).monospacedDigit().foregroundStyle(accent.color)
                     .frame(maxWidth: 64)
+                    .island()
             } minimal: {
                 Text(timerInterval: s.startedAt...Date.distantFuture, countsDown: false)
                     .font(.system(size: 11, weight: .semibold)).monospacedDigit().foregroundStyle(accent.color)
+                    .island()
             }
             .widgetURL(URL(string: "ascent://log"))
-            .keylineTint(accent.color)
+            .keylineTint(accent.resolved(dark: true).color)
         }
     }
 
     func stat(_ v: String, _ l: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(v).font(.system(size: 22, weight: .bold))
+        VStack(alignment: .leading, spacing: 2) {
+            Text(v).font(.system(size: 20, weight: .bold))
             Text(l).font(.system(size: 11, weight: .medium)).opacity(0.6)
         }
     }
 }
 
+private extension View {
+    /// The island is always black, so resolve the accent and text tokens as dark whatever the system appearance.
+    func island() -> some View { environment(\.colorScheme, .dark) }
+}
+
 struct LiveButtons: View {
     var accent: AccentTheme
+    var height: CGFloat = 44
     var body: some View {
         HStack(spacing: 8) {
             Link(destination: URL(string: "ascent://log")!) {
                 Text("Log a send").font(.system(size: 15, weight: .semibold)).foregroundStyle(accent.onAccent)
-                    .frame(maxWidth: .infinity, minHeight: 44).background(Capsule().fill(accent.color))
+                    .frame(maxWidth: .infinity, minHeight: height).background(Capsule().fill(accent.color))
             }
             Link(destination: URL(string: "ascent://review")!) {
                 Text("End & rate").font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.text)
-                    .frame(maxWidth: .infinity, minHeight: 44).background(Capsule().fill(Palette.text.opacity(0.12)))
+                    .frame(maxWidth: .infinity, minHeight: height).background(Capsule().fill(Palette.text.opacity(0.12)))
             }
         }
     }
 }
 
-/// 1.9 — the paper card on the Lock Screen.
+/// The Lock Screen card (DESIGN §8).
 struct LockScreenLiveView: View {
     @Environment(\.accent) private var accent
     var state: LiveSessionState

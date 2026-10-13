@@ -98,7 +98,64 @@ public enum Vocab {
         public let max: Int
     }
 
-    /// Grade bands used by the style × grade heatmap.
+    /* ── Grade scales (DESIGN §11) ──────────────────────────────────── */
+
+    /// French route grades, easiest first. A French climb stores its index here; the label is all that shows.
+    public static let frenchGrades: [String] = [
+        "4a", "4b", "4c", "5a", "5a+", "5b", "5b+", "5c", "5c+", "6a", "6a+", "6b", "6b+", "6c", "6c+",
+        "7a", "7a+", "7b", "7b+", "7c", "7c+", "8a", "8a+", "8b", "8b+", "8c", "8c+", "9a",
+    ]
+    /// 5a to 8b+, a new French gym's range.
+    public static let frenchDefaultRange = 3...24
+    /// VB is stored as −1.
+    public static let vGrades = -1...17
+
+    /// How a grade reads on its scale: `11`, `V5`, `VB`, `6b+`, or the tag's colour.
+    public static func gradeLabel(_ kind: GradeKind, _ grade: Int, tagId: String? = nil) -> String {
+        switch kind {
+        case .number: "\(grade)"
+        case .v, .gymV: grade < 0 ? "VB" : "V\(grade)"
+        case .french: frenchGrades.indices.contains(grade) ? frenchGrades[grade] : "–"
+        case .tag: colourLabel(tagId ?? (camp5Tags.indices.contains(grade - 1) ? camp5Tags[grade - 1] : nil))
+        }
+    }
+
+    /// The scale's name on the Progress switch and in Settings.
+    public static func scaleName(_ kind: GradeKind) -> String {
+        switch kind {
+        case .number: "1–15"
+        case .tag: "Camp5"
+        case .gymV: "V"
+        case .french: "French"
+        case .v: "Boards"
+        }
+    }
+
+    /// The easiest grade a scale can hold.
+    public static func lowestGrade(_ kind: GradeKind) -> Int {
+        switch kind {
+        case .number, .tag: 1
+        case .v, .gymV: vGrades.lowerBound
+        case .french: 0
+        }
+    }
+
+    /// Heatmap and readiness bands per scale.
+    public static func gradeBands(_ kind: GradeKind) -> [GradeBand] {
+        switch kind {
+        case .gymV, .v:
+            [.init(label: "V0–1", min: 0, max: 1), .init(label: "V2–3", min: 2, max: 3), .init(label: "V4–5", min: 4, max: 5),
+             .init(label: "V6–7", min: 6, max: 7), .init(label: "V8+", min: 8, max: vGrades.upperBound)]
+        case .french:
+            // each letter with its +; everything from 7a+ up is one band
+            [.init(label: "5", min: 3, max: 8), .init(label: "6a", min: 9, max: 10), .init(label: "6b", min: 11, max: 12),
+             .init(label: "6c", min: 13, max: 14), .init(label: "7a+", min: 15, max: frenchGrades.count - 1)]
+        case .number, .tag:
+            gradeBands
+        }
+    }
+
+    /// Grade bands used by the style × grade heatmap on the numbered spine.
     public static let gradeBands: [GradeBand] = [
         .init(label: "6–7", min: 6, max: 7),
         .init(label: "8–9", min: 8, max: 9),
