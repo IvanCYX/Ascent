@@ -2,7 +2,8 @@
 
 > **Status: approved and built.** Decided with the user and approved from the canvas on 12 Oct 2026; built on
 > branch `r3-redesign`. r2 (paper and ink, approved 29 Sep 2026) is in git history; this file replaces it.
-> **§11 (V and French route scales) is a draft for review**, drawn in the canvas row "Gyms and grade scales".
+> §11 (V and French route scales) was approved from the canvas row "Gyms and grade scales" on 13 Oct 2026 and is
+> built.
 
 Build from this spec and the r3 design canvas (Artifact: https://claude.ai/artifact/JzmnogQNGYm7oxoZesVzAp).
 Board names (`Today · dark`, `Load detail`, …) refer to the canvas. Target **iOS 26, SwiftUI, iPhone portrait
@@ -337,7 +338,7 @@ the resolved decisions in r2 §9. See r2 in git history for their full text.
 5. **Grounds.** Dark `#0A0A0A`; the user tried navy and charcoal and came back to it. Light `#F5F5F4`.
 6. **The `+`.** Same position, size and behaviour as r2.
 
-## 11. Gym grade scales: V and French routes (draft, 13 Oct 2026)
+## 11. Gym grade scales: V and French routes (approved and built, 13 Oct 2026)
 
 TensionHouse grades in V, and Batuu's rope area grades its rope climbs in French route grades (5a, 5b+, 6a …), so a
 gym can be set up on the scale it uses. Camp5's ropes and lead walls use its colour tags, so they need nothing new.
@@ -395,7 +396,9 @@ The Log a send sheet is unchanged except the Grade grid, which follows the gym's
   its +).
 - The **Progress pillar** on Today follows the selected scale: top grade in its notation (`13`, `V6`, `7a`) with a
   delta chip in grades, and the ring is hard sends on that scale against the previous range. With Camp5 selected,
-  the pillar uses the main numbered, V or French scale instead.
+  the pillar uses the main numbered, V or French scale instead (`Pillars.gradedScale`).
+- The same graded scale drives comp readiness in Plan and Season, and the widgets' top grade, flash rate and pyramid.
+- A range with only Camp5 climbs opens on Camp5 rather than an empty 1–15.
 
 ### 11.5 Load and normal grades
 - New normals `normalGymV` and `normalFrench`, stored as settings rows like the others and suggested the same way
@@ -408,11 +411,21 @@ The Log a send sheet is unchanged except the Grade grid, which follows the gym's
   French routes, Boards. The Settings row shows the main scale's normal and the count of the rest ("V3 and 4 more").
 
 ### 11.6 Data and tests
-- `ScaleType` gains `v` and `french`; `GradeKind` gains `french`. Gym V climbs use `GradeKind.v` with a `gymId`;
-  board climbs keep `boardId`. `Gym` gains an easiest grade for V and French (`minGrade`); `maxGrade` is the hardest.
+- `ScaleType` gains `v` and `french`; `GradeKind` gains `gymV` (`"gym-v"`) and `french`. Boards keep `GradeKind.v`,
+  so every existing "is this a board" check still holds and a climb's kind names its scale. `Gym` gains an easiest
+  grade for V and French (`minGrade`); `maxGrade` is the hardest. `Gym.gradeKind`, `Gym.grades` and
+  `Gym.gradeSpan` ("VB to V10") read the scale.
+- Grade labels, bands and step sizes live in `Vocab` (`gradeLabel`, `gradeBands(_:)`, `frenchGrades`, `scaleName`) and
+  `Load.stepGrades`; per-scale thresholds in `Metrics.thresholds`; the Progress scale in `Pillars.scales`,
+  `mainScale`, `progressScale` and `gradedScale`. Settings rows: `normalGymV`, `normalFrench`, `progressScale`.
+- The demo log adds TensionHouse and Batuu rope area with a few fixed sessions each (`Seed.scaleDemo`), drawn without
+  the PRNG so the rest of the demo keeps its shape.
 - Existing logs and older backups load unchanged; backups with the new scales need this version.
-- Tests: grade labels and order per scale, Load step sizes (V 1, French 0.5), thresholds from normals, main-scale
-  pick, pyramid and heatmap bands per scale, backup round trip with V and French gyms.
+- Tests (`Tests/AscentCoreTests/ScalesTests.swift`): grade labels and spans per scale, Load step sizes (V 1,
+  French 0.5), suggested normals, thresholds from normals, key numbers on a chosen scale, pyramid and heatmap bands,
+  the Progress scale choice and Camp5 fallbacks, session highs, store setters, widgets, the live high, and a backup
+  round trip with V and French gyms. The snapshot test renders Gyms and boards, Add gym and Progress on V, French
+  and Camp5.
 
 ### 11.7 Not in this change
 The Font bouldering scale; lead or top rope; converting between scales; offsets between V or French gyms; editing a

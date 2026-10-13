@@ -43,7 +43,7 @@ let demoNow: Date = {
 
     @Test func demoShape() {
         let db = Seed.demo(now: demoNow)
-        #expect(db.gyms.count == 6)
+        #expect(db.gyms.count == 8)
         #expect(db.boards.count == 2)
         #expect(db.activeSession?.gymId == "batuu")
         #expect(Metrics.sessionSends(db.climbs, sessionId: db.activeSession!.id).count == 7)
@@ -246,7 +246,7 @@ func parityResults(_ db: Database, today: String) -> [String: Any] {
     out["topGrades"] = db.sessions.suffix(10).map { s -> String in
         switch Metrics.topGrades(Metrics.sessionSends(db.climbs, sessionId: s.id)) {
         case .number(let xs): "n:" + xs.map(String.init).joined(separator: ",")
-        case .v(let xs): "v:" + xs.joined(separator: ",")
+        case .labels(let xs): "v:" + xs.joined(separator: ",")
         case .tag(let xs): "t:" + xs.joined(separator: ",")
         }
     }

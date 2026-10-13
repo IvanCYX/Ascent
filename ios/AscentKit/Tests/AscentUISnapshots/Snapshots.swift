@@ -12,8 +12,11 @@ import AscentCore
         return Day.calendar.date(from: c)!
     }()
 
-    func env<V: View>(_ v: V, dark: Bool, width: CGFloat = 393, height: CGFloat, accent: String = "") -> some View {
-        let store = AscentStore(database: Seed.demo(now: Self.demoNow))
+    func env<V: View>(_ v: V, dark: Bool, width: CGFloat = 393, height: CGFloat, accent: String = "",
+                      progressScale: GradeKind? = nil) -> some View {
+        var db = Seed.demo(now: Self.demoNow)
+        db.settings.progressScale = progressScale
+        let store = AscentStore(database: db)
         store.now = { Self.demoNow }
         let settings = AppSettings(defaults: UserDefaults(suiteName: "snapshots-\(UUID().uuidString)")!)
         settings.accentHex = accent
@@ -57,7 +60,12 @@ import AscentCore
             write("quickadd-\(sfx)", env(QuickAddSheet(), dark: dark, height: 500), dark: dark)
             write("load-\(sfx)", env(LoadDetailView(), dark: dark, height: 1400), dark: dark)
             write("progress-\(sfx)", env(ProgressDetailView(), dark: dark, height: 2200), dark: dark)
-            write("normalgrade-\(sfx)", env(NormalGradeView(), dark: dark, height: 1000), dark: dark)
+            write("normalgrade-\(sfx)", env(NormalGradeView(), dark: dark, height: 1400), dark: dark)
+            write("gyms-\(sfx)", env(GymsView(), dark: dark, height: 1500), dark: dark)
+            write("addgym-\(sfx)", env(AddGymSheet(), dark: dark, height: 900), dark: dark)
+            write("progress-v-\(sfx)", env(ProgressDetailView(), dark: dark, height: 2000, progressScale: .gymV), dark: dark)
+            write("progress-french-\(sfx)", env(ProgressDetailView(), dark: dark, height: 2000, progressScale: .french), dark: dark)
+            write("progress-camp5-\(sfx)", env(ProgressDetailView(), dark: dark, height: 1400, progressScale: .tag), dark: dark)
             write("log-\(sfx)", env(LoggingSheet(start: false, step: .log(.gym)), dark: dark, height: 1400), dark: dark)
             write("review-\(sfx)", env(LoggingSheet(start: false, step: .review), dark: dark, height: 1500), dark: dark)
             write("lock-\(sfx)", env(LockView(autoPrompt: false), dark: dark, height: 852), dark: dark)

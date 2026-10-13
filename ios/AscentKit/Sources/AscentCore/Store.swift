@@ -95,6 +95,11 @@ public final class AscentStore {
     public func setNormalNumbered(_ g: Int?) { write { $0.settings.normalNumbered = g.map { min(15, max(1, $0)) } } }
     public func setNormalTag(_ tag: String?) { write { $0.settings.normalTag = tag } }
     public func setNormalV(_ v: Int?) { write { $0.settings.normalV = v.map { min(17, max(0, $0)) } } }
+    public func setNormalGymV(_ v: Int?) {
+        write { $0.settings.normalGymV = v.map { min(Vocab.vGrades.upperBound, max(Vocab.vGrades.lowerBound, $0)) } }
+    }
+    public func setNormalFrench(_ i: Int?) { write { $0.settings.normalFrench = i.map { min(Vocab.frenchGrades.count - 1, max(0, $0)) } } }
+    public func setProgressScale(_ kind: GradeKind) { write { $0.settings.progressScale = kind } }
 
     /* ── Sessions ────────────────────────────────────────────────────── */
 

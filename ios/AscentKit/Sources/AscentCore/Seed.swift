@@ -16,6 +16,11 @@ public enum Seed {
         Gym(id: "bump-ssq", name: "Bump SSQ", shortName: "Bump SSQ", scaleType: .numeric, maxGrade: 12, offset: 0, sortOrder: 5),
         Gym(id: "bhub", name: "BHUB", shortName: "BHUB", scaleType: .numeric, maxGrade: 10, offset: -0.5,
             note: "Soft relative to Batuu.", sortOrder: 6),
+        Gym(id: "tensionhouse", name: "TensionHouse", shortName: "TensionHouse", scaleType: .v, minGrade: -1, maxGrade: 10,
+            note: "V grades, kept apart from the boards.", sortOrder: 7),
+        Gym(id: "batuu-ropes", name: "Batuu rope area", shortName: "Batuu rope area", scaleType: .french,
+            minGrade: Vocab.frenchDefaultRange.lowerBound, maxGrade: Vocab.frenchDefaultRange.upperBound,
+            note: "French route grades on the rope walls.", sortOrder: 8),
     ]
 
     public static let boards: [Board] = [
@@ -419,8 +424,9 @@ public enum Seed {
                                PlanBlock(10, "A2 rehab · no-hang 10s × 5", target: "rehab", rehab: true),
                            ], status: .planned)
 
-        db.sessions = sessions + [live, plan]
-        db.climbs = climbs + liveClimbs
+        let (scaleSessions, scaleClimbs) = scaleDemo(today: today)
+        db.sessions = sessions + scaleSessions + [live, plan]
+        db.climbs = climbs + scaleClimbs + liveClimbs
         db.reviews = reviews
 
         var s = Settings()
@@ -433,6 +439,43 @@ public enum Seed {
         db.settings = s
         db.normalise()
         return db
+    }
+
+    /// A few fixed sessions at TensionHouse (V) and the Batuu rope area (French routes), DESIGN §11.
+    /// Drawn without the PRNG so the rest of the demo log keeps its shape.
+    static func scaleDemo(today: String) -> ([Session], [Climb]) {
+        typealias Go = (grade: String, attempts: Int, sent: Bool)
+        let v: [(Int, [Go])] = [
+            (-40, [("V2", 1, true), ("V3", 1, true), ("V3", 2, true), ("V4", 3, true), ("V4", 1, true), ("V5", 5, false)]),
+            (-26, [("V3", 1, true), ("V4", 2, true), ("V4", 1, true), ("V5", 4, true), ("V5", 2, true), ("V6", 6, false)]),
+            (-12, [("V3", 1, true), ("V4", 1, true), ("V5", 3, true), ("V5", 1, true), ("V6", 5, true), ("V3", 2, true)]),
+            (-5, [("V4", 1, true), ("V5", 2, true), ("V6", 3, true), ("V6", 6, false), ("V3", 1, true), ("V4", 2, true)]),
+        ]
+        let french: [(Int, [Go])] = [
+            (-33, [("5c", 1, true), ("6a", 1, true), ("6a+", 2, true), ("6b", 3, true), ("6b+", 4, false)]),
+            (-19, [("6a", 1, true), ("6a+", 1, true), ("6b", 2, true), ("6b+", 3, true), ("6c", 5, false)]),
+            (-9, [("6a+", 1, true), ("6b", 1, true), ("6b+", 2, true), ("6c", 4, true), ("7a", 3, false)]),
+        ]
+        let holds = ["blue", "green", "orange", "purple", "red", "yellow"]
+        var sessions: [Session] = []
+        var climbs: [Climb] = []
+        for (gymId, kind, days) in [("tensionhouse", GradeKind.gymV, v), ("batuu-ropes", .french, french)] {
+            for (back, goes) in days {
+                let date = Day.add(today, back)
+                let id = "demo-\(gymId)\(back)"
+                sessions.append(Session(id: id, date: date, gymId: gymId, intent: kind == .french ? "Power endurance" : "Max strength",
+                                        durationMin: 100, status: .done, startedAt: at(date, 18, 30), endedAt: at(date, 20, 10)))
+                for (i, go) in goes.enumerated() {
+                    let grade = kind == .french ? Vocab.frenchGrades.firstIndex(of: go.grade)! : Int(go.grade.dropFirst())!
+                    climbs.append(Climb(id: "\(id)-\(i)", sessionId: id, gymId: gymId, gradeKind: kind, grade: grade,
+                                        holdColour: holds[i % holds.count],
+                                        styles: [Vocab.climbStyles[(i + abs(back)) % Vocab.climbStyles.count]],
+                                        tickType: Vocab.tickType(attempts: go.attempts, sent: go.sent), attempts: go.attempts,
+                                        createdAt: at(date, 18, 40).addingTimeInterval(Double(i) * 8 * 60)))
+                }
+            }
+        }
+        return (sessions, climbs)
     }
 
     /// "Clear everything": the reference gyms and boards, nothing logged.

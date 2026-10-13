@@ -18,7 +18,7 @@ no iCloud.
 | **Plan** | *Today*: session intent picks the blocks, load rules strike out blocked focus styles, and the plan shortens automatically in a taper. *Season*: calendar, competitions, the taper plan and the weekly session target |
 | **History** | Chip trends over the last 12 sessions, plus the full session ledger with session detail |
 | **Body** | Injury and rehab: body map, pain trend, adherence, rehab protocol, load rules |
-| **Settings** | Appearance, accent colour, training (your normal grade per scale, weekly target), Face ID lock, gyms and boards, backup export and import |
+| **Settings** | Appearance, accent colour, training (your normal grade per scale, weekly target), Face ID lock, gyms and boards (add a gym on numbers, colour tags, V or French routes), backup export and import |
 
 **Quick add.** A floating `+` above the Liquid Glass tab bar opens a selector for the next action:
 start a session, log a gym or board send, end and rate the session, check in pain, tick off rehab, or
@@ -83,6 +83,10 @@ the Live Activity views still need a check on a real device. `HANDOFF.md` lists 
   black (V6–V8+). No 1–15 number ever appears for Camp5: not in logging, tables, charts or export.
   Sorting uses the tag's position in that order, and logs saved with the old yellow-first order are
   re-ranked when they load.
+- **V gyms and French routes keep their own scales.** A gym can grade in V (VB to V17, like TensionHouse) or in
+  French route grades (4a to 9a, like Batuu's rope area). Their climbs are never converted onto the 1–15 spine.
+  Progress detail has a scale switch (1–15, V, French, Camp5), and the Today pillar and the widgets follow it.
+  Rope climbs are logged like boulders, with the same attempt counter.
 - **Boards never merge into the gym pyramid.** They have their own panel and their own max-grade
   metric, and an angle is required.
 - **Load rules** are checked both when planning a session and when logging a climb whose style
@@ -102,12 +106,13 @@ Everything is recomputed from the log; nothing is stored pre-aggregated. The Pro
 (8 weeks / 6 months / Season) refilters Progress detail and the Progress pillar.
 
 - **Load**: each climb scores `attempts × 2^((grade − normal) / 2)` against your normal grade on its own
-  scale (numbered, Camp5 tag, or board V), and not-sent attempts count too. One Camp5 tag step counts
-  as 2.5 grade steps. Load is the last 7 days ÷ (the 28 days before ÷ 4): under 80% is light, over
+  scale (numbered, Camp5 tag, V gym, French route, or board V), and not-sent attempts count too. One
+  Camp5 tag step counts as 2.5 grade steps; one French step (6a to 6a+) counts as half a grade. Load is the last 7 days ÷ (the 28 days before ÷ 4): under 80% is light, over
   130% is spiking. With less than 4 weeks of history it shows "Building baseline N/4". Your normal
   grade per scale is set in Settings and defaults to the median of the last 28 days of sends.
 - **Progress pillar**: the top grade in the Progress range with its change, and a ring of hard sends
-  (10+) against the previous range.
+  against the previous range, on the scale picked in Progress detail. Hard is 10+ on the 1–15 spine and two
+  grades above your normal on V and French.
 - **Body pillar**: the latest pain, and a ring of rehab days done in the last 7 days. Red when a load
   rule is used up, amber when pain is rising or a rule has one use left.
 

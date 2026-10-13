@@ -13,6 +13,8 @@ public struct WidgetSummary: Sendable, Hashable {
     public var weeksToComp: Int?
 
     /* full — hidden while locked */
+    /// The scale the grades below are on: the Progress pillar's (DESIGN §11.4)
+    public var scale: GradeKind
     public var topGrade: String?
     public var topGym: String?
     public var topDelta: String?
@@ -31,7 +33,7 @@ public struct WidgetSummary: Sendable, Hashable {
 
     public static let placeholder = WidgetSummary(
         sessionsThisWeek: 3, weekStrip: [true, false, true, false, false, true, false], todayIndex: 6, streakWeeks: 5,
-        weeklyTarget: 4, weeksToComp: 6, topGrade: "12", topGym: "Batuu", topDelta: "+1", sendsThisWeek: 21,
+        weeklyTarget: 4, weeksToComp: 6, scale: .number, topGrade: "12", topGym: "Batuu", topDelta: "+1", sendsThisWeek: 21,
         flashRate: 38, pyramid: [], camp5: [], kpis: [], injuryShort: "L ring", painNow: 2, rehabStreak: 9, rehabDue: 2,
         compName: "KL Open", weakest: "Compression 42", liveGym: nil)
 
@@ -55,10 +57,12 @@ public struct WidgetSummary: Sendable, Hashable {
             cursor = Day.add(cursor, -7)
         }
 
+        let kind = Pillars.progress(db, today: today).scale
+        let thresholds = Metrics.thresholds(kind, normals: Load.normals(db, today: today))
         let weekClimbs = Metrics.climbsInRange(db.climbs, from: monday, to: today)
         let lastWeekClimbs = Metrics.climbsInRange(db.climbs, from: Day.add(monday, -7), to: Day.add(monday, -1))
-        let top = Metrics.maxGradeSent(weekClimbs, gyms: db.gyms)
-        let prevTop = Metrics.maxGradeSent(lastWeekClimbs, gyms: db.gyms)
+        let top = Metrics.maxGradeSent(weekClimbs, gyms: db.gyms, kind: kind)
+        let prevTop = Metrics.maxGradeSent(lastWeekClimbs, gyms: db.gyms, kind: kind)
         var delta: String?
         if let t = top.grade, let p = prevTop.grade {
             delta = t > p ? "+\(t - p)" : t < p ? "−\(p - t)" : "Flat"
@@ -69,7 +73,8 @@ public struct WidgetSummary: Sendable, Hashable {
         let prev = Metrics.climbsInRange(db.climbs, from: w.prevFrom, to: w.prevTo)
         let sessionsInRange = db.sessions.filter { $0.status == .done && $0.date >= w.from && $0.date <= w.to }.count
         let kpis = Metrics.buildKpis(cur: cur, prev: prev, gyms: db.gyms, sessionCount: sessionsInRange,
-                                     rangeLabel: db.settings.dashboardRange.label.lowercased())
+                                     rangeLabel: db.settings.dashboardRange.label.lowercased(), kind: kind,
+                                     thresholds: thresholds ?? Metrics.Thresholds(flash: Int.max, hard: Int.max))
 
         let injury = db.activeInjuries.first
         let pain = injury.flatMap { inj in db.painEntries.filter { $0.injuryId == inj.id }.max { $0.date < $1.date } }
@@ -80,7 +85,7 @@ public struct WidgetSummary: Sendable, Hashable {
         }.count
 
         let comp = Taper.governingComp(db.competitions, on: today) ?? db.nextComp(from: today)
-        let weakest = Metrics.compReadiness(cur, reviews: db.reviews, today: today).last
+        let weakest = Metrics.compReadiness(cur, reviews: db.reviews, today: today, kind: kind).last
 
         return WidgetSummary(
             sessionsThisWeek: thisWeek.count,
@@ -89,12 +94,13 @@ public struct WidgetSummary: Sendable, Hashable {
             streakWeeks: streak,
             weeklyTarget: target,
             weeksToComp: comp.map { Metrics.weeksOut(today: today, compDate: $0.date) },
-            topGrade: top.grade.map(String.init),
+            scale: kind,
+            topGrade: top.grade.map { Vocab.gradeLabel(kind, $0) },
             topGym: top.grade == nil ? nil : top.gymName,
             topDelta: delta,
             sendsThisWeek: weekClimbs.filter(Metrics.isSend).count,
-            flashRate: Metrics.flashRate(weekClimbs).map { Int($0.rounded()) },
-            pyramid: Metrics.sendPyramid(cur),
+            flashRate: thresholds.flatMap { Metrics.flashRate(weekClimbs, threshold: $0.flash, kind: kind) }.map { Int($0.rounded()) },
+            pyramid: Metrics.sendPyramid(cur, kind: kind),
             camp5: Metrics.camp5Tally(cur, tags: db.gyms.first(where: \.isRanked)?.tags ?? Vocab.camp5Tags),
             kpis: kpis,
             injuryShort: injury.map { shortInjury($0.name).replacingOccurrences(of: " finger", with: "") },

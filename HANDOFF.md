@@ -1,9 +1,9 @@
 # Handoff: Ascent r3 redesign (read this first)
 
 **For:** the next agent, who will finish and ship the r3 UI/UX redesign.
-**Written:** 12 Oct 2026, when the user asked to stop mid-session. **Updated 13 Oct 2026** (§R7).
-**Status in one line:** r3 is **built, committed (`0ea6423`) and pushed** on branch `r3-redesign`, and all tests pass.
-The §R6 doc updates and checks are done; §R7 lists the follow-up fixes (uncommitted) and what's still open.
+**Written:** 12 Oct 2026, when the user asked to stop mid-session. **Updated 13 Oct 2026** (§R7, §R8).
+**Status in one line:** r3 plus V and French route gym scales are **built, committed and pushed** on branch
+`r3-redesign`, and all tests pass (46 core, 2 snapshot suites). §R8 is the latest work; §R7 lists what's still open.
 
 The original iOS-port handoff (Sep 2026) is kept below the line at the end of this section. Its machine notes are out
 of date (§R2).
@@ -168,7 +168,7 @@ The user wants a **spec plus visual draft, approved, before any new UI work**. T
 
 ## R7. Session 13 Oct 2026
 
-**Done from §R6 (uncommitted):**
+**Done from §R6 (committed in `7f661ca`):**
 1. `design/DESIGN.md`: status says approved and built; §4.1 Camp5 step = 2.5 grade steps; §4.3 rehab ring is the last
    7 days, rolling; §5.2 normal grades live in the log's settings rows; §5.3 points at `Pillars.swift`; new §5.4 for
    the Camp5 order, V bands and re-ranking; §10 is now the confirmed decisions.
@@ -193,8 +193,6 @@ The user wants a **spec plus visual draft, approved, before any new UI work**. T
 - Snapshot test also renders the rectangular and inline Lock Screen widgets. The circular gauge style is iOS-only.
 
 **Still open:**
-- **Gyms and boards** still uses the r2 structure: rows with hairlines on the ground, not cards, and the dashed
-  "No 11–15, soft" placeholder is clipped. Restyling it needs the user's go-ahead (draft before build).
 - **Face ID lock screen** is still unverified on iOS. The macOS snapshot draws blank (glass), and headless Face ID times
   out; enrol Face ID from Simulator.app's Features menu, or test on a device.
 - The circular accessory widget and the widgets on a real locked phone are not yet seen on iOS.
@@ -203,8 +201,52 @@ The user wants a **spec plus visual draft, approved, before any new UI work**. T
 - The demo's live session started at seed time, so after a day its timer runs past 24 h (the compact island then
   truncates it). Real sessions are fine.
 - iOS showed "Allow Live Activities from Ascent?" on the Lock Screen; it was left for the user.
-- **V and French route scales** (TensionHouse in V, Batuu rope area in French routes): designed in `design/DESIGN.md` §11 and the canvas row "Gyms and grade
-  scales", awaiting the user's approval. No code yet. The user wants this settled before committing.
+
+## R8. V and French route gym scales (13 Oct 2026)
+
+**What the user asked:** before committing, a user must be able to add a gym graded in V or French grades. Settled in
+a Q&A, drawn on the canvas (row 4, "Gyms and grade scales"), approved, then built. Spec: `design/DESIGN.md` §11.
+
+**Decisions (don't re-litigate):**
+- **Boulders and rope climbs share one logging flow.** TensionHouse grades in V. Batuu's rope area grades its rope
+  climbs in **French route grades**, lowercase (5a, 5b+, 6a …); it's the only gym that does. Rope climbs log like
+  boulders (same attempt bar), with **no lead or top rope**. Camp5's ropes and lead walls use its colour tags, so they
+  need nothing new.
+- **No Font (capital 6A+) bouldering scale**: no gym uses it.
+- **Scale-aware, never converted.** Each scale keeps its own grades. Progress detail has a **scale switch**
+  (`1–15 | V | French | Camp5`, only scales with climbs in range); it opens on your main scale (most climbs) and then
+  remembers the pick (`progressScale`). Camp5 shows its tally only under its own chip.
+- **Thresholds**: 1–15 keeps 8+ and 10+. V and French derive them from your normal grade: flash from normal, hard from
+  two grade steps above (V+2, French +4 steps, e.g. 6b → 7a).
+- **Load steps**: V grade = 1, French step (6a → 6a+) = 0.5, Camp5 tag = 2.5. A rope attempt counts like a boulder
+  attempt for now (routes are longer, so rope days may read light; revisit with real data).
+- **UI copy the user picked**: the Gyms and boards toolbar button and the Add gym sheet's button both say **Add**, with
+  the text centred. Add gym's scale tiles centre both lines.
+
+**Built:**
+- Core: `ScaleType.v/.french`, `GradeKind.gymV ("gym-v")/.french` (boards keep `.v`), `Gym.minGrade`, `gradeKind`,
+  `grades`, `gradeSpan`; `Vocab.frenchGrades/gradeLabel/gradeBands(_:)/scaleName/lowestGrade`; `Load.stepGrades`;
+  `NormalGrades.gymV/.french`; `Metrics.thresholds`, scale-aware key numbers, pyramid (`PyramidRow.label`), heatmap,
+  readiness, `topGrades(.labels)`, `sessionHigh`; `Pillars.scales/mainScale/progressScale/gradedScale`, scale-aware
+  Progress pillar and insight; `WidgetSummary.scale`; settings rows `normalGymV`, `normalFrench`, `progressScale`;
+  store setters. Demo adds TensionHouse and Batuu rope area with fixed sessions (`Seed.scaleDemo`).
+- UI: Gyms and boards in cards with grade strips (`GymCard`), Add gym sheet (`AddGymSheet`, `ScaleOption`),
+  Progress detail scale switch (`ScaleSwitch`), Your normal grade cards per scale, log grid per scale (V: whole range,
+  6 per row; French: ten around your normal + "Show 5a to 8b+"), Today pillar label, Quick add subtitle, widgets.
+- Tests: `Tests/AscentCoreTests/ScalesTests.swift` (17 tests), snapshot renders `gyms-*`, `addgym-*`,
+  `progress-v-*`, `progress-french-*`, `progress-camp5-*`.
+
+**Verified in the Simulator (dark):** added TensionHouse through Add gym (V scale, VB to V10), logged "V5, 2nd go"
+at it from the log sheet's gym menu, saw the V chip appear in Progress detail with V key numbers and a VB–V5 pyramid,
+and the Today pillar read V5. Switched back to 1–15 and the live session back to Batuu afterwards. The Simulator's log
+predates the new demo gyms; it now has a user-added TensionHouse with one V5 climb in the live session. Settings ›
+Reset to demo data gives the full demo with both new gyms.
+
+**Still open from this work:**
+- The old Progress detail board (row 1) on the canvas shows the pre-switch layout; row 4's `Progress detail · by
+  scale` is the current one.
+- No way to edit a gym after adding it (name, range); only Remove while it has no climbs.
+- Routes vs boulders Load weighting (see Decisions).
 
 
 ---

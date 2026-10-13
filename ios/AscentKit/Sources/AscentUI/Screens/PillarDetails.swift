@@ -81,7 +81,8 @@ struct LoadDetailView: View {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Your normal grade").font(.sans(15, .semibold)).foregroundStyle(Palette.text)
-                            Text(NormalGradeView.summary(normals)).font(.sans(13)).foregroundStyle(Palette.secondary)
+                            Text(NormalGradeView.summary(normals, main: Pillars.mainScale(store.db, today: store.today),
+                                                         scales: NormalGradeView.scales(store.db))).font(.sans(13)).foregroundStyle(Palette.secondary)
                         }
                         Spacer()
                         Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.tertiary)
@@ -207,11 +208,12 @@ struct ProgressDetailView: View {
         let cur = Metrics.climbsInRange(db.climbs, from: w.from, to: w.to)
         let prev = Metrics.climbsInRange(db.climbs, from: w.prevFrom, to: w.prevTo)
         let weeks = max(1, Day.weeksBetween(w.from, w.to))
-        let pyramid = Metrics.sendPyramid(cur)
-        let tally = Metrics.camp5Tally(cur, tags: db.gyms.first(where: \.isRanked)?.tags ?? Vocab.camp5Tags)
+        let scales = Pillars.scales(db, today: today)
+        let scale = Pillars.progressScale(db, today: today)
+        // readiness needs grade bands, so Camp5 reads it on your main scale
+        let gradedScale = Pillars.gradedScale(db, today: today)
         let boards = Metrics.boardSummaries(cur: cur, prev: prev, boards: db.boards, weeks: weeks)
-        let heat = Metrics.styleGradeMatrix(cur)
-        let readiness = Metrics.compReadiness(cur, reviews: db.reviews, today: today)
+        let readiness = Metrics.compReadiness(cur, reviews: db.reviews, today: today, kind: gradedScale)
         let comp = db.upcomingComps(from: today).first { $0.effectivePriority != .c } ?? db.nextComp(from: today)
 
         ScrollView {
@@ -219,17 +221,36 @@ struct ProgressDetailView: View {
                 SquareSegment(options: RangeID.allCases.map { ($0, $0.label) },
                               selection: Binding(get: { range }, set: { store.setDashboardRange($0) }))
 
-                StatGrid(stats: Self.stats(cur: cur, prev: prev, db: db, sessions: db.sessions.filter { $0.status == .done && $0.date >= w.from && $0.date <= w.to }.count))
-
-                Card {
-                    SectionHead(title: "Send pyramid") { PyramidLegend() }
-                    PyramidView(rows: pyramid)
-                    Insight(label: nil, text: Metrics.pyramidRead(pyramid))
+                if scales.count > 1 {
+                    ScaleSwitch(scales: scales, selection: scale) { store.setProgressScale($0) }
                 }
 
-                Card {
-                    SectionHead("Camp5 colours", note: Self.nextTag(tally).map { "Next up: \(Vocab.colourLabel($0))" })
-                    TallyView(bars: tally)
+                if scale == .tag {
+                    let tally = Metrics.camp5Tally(cur, tags: db.gyms.first(where: \.isRanked)?.tags ?? Vocab.camp5Tags)
+                    Card {
+                        SectionHead("Camp5 colours", note: Self.nextTag(tally).map { "Next up: \(Vocab.colourLabel($0))" })
+                        TallyView(bars: tally)
+                        Insight(label: nil, text: Metrics.camp5Read(tally))
+                    }
+                } else {
+                    let pyramid = Metrics.sendPyramid(cur, kind: scale)
+                    StatGrid(stats: Self.stats(cur: cur, prev: prev, db: db, kind: scale,
+                                               thresholds: Metrics.thresholds(scale, normals: Load.normals(db, today: today))))
+
+                    Card {
+                        SectionHead(title: "Send pyramid") { PyramidLegend() }
+                        if pyramid.isEmpty {
+                            Text("No sends in this range.").font(.sans(14)).foregroundStyle(Palette.secondary)
+                        } else {
+                            PyramidView(rows: pyramid)
+                            Insight(label: nil, text: Metrics.pyramidRead(pyramid, kind: scale))
+                        }
+                    }
+
+                    Card {
+                        SectionHead("Where you send", note: "Send %")
+                        HeatmapView(rows: Metrics.styleGradeMatrix(cur, kind: scale))
+                    }
                 }
 
                 Card(padding: 0) {
@@ -241,11 +262,6 @@ struct ProgressDetailView: View {
                         }
                     }
                     .padding(.horizontal, 18).padding(.vertical, 14)
-                }
-
-                Card {
-                    SectionHead("Where you send", note: "Send %")
-                    HeatmapView(rows: heat)
                 }
 
                 Button { router.planSegment = .season; router.select(.plan) } label: {
@@ -270,32 +286,37 @@ struct ProgressDetailView: View {
         return bars.first { $0.ordinal > hardest.ordinal && $0.count == 0 }?.tagId
     }
 
-    static func stats(cur: [Climb], prev: [Climb], db: Database, sessions: Int) -> [Stat] {
+    /// Key numbers on one scale. V and French thresholds come from your normal grade (DESIGN §11.4).
+    static func stats(cur: [Climb], prev: [Climb], db: Database, kind: GradeKind, thresholds: Metrics.Thresholds?) -> [Stat] {
         func signed(_ d: Double, digits: Int = 0) -> String {
             let v = digits == 0 ? String(Int(abs(d).rounded())) : String(format: "%.\(digits)f", abs(d))
             return d > 0 ? "+\(v)" : d < 0 ? "−\(v)" : "Flat"
         }
-        let top = Metrics.maxGradeSent(cur, gyms: db.gyms), prevTop = Metrics.maxGradeSent(prev, gyms: db.gyms)
-        let flash = Metrics.flashRate(cur), prevFlash = Metrics.flashRate(prev)
-        let tries = Metrics.attemptsPerSend(cur), prevTries = Metrics.attemptsPerSend(prev)
-        let hard = Metrics.volumeAtHard(cur), prevHard = Metrics.volumeAtHard(prev)
+        func andUp(_ g: Int) -> String { kind == .number ? "Grade \(g) and up" : "\(Vocab.gradeLabel(kind, g)) and up" }
+        let flashFrom = thresholds?.flash ?? Int.max, hardFrom = thresholds?.hard ?? Int.max
+        let top = Metrics.maxGradeSent(cur, gyms: db.gyms, kind: kind), prevTop = Metrics.maxGradeSent(prev, gyms: db.gyms, kind: kind)
+        let flash = Metrics.flashRate(cur, threshold: flashFrom, kind: kind), prevFlash = Metrics.flashRate(prev, threshold: flashFrom, kind: kind)
+        let tries = Metrics.attemptsPerSend(cur, threshold: hardFrom, kind: kind)
+        let prevTries = Metrics.attemptsPerSend(prev, threshold: hardFrom, kind: kind)
+        let hard = Metrics.volumeAtHard(cur, threshold: hardFrom, kind: kind), prevHard = Metrics.volumeAtHard(prev, threshold: hardFrom, kind: kind)
+        let unset = "Set your normal grade"
         var out: [Stat] = []
         let topDelta = top.grade.flatMap { t in prevTop.grade.map { Double(t - $0) } }
-        out.append(Stat(label: "Top grade", value: top.grade.map(String.init) ?? "–",
+        out.append(Stat(label: "Top grade", value: top.grade.map { Vocab.gradeLabel(kind, $0) } ?? "–",
                         chip: topDelta.map { signed($0) }, chipTone: (topDelta ?? 0) < 0 ? .caution : (topDelta == 0 ? .quiet : .neutral),
                         caption: top.grade == nil ? nil : "\(top.gymName), \(Day.pretty(top.date))"))
         let flashDelta = flash.flatMap { f in prevFlash.map { f - $0 } }
         out.append(Stat(label: "Flash rate", value: flash.map { "\(Int($0.rounded()))%" } ?? "–",
                         chip: flashDelta.map { signed($0) }, chipTone: (flashDelta ?? 0) < 0 ? .caution : (flashDelta.map { abs($0) < 0.5 } ?? true ? .quiet : .neutral),
-                        caption: "Grade \(Metrics.flashRateThreshold) and up"))
+                        caption: thresholds.map { andUp($0.flash) } ?? unset))
         // fewer tries per send is better
         let triesDelta = tries.flatMap { t in prevTries.map { t - $0 } }
         out.append(Stat(label: "Tries per send", value: tries.map { Metrics.fixed1($0) } ?? "–",
                         chip: triesDelta.map { signed($0, digits: 1) }, chipTone: (triesDelta ?? 0) > 0.05 ? .caution : (triesDelta.map { abs($0) < 0.05 } ?? true ? .quiet : .neutral),
-                        caption: "Grade \(Metrics.hardGradeThreshold) and up"))
+                        caption: thresholds.map { andUp($0.hard) } ?? unset))
         out.append(Stat(label: "Hard sends", value: "\(hard)", chip: signed(Double(hard - prevHard)),
                         chipTone: hard < prevHard ? .caution : hard == prevHard ? .quiet : .neutral,
-                        caption: sessions > 0 ? "\(Metrics.fixed1(Double(hard) / Double(sessions))) per session" : nil))
+                        caption: thresholds.map { andUp($0.hard) } ?? unset))
         return out
     }
 }
@@ -317,6 +338,8 @@ struct NormalGradeView: View {
                 Text("Load counts climbs above this more, and below it less.")
                     .font(.sans(15)).foregroundStyle(Palette.secondary).padding(.horizontal, 4).padding(.top, 8)
 
+                let scales = Self.scales(db)
+                if scales.contains(.number) {
                 Card {
                     header("Numbered gyms", suggested: suggested.numbered.map(String.init), custom: db.settings.normalNumbered != nil) {
                         store.setNormalNumbered(nil)
@@ -326,7 +349,9 @@ struct NormalGradeView: View {
                                plus: { store.setNormalNumbered((current.numbered ?? 9) + 1) },
                                canMinus: (current.numbered ?? 2) > 1, canPlus: (current.numbered ?? 0) < 15)
                 }
+                }
 
+                if scales.contains(.tag) {
                 Card {
                     header("Camp5 tags", suggested: suggested.tag.map(Vocab.colourLabel), custom: db.settings.normalTag != nil) {
                         store.setNormalTag(nil)
@@ -353,15 +378,45 @@ struct NormalGradeView: View {
                             .font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 6)
                     }
                 }
+                }
 
-                Card {
-                    header("Boards", suggested: suggested.v.map { "V\($0)" }, custom: db.settings.normalV != nil) {
-                        store.setNormalV(nil)
+                if scales.contains(.gymV) {
+                    Card {
+                        header("V gyms", suggested: suggested.gymV.map { Vocab.gradeLabel(.gymV, $0) }, custom: db.settings.normalGymV != nil) {
+                            store.setNormalGymV(nil)
+                        }
+                        bigStepper(current.gymV.map { Vocab.gradeLabel(.gymV, $0) } ?? "–",
+                                   minus: { store.setNormalGymV((current.gymV ?? 4) - 1) },
+                                   plus: { store.setNormalGymV((current.gymV ?? 2) + 1) },
+                                   canMinus: (current.gymV ?? 0) > Vocab.vGrades.lowerBound,
+                                   canPlus: (current.gymV ?? 0) < Vocab.vGrades.upperBound)
                     }
-                    bigStepper(current.v.map { "V\($0)" } ?? "–",
-                               minus: { store.setNormalV((current.v ?? 5) - 1) },
-                               plus: { store.setNormalV((current.v ?? 3) + 1) },
-                               canMinus: (current.v ?? 1) > 0, canPlus: (current.v ?? 0) < 17)
+                }
+
+                if scales.contains(.french) {
+                    let sixB = Vocab.frenchGrades.firstIndex(of: "6b") ?? 11
+                    Card {
+                        header("French routes", suggested: suggested.french.map { Vocab.gradeLabel(.french, $0) },
+                               custom: db.settings.normalFrench != nil) {
+                            store.setNormalFrench(nil)
+                        }
+                        bigStepper(current.french.map { Vocab.gradeLabel(.french, $0) } ?? "–",
+                                   minus: { store.setNormalFrench((current.french ?? sixB + 1) - 1) },
+                                   plus: { store.setNormalFrench((current.french ?? sixB - 1) + 1) },
+                                   canMinus: (current.french ?? 1) > 0, canPlus: (current.french ?? 0) < Vocab.frenchGrades.count - 1)
+                    }
+                }
+
+                if scales.contains(.v) {
+                    Card {
+                        header("Boards", suggested: suggested.v.map { "V\($0)" }, custom: db.settings.normalV != nil) {
+                            store.setNormalV(nil)
+                        }
+                        bigStepper(current.v.map { "V\($0)" } ?? "–",
+                                   minus: { store.setNormalV((current.v ?? 5) - 1) },
+                                   plus: { store.setNormalV((current.v ?? 3) + 1) },
+                                   canMinus: (current.v ?? 1) > 0, canPlus: (current.v ?? 0) < 17)
+                    }
                 }
 
                 Text("Changes apply to all past Load.").font(.sans(13)).foregroundStyle(Palette.secondary).padding(.horizontal, 4)
@@ -398,8 +453,28 @@ struct NormalGradeView: View {
         .animation(.snappy, value: value)
     }
 
-    /// "10, Green, V5"
-    static func summary(_ n: NormalGrades) -> String {
-        [n.numbered.map(String.init), n.tag.map(Vocab.colourLabel), n.v.map { "V\($0)" }].compactMap { $0 }.joined(separator: ", ").ifEmpty("Not set")
+    /// Scales you have a gym or board for, in the order the cards show.
+    static func scales(_ db: Database) -> [GradeKind] {
+        var out = [GradeKind.number, .tag, .gymV, .french].filter { kind in db.gyms.contains { $0.gradeKind == kind } }
+        if !db.boards.isEmpty { out.append(.v) }
+        return out
+    }
+
+    /// One scale's normal as it reads: "10", "Green", "V3", "6b".
+    static func label(_ n: NormalGrades, _ kind: GradeKind) -> String? {
+        switch kind {
+        case .number: n.numbered.map(String.init)
+        case .tag: n.tag.map(Vocab.colourLabel)
+        case .gymV: n.gymV.map { Vocab.gradeLabel(.gymV, $0) }
+        case .french: n.french.map { Vocab.gradeLabel(.french, $0) }
+        case .v: n.v.map { Vocab.gradeLabel(.v, $0) }
+        }
+    }
+
+    /// The main scale's normal, then how many others are set: "V3 and 4 more".
+    static func summary(_ n: NormalGrades, main: GradeKind, scales: [GradeKind]) -> String {
+        let set = ([main] + scales.filter { $0 != main }).compactMap { label(n, $0) }
+        guard let first = set.first else { return "Not set" }
+        return set.count == 1 ? first : "\(first) and \(set.count - 1) more"
     }
 }

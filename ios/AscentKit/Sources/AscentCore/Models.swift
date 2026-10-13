@@ -2,8 +2,9 @@ import Foundation
 
 /* ── Entities — field-for-field with the web schema so backups round-trip ── */
 
-public enum ScaleType: String, Codable, Sendable { case numeric, rankedColour = "ranked-colour" }
-public enum GradeKind: String, Codable, Sendable { case number, tag, v }
+public enum ScaleType: String, Codable, Sendable { case numeric, rankedColour = "ranked-colour", v, french }
+/// The scale a climb is graded on. `v` is boards only; V-grade gyms use `gymV` (DESIGN §11).
+public enum GradeKind: String, Codable, Sendable { case number, tag, v, gymV = "gym-v", french }
 public enum TickType: String, Codable, Sendable, CaseIterable { case flash, secondGo = "second-go", project, attempt }
 public enum SessionStatus: String, Codable, Sendable { case planned, active, done }
 public enum InjuryStatus: String, Codable, Sendable { case active, watching, resolved }
@@ -14,7 +15,9 @@ public struct Gym: Codable, Sendable, Identifiable, Hashable {
     public var name: String
     public var shortName: String
     public var scaleType: ScaleType
-    /// numeric gyms only — top of the gym's own label range on the 1–15 spine
+    /// V and French gyms only — the easiest grade on the wall (VB = −1; French = index into `Vocab.frenchGrades`)
+    public var minGrade: Int?
+    /// numeric gyms: top of the gym's own label range on the 1–15 spine · V and French gyms: the hardest grade
     public var maxGrade: Int?
     /// ranked-colour gyms only — ordered easiest → hardest, values are hold colour ids
     public var tags: [String]?
@@ -23,13 +26,40 @@ public struct Gym: Codable, Sendable, Identifiable, Hashable {
     public var note: String?
     public var sortOrder: Int
 
-    public init(id: String, name: String, shortName: String, scaleType: ScaleType, maxGrade: Int? = nil,
+    public init(id: String, name: String, shortName: String, scaleType: ScaleType, minGrade: Int? = nil, maxGrade: Int? = nil,
                 tags: [String]? = nil, offset: Double = 0, note: String? = nil, sortOrder: Int) {
-        self.id = id; self.name = name; self.shortName = shortName; self.scaleType = scaleType
+        self.id = id; self.name = name; self.shortName = shortName; self.scaleType = scaleType; self.minGrade = minGrade
         self.maxGrade = maxGrade; self.tags = tags; self.offset = offset; self.note = note; self.sortOrder = sortOrder
     }
 
     public var isRanked: Bool { scaleType == .rankedColour }
+
+    /// What a climb logged here is graded on.
+    public var gradeKind: GradeKind {
+        switch scaleType {
+        case .numeric: .number
+        case .rankedColour: .tag
+        case .v: .gymV
+        case .french: .french
+        }
+    }
+
+    /// "1 to 15", "VB to V10", "5a to 8b+", or "pink to black" for colour tags.
+    public var gradeSpan: String {
+        guard !isRanked, let lo = grades.first, let hi = grades.last else { return "pink to black" }
+        return "\(Vocab.gradeLabel(gradeKind, lo)) to \(Vocab.gradeLabel(gradeKind, hi))"
+    }
+
+    /// Every grade on the wall, easiest first (tag ordinals for colour tags).
+    public var grades: [Int] {
+        func span(_ lo: Int, _ hi: Int) -> [Int] { Array(Swift.min(lo, hi)...Swift.max(lo, hi)) }
+        switch scaleType {
+        case .numeric: return span(1, maxGrade ?? 15)
+        case .rankedColour: return span(1, (tags ?? Vocab.camp5Tags).count)
+        case .v: return span(minGrade ?? -1, maxGrade ?? 10)
+        case .french: return span(minGrade ?? Vocab.frenchDefaultRange.lowerBound, maxGrade ?? Vocab.frenchDefaultRange.upperBound)
+        }
+    }
 }
 
 public struct Board: Codable, Sendable, Identifiable, Hashable {
@@ -341,6 +371,11 @@ public struct Settings: Sendable, Hashable {
     public var normalNumbered: Int?
     public var normalTag: String?
     public var normalV: Int?
+    /// DESIGN §11 — V gyms (V number) and French routes (index into `Vocab.frenchGrades`)
+    public var normalGymV: Int?
+    public var normalFrench: Int?
+    /// The scale Progress detail shows; nil = your main scale
+    public var progressScale: GradeKind?
 
     public init() {}
 }

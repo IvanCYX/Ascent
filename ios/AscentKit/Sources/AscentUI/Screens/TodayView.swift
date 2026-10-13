@@ -67,7 +67,8 @@ struct PillarsCard: View {
                     PillarColumn(title: "Progress", caption: "\(progress.hardSends) hard sends", captionColor: Palette.secondary,
                                  progress: progress.ratio ?? 0, color: accent.color, dashed: false, delay: 0.08) {
                         VStack(spacing: 3) {
-                            Text(progress.top.map(String.init) ?? "–").font(.num(26)).contentTransition(.numericText())
+                            Text(progress.topLabel ?? "–").font(.num(26)).minimumScaleFactor(0.7).lineLimit(1)
+                                .contentTransition(.numericText())
                             if let d = progress.delta, d != 0 {
                                 DeltaChip(text: d > 0 ? "+\(d)" : "−\(-d)", tone: d > 0 ? .neutral : .caution)
                                     .scaleEffect(0.85)
@@ -77,7 +78,7 @@ struct PillarsCard: View {
                 }
                 .buttonStyle(.plain)
                 .zoomSource("progress", in: ns)
-                .accessibilityLabel("Progress, top grade \(progress.top.map(String.init) ?? "none"), \(progress.hardSends) hard sends")
+                .accessibilityLabel("Progress, top grade \(progress.topLabel ?? "none"), \(progress.hardSends) hard sends")
 
                 Button { router.select(.body) } label: {
                     PillarColumn(title: "Body", caption: bodyCaption(body), captionColor: bodyColor(body).caption,
@@ -204,17 +205,7 @@ struct LiveSessionCard: View {
 enum LiveSummary {
     /// Top grade in a session; a Camp5 tag stays a tag ("PUR"), never a number.
     static func high(_ sends: [Climb], db: Database, sessionGym: String? = nil) -> String {
-        let gymSends = sends.filter { $0.gradeKind != .v }
-        let numbered = gymSends.filter { $0.gradeKind == .number }
-        let tagged = gymSends.filter { $0.gradeKind == .tag }
-        let gymId = sessionGym ?? db.activeSession?.gymId
-        if db.gym(gymId)?.isRanked == true, let best = tagged.max(by: { $0.grade < $1.grade }) {
-            return Vocab.colourCode(best.tagId)
-        }
-        if let m = numbered.map(\.grade).max() { return "\(m)" }
-        if let best = tagged.max(by: { $0.grade < $1.grade }) { return Vocab.colourCode(best.tagId) }
-        if let v = sends.filter({ $0.gradeKind == .v }).map(\.grade).max() { return "V\(v)" }
-        return "–"
+        Metrics.sessionHigh(sends, gym: db.gym(sessionGym ?? db.activeSession?.gymId)) ?? "–"
     }
 }
 

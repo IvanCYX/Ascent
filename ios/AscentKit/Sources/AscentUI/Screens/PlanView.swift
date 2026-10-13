@@ -245,7 +245,8 @@ struct PlanDayEditor: View {
     /// Weak styles feed the focus list.
     private func weakStyles(_ db: Database) -> [String] {
         let w = RangeID.eightWeeks.windows(today: date)
-        return Metrics.compReadiness(Metrics.climbsInRange(db.climbs, from: w.from, to: w.to), reviews: db.reviews, today: date)
+        return Metrics.compReadiness(Metrics.climbsInRange(db.climbs, from: w.from, to: w.to), reviews: db.reviews, today: date,
+                                     kind: Pillars.gradedScale(db, today: date))
             .filter(\.warn).map { $0.label == "Crimps" ? "Crimpy" : $0.label }
     }
 

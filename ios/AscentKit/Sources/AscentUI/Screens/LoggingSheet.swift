@@ -183,7 +183,7 @@ struct LogView: View {
     }
 
     func subtitle(session: Session, gym: Gym?, mode: LogMode) -> String {
-        let place = mode == .board ? "Board" : gym?.isRanked == true ? "\(gym?.shortName ?? "Camp5"), pink to black" : "\(gym?.shortName ?? "No gym"), 1 to \(gym?.maxGrade ?? 15)"
+        let place = mode == .board ? "Board" : "\(gym?.shortName ?? "No gym"), \(gym?.gradeSpan ?? "1 to 15")"
         return place
     }
 }
@@ -331,10 +331,25 @@ struct GymLogView: View {
     @State private var showAll = false
     @State private var sentCount = 0
 
+    var kind: GradeKind { gym?.gradeKind ?? .number }
+
+    /// Numbers show the top ten; V shows the whole range; French shows ten around your normal (DESIGN §11.3).
+    func shownGrades(_ all: [Int], normal: Int?) -> [Int] {
+        guard !showAll, all.count > 10 else { return all }
+        switch kind {
+        case .gymV: return all
+        case .french:
+            let start = min(max(0, (all.firstIndex(of: normal ?? all[all.count / 2]) ?? all.count / 2) - 2), all.count - 10)
+            return Array(all[start..<(start + 10)])
+        default: return Array(all.suffix(10))
+        }
+    }
+
     var body: some View {
         let db = store.db
-        let maxGrade = gym?.maxGrade ?? 15
-        let lowest = showAll ? 1 : max(1, maxGrade - 9)
+        let all = gym?.grades ?? Array(1...15)
+        let shown = shownGrades(all, normal: Load.normals(db, today: store.today).french)
+        let columns = kind == .gymV || (kind == .french && shown.count > 10) ? 6 : 5
         let climbs = db.climbs.filter { $0.sessionId == session.id }.sorted { $0.createdAt > $1.createdAt }
         let sends = climbs.filter(Metrics.isSend)
         let tripped = trippedRules(db, styles: styles, today: store.today)
@@ -345,12 +360,17 @@ struct GymLogView: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text("Grade").font(.sans(15, .semibold)).foregroundStyle(Palette.text)
                     Spacer()
-                    if maxGrade > 10 { LinkButton(title: showAll ? "Top 10 only" : "Show 1 to \(maxGrade)", color: Palette.secondary) { showAll.toggle() } }
+                    if kind == .gymV {
+                        Text(gym?.gradeSpan ?? "").font(.sans(14)).foregroundStyle(Palette.secondary)
+                    } else if all.count > 10 {
+                        LinkButton(title: showAll ? (kind == .french ? "Show fewer" : "Top 10 only") : "Show \(gym?.gradeSpan ?? "all")",
+                                   color: Palette.secondary) { showAll.toggle() }
+                    }
                 }
                 .padding(.bottom, 6)
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
-                    ForEach(lowest...maxGrade, id: \.self) { g in
-                        GradeCell(label: "\(g)", on: grade == g) { grade = grade == g ? nil : g }
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columns), spacing: 8) {
+                    ForEach(shown, id: \.self) { g in
+                        GradeCell(label: Vocab.gradeLabel(kind, g), on: grade == g) { grade = grade == g ? nil : g }
                     }
                 }
                 .padding(.bottom, 20)
@@ -383,10 +403,10 @@ struct GymLogView: View {
         guard let grade, let gym else { return }
         let tick = Vocab.tickType(attempts: attempts, sent: !notSent)
         let label = Vocab.attemptsLabel(attempts, sent: !notSent)
-        let id = store.addClimb(Climb(sessionId: session.id, gymId: gym.id, gradeKind: .number, grade: grade, holdColour: colour,
+        let id = store.addClimb(Climb(sessionId: session.id, gymId: gym.id, gradeKind: gym.gradeKind, grade: grade, holdColour: colour,
                                       styles: styles, location: location.trimmingCharacters(in: .whitespaces).isEmpty ? nil : location,
                                       tickType: tick, attempts: attempts))
-        router.show(Toast(title: "Logged \(grade)", detail: label, undo: { [store] in store.deleteClimb(id) }))
+        router.show(Toast(title: "Logged \(Vocab.gradeLabel(gym.gradeKind, grade))", detail: label, undo: { [store] in store.deleteClimb(id) }))
         sentCount += 1
         // every climb starts as a first go
         self.grade = nil

@@ -76,7 +76,7 @@ struct QuickAddSheet: View {
             let lastBoard = db.climbs.last { $0.boardId != nil }
             return [
                 Tile(icon: "figure.climbing", title: "Gym send",
-                     sub: gym?.isRanked == true ? "\(gym?.shortName ?? ""), tags" : "\(gym?.shortName ?? ""), 1 to \(gym?.maxGrade ?? 15)",
+                     sub: "\(gym?.shortName ?? ""), \(gym?.isRanked == true ? "tags" : gym?.gradeSpan ?? "1 to 15")",
                      hero: true) { go(.logging(start: false, step: .log(.gym))) },
                 Tile(icon: "square.grid.3x3", title: "Board send",
                      sub: lastBoard.map { "\(db.board($0.boardId)?.code == "KB" ? "Kilter" : "Tension") \($0.angle ?? 40)°" } ?? "V1 to V10") {
