@@ -20,6 +20,8 @@ public enum Route: Hashable {
 /// Steps inside the logging sheet's own stack.
 public enum LogStep: Hashable {
     case log(LogMode)
+    /// The log sheet with the End session confirmation up (DESIGN §12.4)
+    case end
     case review
 }
 
@@ -38,6 +40,7 @@ public enum SheetRoute: Identifiable, Hashable {
     case addExercise(injuryId: String)
     case addLoadRule(injuryId: String)
     case addGym
+    case editGym(gymIds: [String])
     case reviewEdit(sessionId: String)
 
     public var id: String {
@@ -52,6 +55,7 @@ public enum SheetRoute: Identifiable, Hashable {
         case .addExercise(let id): "addExercise-\(id)"
         case .addLoadRule(let id): "addRule-\(id)"
         case .addGym: "addGym"
+        case .editGym(let ids): "editGym-\(ids.joined(separator: ","))"
         case .reviewEdit(let id): "reviewEdit-\(id)"
         }
     }
@@ -73,6 +77,8 @@ public final class Router {
     public var paths: [AppTab: NavigationPath] = [:]
     public var sheet: SheetRoute?
     public var planSegment: PlanSegment = .today
+    /// Bumped by every End session request, so a log sheet that is already up shows the confirmation again.
+    public var endRequests = 0
     public var toast: Toast?
     /// The tab bar slides away while scrolling down and returns while scrolling up; the + follows it.
     public var barHidden = false
@@ -101,6 +107,12 @@ public final class Router {
         }
     }
 
+    /// Quick add's End session tile and the Live Activity's end button (DESIGN §12.4).
+    public func endSession() {
+        sheet = .logging(start: false, step: .end)
+        endRequests += 1
+    }
+
     public func show(_ toast: Toast) {
         self.toast = toast
         let id = toast.id
@@ -110,7 +122,7 @@ public final class Router {
         }
     }
 
-    /// `ascent://today`, `…/body`, `…/log`, `…/review`, `…/rehab`, `…/season`
+    /// `ascent://today`, `…/body`, `…/log`, `…/end`, `…/rehab`, `…/season`. `…/review` is the old name for `…/end`.
     public func open(_ url: URL, hasLiveSession: Bool) {
         guard url.scheme == "ascent" else { return }
         switch url.host() ?? url.path() {
@@ -118,7 +130,7 @@ public final class Router {
         case "body": sheet = nil; tab = .body
         case "season": sheet = nil; tab = .plan; planSegment = .season
         case "log": sheet = .logging(start: !hasLiveSession, step: .log(.gym))
-        case "review": sheet = .logging(start: false, step: .review)
+        case "end", "review": endSession()
         case "rehab": sheet = .rehabToday
         default: break
         }

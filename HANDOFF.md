@@ -2,9 +2,9 @@
 
 **For:** the next agent, who will finish and ship the r3 UI/UX redesign.
 **Written:** 12 Oct 2026, when the user asked to stop mid-session. **Updated 13 Oct 2026** (§R7, §R8).
-**Status in one line:** r3 plus V and French route gym scales are **built and merged to `main`** (pull requests #1
-and #2 from `r3-redesign`), and all tests pass (46 core, 2 snapshot suites). §R8 is the latest work; §R7 lists what's
-still open.
+**Status in one line:** r3, the V and French route gym scales, and the logging edits (§R9: edit gym, heel and toe
+hooks, the board log with an angle slider and outcomes, review only after End session) are **built and on `main`**.
+All tests pass (54 core, 2 snapshot suites). §R9 is the latest work; §R7 and §R8 list what's still open.
 
 The original iOS-port handoff (Sep 2026) is kept below the line at the end of this section. Its machine notes are out
 of date (§R2).
@@ -250,6 +250,41 @@ Reset to demo data gives the full demo with both new gyms.
 - No way to edit a gym after adding it (name, range); only Remove while it has no climbs.
 - Routes vs boulders Load weighting (see Decisions).
 
+
+## R9. Logging edits (14–15 Oct 2026)
+
+**What the user asked:** edit a gym after adding it; Heel hook and Toe hook styles; on boards no styles, only Flash,
+2nd go, Project or Attempt only with a way to enter attempts; a 10°–70° angle slider in 5° steps, showing 40° before
+any tap; "How did that feel?" only when the session ends. "Confused with beta" was drafted and then dropped (it
+overlaps "Read beta wrong"). Spec: `design/DESIGN.md` §12, canvas row "Logging" (board logs) and "Edit gym, end of
+session". Approved 15 Oct 2026.
+
+**Built:**
+- Core (`Vocab.swift`): `climbStyles` + Heel hook, Toe hook; `ruleStyles` (styles a load rule can cap, keeps Tension
+  and Campus) replaces `boardStyles`; `boardAngles` 10…70 by 5, `defaultBoardAngle` 40; `BoardOutcome` (label,
+  `of(attempts:sent:)`, `attempts(from:)`, hint); `GymEdit.loggedRange/climbCount`; `Gym.renamed` (a short name that
+  matched the name follows it, a separate one like "Camp5" stays). Tests: `LoggingEditsTests.swift` (8).
+- Edit gym: `AddGymSheet(editing: [ids])`, opened from every gym card (`SheetRoute.editGym`). Scale locked once the gym
+  has climbs; the range can't cut out logged grades; Remove gym only with no climbs; the Bump card edits all three.
+- Board log: `BoardLogView` + `AngleRow`; `AttemptBar` gained `title` and `typeable` (the count is a text field; while
+  typing, the bar's button reads Done because the number pad has no return key).
+- End session: `LogStep.end`, `Router.endSession()` (+ `endRequests`, so a sheet already up re-shows the card),
+  `EndSessionCard`, `EndedRoute` → `ReviewView(justEnded:)` with "Session ended, 1:20." and no back button. Quick add
+  tile "End session", Live Activity button "End session" → `ascent://end` (`ascent://review` still works).
+
+**Verified in the Simulator (dark):** edited TensionHouse (name and range, stepper stops at the logged V5, toast);
+gym log multi-select with both hooks; board log angle slider 40° → 45°, Project → typed 7 → "Logged V6, 7 tries" with
+"7 tries, 40°"; End session from the log, the Quick add route and a second End while the sheet was up; Keep climbing;
+End and rate → review → Save → Saved; closing the review leaves the session ended and unrated. Snapshots render
+`editgym-*`, `editgym-bump-*`, `logboard-*`.
+
+**Simulator state:** the demo's 65-hour live session was ended and rated during the test (it now holds one V6 board
+climb, 7 tries). TensionHouse is back to its name and VB to V10. Settings › Reset to demo data restores the demo.
+
+**Still open:**
+- Board angles: a board's `angles` list no longer limits logging, but Gyms and boards still shows it ("25, 30, 40 and
+  45°") rather than the angles you have logged.
+- The Live Activity's end button was changed but not tapped on a real Lock Screen.
 
 ---
 

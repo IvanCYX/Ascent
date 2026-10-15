@@ -3,11 +3,15 @@ import Foundation
 /// Exact vocabularies from the handoff. Strings are final — do not paraphrase.
 public enum Vocab {
     public static let climbStyles: [String] = [
-        "Crimpy", "Compression", "Slopey", "Slab", "Coordination", "Power",
+        "Crimpy", "Compression", "Slopey", "Slab", "Coordination", "Power", "Heel hook", "Toe hook",
     ]
 
-    /// Tension is board-only.
-    public static let boardStyles: [String] = climbStyles + ["Tension"]
+    /// Styles a load rule can cap. Board climbs carry no styles (DESIGN §12.3), but Tension and Campus rules stay.
+    public static let ruleStyles: [String] = climbStyles + ["Tension", "Campus"]
+
+    /// The board angle slider: 10° to 70° in 5° steps, opening at 40° (DESIGN §12.3).
+    public static let boardAngles: [Int] = Array(stride(from: 10, through: 70, by: 5))
+    public static let defaultBoardAngle = 40
 
     public static let sessionIntents: [String] = [
         "Max strength", "Power endurance", "Coordination", "Comp sim", "Slab / technique", "Chill maintenance",
@@ -207,4 +211,78 @@ public func shortInjury(_ name: String) -> String {
     if head.hasPrefix("Left ") { head = "L " + head.dropFirst(5) }
     else if head.hasPrefix("Right ") { head = "R " + head.dropFirst(6) }
     return head
+}
+
+/// The four board outcomes (DESIGN §12.3). They and the attempt counter are one value: a sent climb's outcome
+/// follows its count, as `Vocab.tickType` derives it.
+public enum BoardOutcome: String, CaseIterable, Sendable {
+    case flash, secondGo, project, attempt
+
+    public var label: String {
+        switch self {
+        case .flash: "Flash"
+        case .secondGo: "2nd go"
+        case .project: "Project"
+        case .attempt: "Attempt only"
+        }
+    }
+
+    public var sent: Bool { self != .attempt }
+
+    public static func of(attempts: Int, sent: Bool) -> BoardOutcome {
+        switch Vocab.tickType(attempts: attempts, sent: sent) {
+        case .flash: .flash
+        case .secondGo: .secondGo
+        case .project: .project
+        case .attempt: .attempt
+        }
+    }
+
+    /// The count after picking this outcome. Project keeps a count of 3 or more; Attempt only keeps any count.
+    public func attempts(from current: Int) -> Int {
+        switch self {
+        case .flash: 1
+        case .secondGo: 2
+        case .project: max(3, current)
+        case .attempt: max(1, current)
+        }
+    }
+
+    public func hint(attempts: Int) -> String {
+        switch self {
+        case .flash: "First go"
+        case .secondGo: "Sent on your second go"
+        case .project: "\(attempts) tries, tap to type"
+        case .attempt: "\(attempts == 1 ? "1 attempt" : "\(attempts) attempts"), not sent"
+        }
+    }
+}
+
+/// Edit gym (DESIGN §12.1): what the climbs already logged at a gym (or the Bump trio) pin down.
+public enum GymEdit {
+    static func climbs(_ gyms: [Gym], _ climbs: [Climb]) -> [Climb] {
+        let ids = Set(gyms.map(\.id))
+        return climbs.filter { ids.contains($0.gymId ?? "") }
+    }
+
+    public static func climbCount(_ gyms: [Gym], climbs: [Climb]) -> Int { Self.climbs(gyms, climbs).count }
+
+    /// The easiest to the hardest grade logged on the gyms' own scale; the range can't be edited to cut these out.
+    public static func loggedRange(_ gyms: [Gym], climbs: [Climb]) -> ClosedRange<Int>? {
+        guard let kind = gyms.first?.gradeKind else { return nil }
+        let grades = Self.climbs(gyms, climbs).filter { $0.gradeKind == kind }.map(\.grade)
+        guard let lo = grades.min(), let hi = grades.max() else { return nil }
+        return lo...hi
+    }
+}
+
+extension Gym {
+    /// A new name; a short name that matched the old name follows it, a separate one ("Camp5") stays.
+    public func renamed(_ newName: String) -> Gym {
+        let trimmed = newName.trimmingCharacters(in: .whitespaces)
+        var g = self
+        if shortName == name { g.shortName = trimmed }
+        g.name = trimmed
+        return g
+    }
 }

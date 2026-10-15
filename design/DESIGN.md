@@ -5,6 +5,8 @@
 > replaces it.
 > §11 (V and French route scales) was approved from the canvas row "Gyms and grade scales" on 13 Oct 2026 and is
 > built.
+> §12 (edit gym, board logging, end of session) was approved from the canvas rows "Logging" (board logs) and
+> "Edit gym, end of session" on 15 Oct 2026 and is built.
 
 Build from this spec and the r3 design canvas (Artifact: https://claude.ai/artifact/JzmnogQNGYm7oxoZesVzAp).
 Board names (`Today · dark`, `Load detail`, …) refer to the canvas. Target **iOS 26, SwiftUI, iPhone portrait
@@ -431,3 +433,84 @@ The Log a send sheet is unchanged except the Grade grid, which follows the gym's
 ### 11.7 Not in this change
 The Font bouldering scale; lead or top rope; converting between scales; offsets between V or French gyms; editing a
 gym's scale after it has climbs.
+
+## 12. Edit gym, board logging, end of session (approved and built, 15 Oct 2026)
+
+Asked for on 14 Oct 2026. Where this section differs from §3.5, §5.1 or §11, this section wins.
+Canvas boards: `Edit gym`, `Log a send · board` and `Log a send · board, angle open` (in the Logging row),
+`End session`, `How did that feel`, plus small changes to
+`Settings › Gyms and boards` and the four gym `Log a send` boards.
+
+### 12.1 Edit gym
+- Every gym card in **Gyms and boards** opens an **Edit gym** sheet (a chevron on the card says so). Same layout as
+  Add gym, filled in, titled "Edit gym", with a pinned **Save** that stays dimmed (35 %) until something changes.
+- **Name** is always editable. It renames the gym everywhere (the log sheet's gym menu, History, Progress); climbs
+  keep pointing at the same gym id.
+- **Grades:**
+  - With climbs logged, the scale shows as one locked row ("French routes", "Fixed, 23 climbs are logged here").
+    This keeps §11.1's rule that the scale is fixed once a gym has climbs.
+  - With no climbs yet, the four scale tiles from Add gym are back and the scale can change.
+- **Range** (easiest and hardest grade, or hardest grade for numbered gyms) is editable, but can't cut out a grade
+  that has climbs: the stepper stops there and a line under the card says "You've logged 5c to 7a here, so the range
+  always covers those." The Preview fills the grades that have climbs.
+- **Against Batuu** (numbered gyms) is editable. Metrics read the offset when they run, so a change applies to the
+  climbs already logged there too.
+- **Colour tag** gyms: name only.
+- **Bump PBJ, J1 and SSQ** (one card for three gyms): one sheet with a name row for each; the range and offset apply
+  to all three, since they share one scale.
+- **Remove gym** (injury-red text button) shows only while the gym has no climbs. It replaces today's Remove link.
+- Saving shows a toast, "Saved Batuu rope area".
+
+### 12.2 Gym styles
+- Two new style chips at gyms: **Heel hook** and **Toe hook** (sentence case, per §0's copy rules). The list becomes
+  Crimpy, Compression, Slopey, Slab, Coordination, Power, Heel hook, Toe hook. They wrap to a second row.
+- **Styles are multi-select** (as now): tap any number of chips, tap again to clear one. The Style heading gets a
+  right-hand note, "Pick any that apply", so this reads at a glance. All selected styles save on the climb.
+- They are ordinary styles: load rules can target them (for example a hamstring rule on heel hooks), and they count
+  in style splits. The Progress heatmap keeps its five style rows.
+
+### 12.3 Board log
+Order: header → `Gym | Board` segment → board picker → **Angle** → **Grade** → **Climb** name → **Outcome** →
+**Tonight** → **End session**, with the attempt bar pinned at the bottom.
+- **No style chips on boards**, Tension included, and no Not sent switch. `Vocab.boardStyles` goes away; board climbs
+  save with no styles. Old board climbs keep the styles they have.
+- **Angle**: a row in the field style, "Angle" on the left and the value in Archivo on the right with a chevron.
+  It reads **40°** before any tap. Tapping the row opens a slider under it in the same card: 10° to 70° in 5° steps,
+  a tick at every step and a label every 10°, the current tick in the accent. Tap the row again to close it. The
+  angle stays where you set it for the rest of the sheet, and opens at 40° next time. A board's list of angles no
+  longer limits what you can log. The histogram under Tonight ("KilterBoard 45°, all time") follows the slider.
+- **Outcome**: four chips in one row, **Flash**, **2nd go**, **Project**, **Attempt only**. They and the bar's counter
+  are one value:
+  - Flash = 1, 2nd go = 2, Project = 3 or more (picking it from Flash or 2nd go sets 3), Attempt only = not sent,
+    any count from 1.
+  - `+` and `−` on a sent climb move between the chips (Flash → 2nd go → Project, 4, 5 …; back down the same way).
+    On Attempt only they change the count only.
+  - **The number in the bar is a field**: tap it to type a count (numeric keypad, 1 to 99), for long projects.
+    While typing, the bar sits on the keypad and its button reads **Done** (the keypad has no return key);
+    `+` and `−` also close it.
+  - Bar label and hint: Flash "First go"; 2nd go "Sent on your second go"; Project "7 tries, tap to type";
+    Attempt only "3 attempts, not sent". The button reads **Log** on Attempt only, else **Send**.
+- Data is unchanged: the chips set `attempts` and `tickType` exactly as §5.1 derives them (Attempt only =
+  `.attempt`). Rows read Flash, 2nd go, "7 tries", "3 attempts", with the board and angle on the right ("KB 40°").
+- After Send the form resets to Flash with no grade, as at gyms. The board and angle stay.
+
+### 12.4 Review only at the end of a session
+- "How did that feel?" opens **only after a session ends**, never from logging. Today the log sheet's "End and rate"
+  button sits just under the session rows, where it is easy to hit after a log, and it opens the review while the
+  session is still live.
+- That button becomes **End session** (secondary style) in both the gym and board logs. It, the Quick add tile (now
+  "End session", sub "Finish and rate") and the Live Activity's end button all open one confirmation:
+  "End this session?", "Batuu, 1:13:02, 9 sends", three small stats (Sends, High, Flashed), **End and rate**
+  (accent) and **Keep climbing**.
+- **End and rate** ends the session first (the timer stops, the Live Activity ends) and then shows the review. The
+  review's subtitle says "Session ended, 1:13:02. 9 sends."
+- Closing the review without saving leaves the session ended and unrated; it can be rated later from History, as
+  now. Saving a review no longer ends the session, because it has already ended.
+- After every Send the sheet stays on the log with the toast (§3.5). Nothing pushes the review.
+
+### 12.5 Review chips
+Unchanged. "Confused with beta" was considered and dropped (14 Oct 2026): it overlaps "Read beta wrong".
+
+### 12.6 Not in this change
+Editing a board (name, angles); editing a gym's scale once it has climbs; styles on board climbs; the board grade
+range (stays V1 to V10 in the grid).

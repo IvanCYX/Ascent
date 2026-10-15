@@ -83,7 +83,7 @@ struct QuickAddSheet: View {
                     go(.logging(start: false, step: .log(.board)))
                 },
                 pain, rehab,
-                Tile(icon: "flag.checkered", title: "End and rate", sub: "Finish session") { go(.logging(start: false, step: .review)) },
+                Tile(icon: "flag.checkered", title: "End session", sub: "Finish and rate") { router.endSession() },
                 Tile(icon: "list.bullet.clipboard", title: "Plan", sub: "Tomorrow") { planTab() },
             ]
         }

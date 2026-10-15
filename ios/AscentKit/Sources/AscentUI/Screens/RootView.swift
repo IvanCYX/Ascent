@@ -123,6 +123,7 @@ struct RootView: View {
         case .addExercise(let id): AddExerciseSheet(injuryId: id)
         case .addLoadRule(let id): AddLoadRuleSheet(injuryId: id)
         case .addGym: AddGymSheet()
+        case .editGym(let ids): AddGymSheet(editing: ids)
         }
     }
 }

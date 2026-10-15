@@ -6,7 +6,7 @@ import AscentCore
 import AscentUI
 
 /// The session Live Activity (DESIGN §2, frames 1.7–1.9).
-/// Buttons are links into the app (`ascent://log`, `ascent://review`), which is what `openAppWhenRun` intents would do.
+/// Buttons are links into the app (`ascent://log`, `ascent://end`), which is what `openAppWhenRun` intents would do.
 public struct LiveSessionActivity: Widget {
     public init() {}
 
@@ -91,8 +91,8 @@ struct LiveButtons: View {
                 Text("Log a send").font(.system(size: 15, weight: .semibold)).foregroundStyle(accent.onAccent)
                     .frame(maxWidth: .infinity, minHeight: height).background(Capsule().fill(accent.color))
             }
-            Link(destination: URL(string: "ascent://review")!) {
-                Text("End & rate").font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.text)
+            Link(destination: URL(string: "ascent://end")!) {
+                Text("End session").font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.text)
                     .frame(maxWidth: .infinity, minHeight: height).background(Capsule().fill(Palette.text.opacity(0.12)))
             }
         }

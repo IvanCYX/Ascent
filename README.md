@@ -18,14 +18,17 @@ no iCloud.
 | **Plan** | *Today*: session intent picks the blocks, load rules strike out blocked focus styles, and the plan shortens automatically in a taper. *Season*: calendar, competitions, the taper plan and the weekly session target |
 | **History** | Chip trends over the last 12 sessions, plus the full session ledger with session detail |
 | **Body** | Injury and rehab: body map, pain trend, adherence, rehab protocol, load rules |
-| **Settings** | Appearance, accent colour, training (your normal grade per scale, weekly target), Face ID lock, gyms and boards (add a gym on numbers, colour tags, V or French routes), backup export and import |
+| **Settings** | Appearance, accent colour, training (your normal grade per scale, weekly target), Face ID lock, gyms and boards (add a gym on numbers, colour tags, V or French routes; tap a gym to edit it), backup export and import |
 
 **Quick add.** A floating `+` above the Liquid Glass tab bar opens a selector for the next action:
-start a session, log a gym or board send, end and rate the session, check in pain, tick off rehab, or
+start a session, log a gym or board send, end the session, check in pain, tick off rehab, or
 open the plan. Logging a send, the Camp5 tally, board climbs and the review all live in one sheet.
 Each climb records a real attempt count from a pinned `[ − n + ]` bar: 1 is a flash, 2 a second go,
-3 or more "N tries". Turn on "Not sent" to log attempts on a climb you didn't top. The bar resets to
-Flash after every save.
+3 or more "N tries". At a gym, pick any styles that apply (heel and toe hooks included) and turn on
+"Not sent" to log attempts on a climb you didn't top. On a board there are no styles: set the angle on a
+10° to 70° slider (it starts at 40°) and pick Flash, 2nd go, Project or Attempt only; the count follows,
+and you can type it for a long project. The bar resets to Flash after every save. "How did that feel?"
+only opens after End session, which asks first and stops the timer.
 
 **On the phone:**
 - A Live Activity runs during a session, in the Dynamic Island and on the Lock Screen.

@@ -63,10 +63,13 @@ import AscentCore
             write("normalgrade-\(sfx)", env(NormalGradeView(), dark: dark, height: 1400), dark: dark)
             write("gyms-\(sfx)", env(GymsView(), dark: dark, height: 1500), dark: dark)
             write("addgym-\(sfx)", env(AddGymSheet(), dark: dark, height: 900), dark: dark)
+            write("editgym-\(sfx)", env(AddGymSheet(editing: ["batuu-ropes"]), dark: dark, height: 1000), dark: dark)
+            write("editgym-bump-\(sfx)", env(AddGymSheet(editing: ["bump-pbj", "bump-j1", "bump-ssq"]), dark: dark, height: 1000), dark: dark)
             write("progress-v-\(sfx)", env(ProgressDetailView(), dark: dark, height: 2000, progressScale: .gymV), dark: dark)
             write("progress-french-\(sfx)", env(ProgressDetailView(), dark: dark, height: 2000, progressScale: .french), dark: dark)
             write("progress-camp5-\(sfx)", env(ProgressDetailView(), dark: dark, height: 1400, progressScale: .tag), dark: dark)
             write("log-\(sfx)", env(LoggingSheet(start: false, step: .log(.gym)), dark: dark, height: 1400), dark: dark)
+            write("logboard-\(sfx)", env(LoggingSheet(start: false, step: .log(.board)), dark: dark, height: 1500), dark: dark)
             write("review-\(sfx)", env(LoggingSheet(start: false, step: .review), dark: dark, height: 1500), dark: dark)
             write("lock-\(sfx)", env(LockView(autoPrompt: false), dark: dark, height: 852), dark: dark)
         }

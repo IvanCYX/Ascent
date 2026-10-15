@@ -461,7 +461,7 @@ struct AddLoadRuleSheet: View {
             dismiss()
         } content: {
             FieldLabel(title: "Style")
-            ChipFlow { ForEach(Vocab.boardStyles + ["Campus"], id: \.self) { s in Chip(label: s, on: style == s, small: true) { style = s } } }
+            ChipFlow { ForEach(Vocab.ruleStyles, id: \.self) { s in Chip(label: s, on: style == s, small: true) { style = s } } }
                 .padding(.bottom, 14)
             SquareSegment(options: [(false, "Weekly cap"), (true, "Not at all")], selection: $prohibition).padding(.bottom, 10)
             if !prohibition {

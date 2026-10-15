@@ -328,9 +328,10 @@ extension GymsView {
     }
 }
 
-/// One gym (or the Bump trio): name, scale line, sends, and its grades with the sent ones filled.
+/// One gym (or the Bump trio): name, scale line, sends, and its grades with the sent ones filled. Tap to edit.
 struct GymCard: View {
     @Environment(AscentStore.self) private var store
+    @Environment(Router.self) private var router
     @Environment(\.accent) private var accent
     var gyms: [Gym]
     var sends: Int
@@ -340,6 +341,12 @@ struct GymCard: View {
         let kind = first.gradeKind
         let ids = Set(gyms.map(\.id))
         let sent = Set(store.db.climbs.filter { ids.contains($0.gymId ?? "") && $0.gradeKind == kind && Metrics.isSend($0) }.map(\.grade))
+        Button { router.sheet = .editGym(gymIds: gyms.map(\.id)) } label: { card(first: first, kind: kind, sent: sent) }
+            .buttonStyle(.plain)
+            .accessibilityHint("Edit the gym")
+    }
+
+    func card(first: Gym, kind: GradeKind, sent: Set<Int>) -> some View {
         Card(padding: 0) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -349,6 +356,7 @@ struct GymCard: View {
                     }
                     Spacer()
                     Text("\(sends)").font(.num(20)).foregroundStyle(Palette.text)
+                    Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.tertiary)
                 }
                 if first.isRanked {
                     HStack(spacing: 6) {
@@ -380,9 +388,6 @@ struct GymCard: View {
                     }
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("\(sent.count) of \(grades.count) grades sent")
-                }
-                if gyms.count == 1 && sends == 0 {
-                    LinkButton(title: "Remove", color: Palette.tertiary) { store.deleteGym(first.id) }
                 }
             }
             .padding(.horizontal, 18).padding(.vertical, 16)
@@ -416,12 +421,15 @@ struct GymCard: View {
     }
 }
 
-/* ── Add gym (DESIGN §11.2) ─────────────────────────────────────────────── */
+/* ── Add gym (DESIGN §11.2) and Edit gym (§12.1) ───────────────────────── */
 
 struct AddGymSheet: View {
     @Environment(AscentStore.self) private var store
+    @Environment(Router.self) private var router
     @Environment(\.dismiss) private var dismiss
-    @State private var name = ""
+    /// Empty for a new gym; else the gym, or the Bump trio, being edited.
+    var editing: [String] = []
+    @State private var names = [""]
     @State private var scale: ScaleType = .numeric
     @State private var maxGrade = 12
     @State private var offset = 0.0
@@ -429,56 +437,97 @@ struct AddGymSheet: View {
     @State private var vHigh = 10
     @State private var frenchLow = Vocab.frenchDefaultRange.lowerBound
     @State private var frenchHigh = Vocab.frenchDefaultRange.upperBound
+    @State private var loaded = false
 
     static let options: [(scale: ScaleType, title: String, example: String)] = [
         (.numeric, "Numbers", "1 to 15"), (.rankedColour, "Colour tags", "Pink to black"),
         (.v, "V scale", "VB to V17"), (.french, "French routes", "4a to 9a"),
     ]
 
-    var trimmed: String { name.trimmingCharacters(in: .whitespaces) }
+    var isEditing: Bool { !editing.isEmpty }
+    var gyms: [Gym] { editing.compactMap { store.db.gym($0) } }
+    var climbCount: Int { GymEdit.climbCount(gyms, climbs: store.db.climbs) }
+    /// Grades already logged here; the range can't be edited to cut them out.
+    var logged: ClosedRange<Int>? { GymEdit.loggedRange(gyms, climbs: store.db.climbs) }
+    var trimmed: [String] { names.map { $0.trimmingCharacters(in: .whitespaces) } }
 
-    /// The gym as it would be saved.
-    var draft: Gym {
-        Gym(id: uid(), name: trimmed, shortName: trimmed, scaleType: scale,
-            minGrade: scale == .v ? vLow : scale == .french ? frenchLow : nil,
-            maxGrade: scale == .v ? vHigh : scale == .french ? frenchHigh : scale == .numeric ? maxGrade : nil,
-            tags: scale == .rankedColour ? Vocab.camp5Tags : nil,
-            offset: scale == .numeric ? offset : 0, sortOrder: store.db.gyms.count + 1)
+    /// The gyms as they would be saved.
+    var drafts: [Gym] {
+        if isEditing { return zip(gyms, names).map { g, n in apply(g.renamed(n)) } }
+        return [apply(Gym(id: uid(), name: trimmed[0], shortName: trimmed[0], scaleType: scale, sortOrder: store.db.gyms.count + 1))]
     }
+
+    func apply(_ gym: Gym) -> Gym {
+        var g = gym
+        g.scaleType = scale
+        g.minGrade = scale == .v ? vLow : scale == .french ? frenchLow : nil
+        g.maxGrade = scale == .v ? vHigh : scale == .french ? frenchHigh : scale == .numeric ? maxGrade : nil
+        g.tags = scale == .rankedColour ? (gym.tags ?? Vocab.camp5Tags) : nil
+        g.offset = scale == .numeric ? offset : 0
+        return g
+    }
+
+    var canSave: Bool { !trimmed.contains("") && (!isEditing || drafts != gyms) }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    TextFieldRow(label: "Name", placeholder: "Gym name", text: $name).padding(.bottom, 20)
-
-                    FieldLabel(title: "Grades")
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                        ForEach(Self.options, id: \.scale) { o in
-                            ScaleOption(title: o.title, example: o.example, on: scale == o.scale) { scale = o.scale }
+                    VStack(spacing: 8) {
+                        ForEach(names.indices, id: \.self) { i in
+                            TextFieldRow(label: "Name", placeholder: "Gym name", text: $names[i])
                         }
                     }
-                    .padding(.bottom, 16)
+                    .padding(.bottom, 20)
+
+                    FieldLabel(title: "Grades")
+                    if isEditing && climbCount > 0 {
+                        lockedScale.padding(.bottom, 12)
+                    } else {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                            ForEach(Self.options, id: \.scale) { o in
+                                ScaleOption(title: o.title, example: o.example, on: scale == o.scale) { scale = o.scale }
+                            }
+                        }
+                        .padding(.bottom, 16)
+                    }
 
                     controls
+                    if let logged, scale != .rankedColour {
+                        Text(loggedNote(logged)).font(.sans(13)).foregroundStyle(Palette.secondary)
+                            .padding(.horizontal, 4).padding(.top, 8)
+                    }
 
                     FieldLabel(title: "Preview").padding(.top, 20)
                     preview
 
-                    Text("The scale is fixed once the gym has climbs.")
-                        .font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 16)
+                    if !(isEditing && climbCount > 0 && scale == .rankedColour) {
+                        Text(isEditing && climbCount > 0 ? "Filled grades have climbs logged." : "The scale is fixed once the gym has climbs.")
+                            .font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 16)
+                    }
+
+                    if isEditing && climbCount == 0 && gyms.count == 1 {
+                        Button { store.deleteGym(editing[0]); dismiss() } label: {
+                            Text("Remove gym").font(.sans(16, .semibold)).foregroundStyle(Palette.injuryText)
+                                .frame(maxWidth: .infinity, minHeight: 50)
+                                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Palette.raised))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 22)
+                    }
                 }
                 .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 120)
             }
             .background(Palette.sheet)
+            .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {
-                Button("Add") { save() }
+                Button(isEditing ? "Save" : "Add") { save() }
                     .buttonStyle(PrimaryButtonStyle())
-                    .disabled(trimmed.isEmpty)
+                    .disabled(!canSave)
                     .padding(.horizontal, 16).padding(.vertical, 12)
                     .background(Palette.sheet)
             }
-            .navigationTitle("New gym")
+            .navigationTitle(isEditing ? "Edit gym" : "New gym")
             .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -486,7 +535,47 @@ struct AddGymSheet: View {
                 }
             }
             .sensoryFeedback(.selection, trigger: scale)
+            .onAppear(perform: load)
         }
+    }
+
+    func load() {
+        guard isEditing, !loaded, let g = gyms.first else { return }
+        loaded = true
+        names = gyms.map(\.name)
+        scale = g.scaleType
+        offset = g.offset
+        switch g.scaleType {
+        case .numeric: maxGrade = g.maxGrade ?? 15
+        case .v: vLow = g.minGrade ?? -1; vHigh = g.maxGrade ?? 10
+        case .french:
+            frenchLow = g.minGrade ?? Vocab.frenchDefaultRange.lowerBound
+            frenchHigh = g.maxGrade ?? Vocab.frenchDefaultRange.upperBound
+        case .rankedColour: break
+        }
+    }
+
+    /// "French routes" with a lock: the scale can't change once the gym has climbs.
+    var lockedScale: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(Self.options.first { $0.scale == scale }?.title ?? "").font(.sans(15, .semibold)).foregroundStyle(Palette.text)
+                Text("Fixed, \(climbCount) climb\(climbCount == 1 ? " is" : "s are") logged here")
+                    .font(.sans(12)).foregroundStyle(Palette.secondary)
+            }
+            Spacer()
+            Image(systemName: "lock").font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.secondary)
+        }
+        .padding(.horizontal, 14).frame(minHeight: 62)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Palette.raised))
+        .accessibilityElement(children: .combine)
+    }
+
+    func loggedNote(_ r: ClosedRange<Int>) -> String {
+        let kind = gyms.first?.gradeKind ?? .number
+        if scale == .numeric { return "You've logged up to \(r.upperBound) here, so the hardest grade can't go lower." }
+        if r.lowerBound == r.upperBound { return "You've logged \(Vocab.gradeLabel(kind, r.lowerBound)) here, so the range always covers it." }
+        return "You've logged \(Vocab.gradeLabel(kind, r.lowerBound)) to \(Vocab.gradeLabel(kind, r.upperBound)) here, so the range always covers those."
     }
 
     @ViewBuilder var controls: some View {
@@ -495,7 +584,7 @@ struct AddGymSheet: View {
             VStack(alignment: .leading, spacing: 8) {
                 FieldRow(label: "Hardest grade") {
                     Spacer()
-                    SquareStepper(value: "\(maxGrade)", decrement: { maxGrade = max(4, maxGrade - 1) },
+                    SquareStepper(value: "\(maxGrade)", decrement: { maxGrade = max(max(4, logged?.upperBound ?? 4), maxGrade - 1) },
                                   increment: { maxGrade = min(20, maxGrade + 1) })
                 }
                 FieldRow(label: "Against Batuu") {
@@ -503,7 +592,8 @@ struct AddGymSheet: View {
                     SquareStepper(value: offset == 0 ? "0" : "\(offset > 0 ? "+" : "−")\(abs(offset).formatted())",
                                   decrement: { offset = max(-1, offset - 0.5) }, increment: { offset = min(1, offset + 0.5) })
                 }
-                Text("Softer gyms go below 0.").font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 2)
+                Text(isEditing ? "Softer gyms go below 0. A change applies to climbs already logged here too." : "Softer gyms go below 0.")
+                    .font(.sans(13)).foregroundStyle(Palette.secondary).padding(.top, 2)
             }
         case .rankedColour:
             Text("Tags follow the Camp5 order, pink to black.")
@@ -518,17 +608,20 @@ struct AddGymSheet: View {
     }
 
     func rangeRows(_ kind: GradeKind, low: Binding<Int>, high: Binding<Int>, bounds: ClosedRange<Int>) -> some View {
-        VStack(spacing: 8) {
+        // Logged grades stay inside the range.
+        let lowMax = min(high.wrappedValue - 1, logged?.lowerBound ?? Int.max)
+        let highMin = max(low.wrappedValue + 1, logged?.upperBound ?? Int.min)
+        return VStack(spacing: 8) {
             FieldRow(label: "Easiest grade") {
                 Spacer()
                 SquareStepper(value: Vocab.gradeLabel(kind, low.wrappedValue),
                               decrement: { low.wrappedValue = max(bounds.lowerBound, low.wrappedValue - 1) },
-                              increment: { low.wrappedValue = min(high.wrappedValue - 1, low.wrappedValue + 1) })
+                              increment: { low.wrappedValue = min(lowMax, low.wrappedValue + 1) })
             }
             FieldRow(label: "Hardest grade") {
                 Spacer()
                 SquareStepper(value: Vocab.gradeLabel(kind, high.wrappedValue),
-                              decrement: { high.wrappedValue = max(low.wrappedValue + 1, high.wrappedValue - 1) },
+                              decrement: { high.wrappedValue = max(highMin, high.wrappedValue - 1) },
                               increment: { high.wrappedValue = min(bounds.upperBound, high.wrappedValue + 1) })
             }
         }
@@ -545,22 +638,37 @@ struct AddGymSheet: View {
             }
             .accessibilityHidden(true)
         } else {
-            let gym = draft
-            ChipFlow(spacing: 4) {
-                ForEach(gym.grades, id: \.self) { g in
-                    Text(Vocab.gradeLabel(gym.gradeKind, g)).font(.num(13)).foregroundStyle(Palette.text)
-                        .padding(.horizontal, 6).frame(minWidth: 38, minHeight: 30)
-                        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Palette.raised))
-                }
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(gym.grades.count) grades")
+            let gym = drafts[0]
+            let ids = Set(editing)
+            let filled = Set(store.db.climbs.filter { ids.contains($0.gymId ?? "") && $0.gradeKind == gym.gradeKind }.map(\.grade))
+            GradePreview(gym: gym, filled: filled)
         }
     }
 
     func save() {
-        store.saveGym(draft)
+        for g in drafts { store.saveGym(g) }
+        if isEditing { router.show(Toast(title: "Saved \(GymCard.name(drafts))", detail: "")) }
         dismiss()
+    }
+}
+
+/// The Preview strip: every grade in the range, the ones with climbs filled in the accent.
+struct GradePreview: View {
+    @Environment(\.accent) private var accent
+    var gym: Gym
+    var filled: Set<Int>
+
+    var body: some View {
+        ChipFlow(spacing: 4) {
+            ForEach(gym.grades, id: \.self) { g in
+                let on = filled.contains(g)
+                Text(Vocab.gradeLabel(gym.gradeKind, g)).font(.num(13)).foregroundStyle(on ? accent.onAccent : Palette.text)
+                    .padding(.horizontal, 6).frame(minWidth: 38, minHeight: 30)
+                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(on ? accent.color : Palette.raised))
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(gym.grades.count) grades\(filled.isEmpty ? "" : ", \(filled.count) with climbs")")
     }
 }
 

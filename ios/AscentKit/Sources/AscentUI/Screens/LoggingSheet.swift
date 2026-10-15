@@ -4,23 +4,27 @@ import AscentCore
 /// Web `/log`, `/board`, `/review` as one sheet with its own stack (DESIGN §3, 2.1–2.7).
 struct LoggingSheet: View {
     @Environment(AscentStore.self) private var store
+    @Environment(Router.self) private var router
     var start: Bool
     var step: LogStep
     /// Reviewing a finished session from History.
     var reviewSessionId: String?
 
     @State private var path = NavigationPath()
+    /// The session the End session confirmation is up for (DESIGN §12.4).
+    @State private var ending: EndingSession?
 
     var body: some View {
         NavigationStack(path: $path) {
             Group {
                 if let id = reviewSessionId {
                     ReviewView(sessionId: id, path: $path)
-                } else if store.db.activeSession == nil && (start || step != .review) {
+                } else if store.db.activeSession == nil && step != .review {
                     StartSessionView(onStarted: {})
                 } else {
                     switch step {
                     case .log(let mode): LogView(initialMode: mode, path: $path)
+                    case .end: LogView(initialMode: .gym, path: $path)
                     case .review: ReviewView(sessionId: nil, path: $path)
                     }
                 }
@@ -28,19 +32,100 @@ struct LoggingSheet: View {
             .navigationDestination(for: LogStep.self) { s in
                 switch s {
                 case .log(let mode): LogView(initialMode: mode, path: $path)
+                case .end: LogView(initialMode: .gym, path: $path)
                 case .review: ReviewView(sessionId: nil, path: $path)
                 }
+            }
+            .navigationDestination(for: EndedRoute.self) { r in
+                ReviewView(sessionId: r.sessionId, justEnded: true, path: $path)
             }
             .navigationDestination(for: SavedRoute.self) { r in
                 SavedView(sessionId: r.sessionId, editing: reviewSessionId != nil, path: $path)
             }
         }
+        .environment(\.endSession, { if let s = store.db.activeSession { ending = EndingSession(session: s) } })
+        .sheet(item: $ending) { e in
+            EndSessionCard(session: e.session, end: { endAndRate(e.session) }, keep: { ending = nil })
+        }
+        .onAppear {
+            if step == .end, let s = store.db.activeSession { ending = EndingSession(session: s) }
+        }
+        // An End request while this sheet is already up (the same route doesn't present again)
+        .onChange(of: router.endRequests) {
+            if let s = store.db.activeSession { ending = EndingSession(session: s) }
+        }
         .presentationDetents([.large])
         .presentationBackground(Palette.sheet)
+    }
+
+    /// Ends the session first (the timer and the Live Activity stop), then asks how it felt.
+    func endAndRate(_ s: Session) {
+        ending = nil
+        store.endSession(s.id)
+        path.append(EndedRoute(sessionId: s.id))
     }
 }
 
 struct SavedRoute: Hashable { var sessionId: String }
+/// The review shown straight after End and rate.
+struct EndedRoute: Hashable { var sessionId: String }
+
+struct EndingSession: Identifiable {
+    var session: Session
+    var id: String { session.id }
+}
+
+extension EnvironmentValues {
+    /// Opens the End session confirmation from anywhere inside the log sheet.
+    @Entry var endSession: () -> Void = {}
+}
+
+/// "End this session?" with three small stats, End and rate, and Keep climbing (DESIGN §12.4).
+struct EndSessionCard: View {
+    @Environment(AscentStore.self) private var store
+    var session: Session
+    var end: () -> Void
+    var keep: () -> Void
+
+    var body: some View {
+        let db = store.db
+        let sends = Metrics.sessionSends(db.climbs, sessionId: session.id)
+        VStack(spacing: 0) {
+            Text("End this session?").font(.sans(19, .bold)).foregroundStyle(Palette.text)
+            HStack(spacing: 0) {
+                Text("\(db.gym(session.gymId)?.name ?? "Board"), ")
+                if let start = session.startedAt {
+                    Text(timerInterval: start...Date.distantFuture, countsDown: false).font(.num(14)).monospacedDigit()
+                    Text(", ")
+                }
+                Text("\(sends.count) send\(sends.count == 1 ? "" : "s")")
+            }
+            .font(.sans(14)).foregroundStyle(Palette.secondary).padding(.top, 6)
+            .accessibilityElement(children: .combine)
+            HStack(spacing: 8) {
+                stat("\(sends.count)", "Sends")
+                stat(sends.isEmpty ? "–" : LiveSummary.high(sends, db: db, sessionGym: session.gymId), "High")
+                stat("\(sends.filter(Metrics.isFlash).count)", "Flashed")
+            }
+            .padding(.top, 18)
+            Button("End and rate", action: end).buttonStyle(PrimaryButtonStyle()).padding(.top, 18)
+            Button("Keep climbing", action: keep).buttonStyle(SecondaryButtonStyle()).padding(.top, 8)
+        }
+        .padding(.horizontal, 16).padding(.top, 24).padding(.bottom, 8)
+        .presentationDetents([.height(372)])
+        .presentationBackground(Palette.sheet)
+    }
+
+    func stat(_ value: String, _ label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value).font(.num(22)).foregroundStyle(Palette.text).lineLimit(1).minimumScaleFactor(0.6)
+            Text(label).font(.sans(12)).foregroundStyle(Palette.secondary)
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Palette.raised))
+        .accessibilityElement(children: .combine)
+    }
+}
 
 /// Close button + title with a mono subtitle, shared by every step.
 struct SheetChrome: ViewModifier {
@@ -235,7 +320,7 @@ struct OptionalBlock: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            FieldLabel(title: "Style")
+            FieldLabel(title: "Style", note: "Pick any that apply")
             ChipFlow {
                 ForEach(styleList, id: \.self) { s in
                     Chip(label: s, on: styles.contains(s), small: true) {
@@ -272,32 +357,61 @@ struct AttemptBar: View {
     /// nil = no button (the Camp5 tally logs from each row)
     var sendTitle: String?
     var canSend = true
+    /// Replaces the derived label ("Project" on boards instead of "7 tries")
+    var title: String?
     var hint: String?
+    /// The count is a field you can type into (board log, DESIGN §12.3)
+    var typeable = false
     var send: () -> Void = {}
+
+    @FocusState private var typing: Bool
+    /// What's typed so far; nil while not typing
+    @State private var draft: String?
 
     var body: some View {
         HStack(spacing: 10) {
             HStack(spacing: 0) {
                 StepButton(systemName: "minus", label: "One fewer attempt", size: 40, fill: .clear, disabled: attempts <= 1) {
+                    typing = false
                     attempts = max(1, attempts - 1)
                 }
-                Text("\(attempts)").font(.num(22)).foregroundStyle(Palette.text).frame(minWidth: 28)
-                    .contentTransition(.numericText())
-                    .accessibilityLabel("\(attempts) attempt\(attempts == 1 ? "" : "s")")
+                if typeable {
+                    TextField(String(attempts), text: Binding(get: { draft ?? String(attempts) }, set: { s in
+                        let digits = String(s.filter(\.isNumber).prefix(2))
+                        draft = digits
+                        if let n = Int(digits), n > 0 { attempts = n }
+                    }))
+                    .font(.num(22)).foregroundStyle(Palette.text).multilineTextAlignment(.center)
+                    .textFieldStyle(.plain).numberKeyboard().focused($typing)
+                    .frame(width: 40)
+                    .onChange(of: typing) { _, on in draft = on ? "" : nil }
+                    .accessibilityLabel("Attempts")
+                    .accessibilityValue("\(attempts)")
+                } else {
+                    Text("\(attempts)").font(.num(22)).foregroundStyle(Palette.text).frame(minWidth: 28)
+                        .contentTransition(.numericText())
+                        .accessibilityLabel("\(attempts) attempt\(attempts == 1 ? "" : "s")")
+                }
                 StepButton(systemName: "plus", label: "One more attempt", size: 40, fill: .clear) {
+                    typing = false
                     attempts = min(99, attempts + 1)
                 }
             }
             .padding(.horizontal, 2)
             .background(Capsule().fill(Palette.raised))
             VStack(alignment: .leading, spacing: 1) {
-                Text(Vocab.attemptsLabel(attempts, sent: !notSent)).font(.sans(16, .bold)).foregroundStyle(Palette.text)
+                Text(title ?? Vocab.attemptsLabel(attempts, sent: !notSent)).font(.sans(16, .bold)).foregroundStyle(Palette.text)
                     .contentTransition(.opacity)
                 Text(hint ?? (notSent ? "No send logged" : attempts == 1 ? "First go" : "Attempts until sent"))
-                    .font(.sans(12)).foregroundStyle(Palette.secondary).lineLimit(1)
+                    .font(.sans(12)).foregroundStyle(Palette.secondary).lineLimit(1).minimumScaleFactor(0.85)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            if let sendTitle {
+            if typing {
+                // The number pad has no return key; the bar's own button closes it.
+                Button("Done") { typing = false }
+                    .buttonStyle(PrimaryButtonStyle(height: 50))
+                    .frame(width: 100)
+            } else if let sendTitle {
                 Button(sendTitle, action: send)
                     .buttonStyle(PrimaryButtonStyle(height: 50))
                     .frame(width: 100)
@@ -467,9 +581,10 @@ struct HoldStrip: View {
     }
 }
 
-/// "This session" rows, the latest first, plus End and rate.
+/// "This session" rows, the latest first, plus End session.
 struct SessionRows: View {
     @Environment(AscentStore.self) private var store
+    @Environment(\.endSession) private var endSession
     var climbs: [Climb]
     var sends: [Climb]
     var gymOnly = false
@@ -485,7 +600,7 @@ struct SessionRows: View {
                     .overlay(alignment: .bottom) { if i < min(8, shown.count) - 1 { Hairline() } }
                     .swipeToDelete { store.deleteClimb(c.id) }
             }
-            Button("End and rate") { path.append(LogStep.review) }
+            Button("End session") { endSession() }
                 .buttonStyle(SecondaryButtonStyle(height: 46))
                 .padding(.top, 14)
         }
@@ -564,21 +679,25 @@ struct TallyLogView: View {
     }
 }
 
-/// `3b` — board log.
+/// `3b` — board log: board, angle, grade, climb, outcome; no styles (DESIGN §12.3).
 struct BoardLogView: View {
     @Environment(AscentStore.self) private var store
     @Environment(Router.self) private var router
     @Environment(\.accent) private var accent
+    @Environment(\.endSession) private var endSession
     var session: Session
     @Binding var path: NavigationPath
     @State private var boardId = ""
-    @State private var angle = 40
+    @State private var angle = Vocab.defaultBoardAngle
+    @State private var angleOpen = false
     @State private var v: Int?
     @State private var name = ""
-    @State private var styles: [String] = []
     @State private var attempts = 1
     @State private var notSent = false
     @State private var logged = 0
+
+    /// The chips and the counter are one value.
+    var outcome: BoardOutcome { .of(attempts: attempts, sent: !notSent) }
 
     var body: some View {
         let db = store.db
@@ -586,7 +705,6 @@ struct BoardLogView: View {
         let bars = Metrics.boardHistogram(db.climbs, boardId: board?.id ?? "", angle: angle)
         let maxV = bars.filter { $0.count > 0 }.last?.v
         let tonight = db.climbs.filter { $0.sessionId == session.id && $0.boardId != nil }.sorted { $0.createdAt > $1.createdAt }
-        let tripped = trippedRules(db, styles: styles, today: store.today)
 
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -594,43 +712,37 @@ struct BoardLogView: View {
                 HStack(spacing: 8) {
                     ForEach(db.boards) { b in
                         let on = b.id == board?.id
-                        Button {
-                            boardId = b.id
-                            if !b.angles.contains(angle) { angle = b.angles.first ?? 40 }
-                        } label: {
+                        Button { boardId = b.id } label: {
                             Text(b.name).font(.sans(14, on ? .semibold : .medium))
                                 .foregroundStyle(on ? accent.onAccent : Palette.text)
                                 .frame(maxWidth: .infinity, minHeight: 44)
                                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(on ? accent.color : Palette.raised))
                         }
                         .buttonStyle(.plain)
+                        .accessibilityAddTraits(on ? .isSelected : [])
                     }
                 }
-                .padding(.bottom, 12)
-                FieldRow(label: "Angle") {
-                    Spacer()
-                    HStack(spacing: 6) {
-                        ForEach(board?.angles ?? [], id: \.self) { a in GradeCell(label: "\(a)°", on: a == angle, height: 36) { angle = a }.frame(width: 56) }
-                    }
-                }
-                .padding(.bottom, 20)
+                .padding(.bottom, 10)
+                AngleRow(angle: $angle, open: $angleOpen).padding(.bottom, 20)
                 FieldLabel(title: "Grade")
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
                     ForEach(1...10, id: \.self) { g in GradeCell(label: "V\(g)", on: v == g) { v = v == g ? nil : g } }
                 }
                 .padding(.bottom, 16)
-                TextFieldRow(label: "Climb", placeholder: "Shrimp cocktail", text: $name).padding(.bottom, 16)
-                if let t = tripped.first {
-                    WarnPanel(lead: "\(t.headline)", text: "\(t.used) of \(t.cap ?? 0) this week\(t.used == t.cap ? ". Limit reached." : ".")")
-                        .padding(.bottom, 14)
+                TextFieldRow(label: "Climb", placeholder: "Shrimp cocktail", text: $name).padding(.bottom, 20)
+                FieldLabel(title: "Outcome")
+                ChipFlow {
+                    ForEach(BoardOutcome.allCases, id: \.self) { o in
+                        Chip(label: o.label, on: outcome == o, small: true) { pick(o) }
+                    }
                 }
-                OptionalBlock(styles: $styles, notSent: $notSent, location: .constant(""), styleList: Vocab.boardStyles, showWhere: false)
             }
             .padding(.horizontal, 16)
 
             if !tonight.isEmpty {
                 Band {
-                    SectionHead("Tonight", note: "\(tonight.filter(Metrics.isSend).count) sends")
+                    let sent = tonight.filter(Metrics.isSend).count
+                    SectionHead("Tonight", note: "\(sent) send\(sent == 1 ? "" : "s")")
                     ForEach(Array(tonight.prefix(6).enumerated()), id: \.element.id) { i, c in
                         ClimbRow(climb: c)
                             .overlay(alignment: .bottom) { if i < min(6, tonight.count) - 1 { Hairline() } }
@@ -642,38 +754,100 @@ struct BoardLogView: View {
             Band {
                 SectionHead("\(board?.name ?? "Board") \(angle)°, all time", note: maxV.map { "Max V\($0)" } ?? "No sends")
                 BoardHistogramView(bars: bars)
-                Button("End and rate") { path.append(LogStep.review) }
+                Button("End session") { endSession() }
                     .buttonStyle(SecondaryButtonStyle(height: 46))
                     .padding(.top, 14)
             }
             .padding(.bottom, 20)
         }
+        .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
-            AttemptBar(attempts: $attempts, notSent: notSent, sendTitle: notSent ? "Log" : "Send", canSend: v != nil && board != nil) { save(board) }
+            AttemptBar(attempts: $attempts, notSent: notSent, sendTitle: notSent ? "Log" : "Send", canSend: v != nil && board != nil,
+                       title: outcome.label, hint: outcome.hint(attempts: attempts), typeable: true) { save(board) }
         }
         .sensoryFeedback(.success, trigger: logged)
-        .onAppear {
-            if boardId.isEmpty {
-                let b = db.boards.first
-                boardId = b?.id ?? ""
-                angle = b?.angles.contains(40) == true ? 40 : b?.angles.first ?? 40
-            }
-        }
+        .sensoryFeedback(.selection, trigger: outcome)
+        .onAppear { if boardId.isEmpty { boardId = db.boards.first?.id ?? "" } }
+    }
+
+    func pick(_ o: BoardOutcome) {
+        notSent = !o.sent
+        attempts = o.attempts(from: attempts)
     }
 
     func save(_ board: Board?) {
         guard let v, let board else { return }
         let label = Vocab.attemptsLabel(attempts, sent: !notSent)
-        let id = store.addClimb(Climb(sessionId: session.id, boardId: board.id, angle: angle, gradeKind: .v, grade: v, styles: styles,
+        let id = store.addClimb(Climb(sessionId: session.id, boardId: board.id, angle: angle, gradeKind: .v, grade: v,
                                       name: name.trimmingCharacters(in: .whitespaces).isEmpty ? nil : name,
                                       tickType: Vocab.tickType(attempts: attempts, sent: !notSent), attempts: attempts))
         router.show(Toast(title: "Logged V\(v)", detail: label, undo: { [store] in store.deleteClimb(id) }))
         logged += 1
+        // the board and angle stay; the climb starts again as a flash
         self.v = nil
         name = ""
-        styles = []
         attempts = 1
         notSent = false
+    }
+}
+
+/// "Angle  40° ⌄"; a tap opens a 10° to 70° slider in 5° steps under it (DESIGN §12.3).
+struct AngleRow: View {
+    @Environment(\.accent) private var accent
+    @Binding var angle: Int
+    @Binding var open: Bool
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button { withAnimation(.snappy(duration: 0.25)) { open.toggle() } } label: {
+                HStack(spacing: 10) {
+                    Text("Angle").font(.sans(15)).foregroundStyle(Palette.text)
+                    Spacer()
+                    Text("\(angle)°").font(.num(18)).foregroundStyle(Palette.text).contentTransition(.numericText())
+                    Image(systemName: "chevron.down").font(.system(size: 12, weight: .bold)).foregroundStyle(Palette.secondary)
+                        .rotationEffect(.degrees(open ? 180 : 0))
+                }
+                .padding(.horizontal, 14).frame(minHeight: 52).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Angle, \(angle) degrees")
+            .accessibilityHint(open ? "Hides the angle slider" : "Shows the angle slider")
+            if open {
+                VStack(spacing: 6) {
+                    Slider(value: Binding(get: { Double(angle) }, set: { angle = Int(($0 / 5).rounded()) * 5 }),
+                           in: Double(Vocab.boardAngles.first!)...Double(Vocab.boardAngles.last!), step: 5)
+                        .tint(accent.color)
+                        .accessibilityLabel("Board angle")
+                        .accessibilityValue("\(angle) degrees")
+                    ticks
+                }
+                .padding(.horizontal, 14).padding(.bottom, 14)
+                .transition(.opacity)
+            }
+        }
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Palette.raised))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .animation(.snappy(duration: 0.2), value: angle)
+        .sensoryFeedback(.selection, trigger: angle)
+    }
+
+    /// A tick per step, a label every 10°, the current one in the accent.
+    var ticks: some View {
+        HStack(spacing: 0) {
+            ForEach(Vocab.boardAngles, id: \.self) { a in
+                Capsule().fill(a == angle ? accent.color : Palette.tertiary)
+                    .frame(width: 2, height: a % 10 == 0 ? 8 : 5)
+                    .frame(width: 2, height: 8, alignment: .top)
+                    .overlay(alignment: .top) {
+                        if a % 10 == 0 {
+                            Text("\(a)°").font(.num(11)).foregroundStyle(Palette.secondary).fixedSize().offset(y: 12)
+                        }
+                    }
+                if a != Vocab.boardAngles.last { Spacer(minLength: 0) }
+            }
+        }
+        .padding(.horizontal, 12).padding(.bottom, 16)
+        .accessibilityHidden(true)
     }
 }
 
@@ -684,6 +858,8 @@ struct ReviewView: View {
     @Environment(\.accent) private var accent
     /// nil = the live session, or the most recent finished one
     var sessionId: String?
+    /// Straight after End and rate: the header says the session ended and how long it ran.
+    var justEnded = false
     @Binding var path: NavigationPath
 
     @State private var chips: [String] = []
@@ -710,7 +886,7 @@ struct ReviewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("How did that feel?").font(.sans(28, .bold)).foregroundStyle(Palette.text)
-                    Text("\(sends) send\(sends == 1 ? "" : "s"). Tap any that apply.")
+                    Text("\(endedLine(session))\(sends) send\(sends == 1 ? "" : "s"). Tap any that apply.")
                         .font(.sans(15)).foregroundStyle(Palette.secondary).padding(.top, 6)
 
                     if session.intent == nil {
@@ -787,12 +963,24 @@ struct ReviewView: View {
                     .padding(.horizontal, 16).padding(.vertical, 12).background(Palette.sheet)
             }
             .modifier(SheetChrome(title: "", subtitle: [db.gym(session.gymId)?.name, session.intent].compactMap { $0 }.joined(separator: ", ")))
+            // Back would land on an empty Start session step; close is the way out.
+            .navigationBarBackButtonHidden(justEnded)
             .onAppear { load(session, db: db) }
         } else {
             Text("No session to review.").font(.sans(14)).foregroundStyle(Palette.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity).background(Palette.sheet)
                 .modifier(SheetChrome(title: "Review", subtitle: ""))
         }
+    }
+
+    /// "Session ended, 1:13:02. "
+    func endedLine(_ s: Session) -> String {
+        guard justEnded, let start = s.startedAt, let end = s.endedAt else { return "" }
+        let secs = max(0, Int(end.timeIntervalSince(start)))
+        // Same shape as the live timer: 1:20 under an hour, 1:13:02 over
+        let time = secs >= 3600 ? String(format: "%d:%02d:%02d", secs / 3600, secs / 60 % 60, secs % 60)
+                                : String(format: "%d:%02d", secs / 60, secs % 60)
+        return "Session ended, \(time). "
     }
 
     @ViewBuilder func group<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
