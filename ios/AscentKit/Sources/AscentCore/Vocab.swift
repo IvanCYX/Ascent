@@ -13,6 +13,15 @@ public enum Vocab {
     public static let boardAngles: [Int] = Array(stride(from: 10, through: 70, by: 5))
     public static let defaultBoardAngle = 40
 
+    /// Where the slider opens: the angle of the last climb on that board, from any session, snapped onto the
+    /// slider's steps; 40° for a board with none (DESIGN §13).
+    public static func lastBoardAngle(_ boardId: String, climbs: [Climb]) -> Int {
+        guard let last = climbs.filter({ $0.boardId == boardId && $0.angle != nil }).max(by: { $0.createdAt < $1.createdAt }),
+              let angle = last.angle else { return defaultBoardAngle }
+        let snapped = Int((Double(angle) / 5).rounded()) * 5
+        return min(boardAngles.last!, max(boardAngles.first!, snapped))
+    }
+
     public static let sessionIntents: [String] = [
         "Max strength", "Power endurance", "Coordination", "Comp sim", "Slab / technique", "Chill maintenance",
     ]

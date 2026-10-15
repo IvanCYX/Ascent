@@ -7,6 +7,7 @@
 > built.
 > §12 (edit gym, board logging, end of session) was approved from the canvas rows "Logging" (board logs) and
 > "Edit gym, end of session" on 15 Oct 2026 and is built.
+> §13 (boards are angle-agnostic) was approved on 15 Oct 2026 and is built.
 
 Build from this spec and the r3 design canvas (Artifact: https://claude.ai/artifact/JzmnogQNGYm7oxoZesVzAp).
 Board names (`Today · dark`, `Load detail`, …) refer to the canvas. Target **iOS 26, SwiftUI, iPhone portrait
@@ -514,3 +515,22 @@ Unchanged. "Confused with beta" was considered and dropped (14 Oct 2026): it ove
 ### 12.6 Not in this change
 Editing a board (name, angles); editing a gym's scale once it has climbs; styles on board climbs; the board grade
 range (stays V1 to V10 in the grid).
+
+## 13. Boards are angle-agnostic (approved and built, 15 Oct 2026)
+
+Asked for on 15 Oct 2026. Where this section differs from §12.3, this section wins. Canvas boards:
+`Settings › Gyms and boards`, `Log a send · board`, `Log a send · board, angle open`.
+
+- **A board has no angles of its own.** Every board, Moon boards and other fixed-angle boards included, takes any
+  angle from 10° to 70° in 5° steps. The angle belongs to each climb, not to the board.
+- **Gyms and boards:** a board's second line reads "V scale, any angle" (it was its fixed list, "25, 30, 40 and 45°").
+  The footer adds "Every board takes any angle from 10° to 70°, and each climb keeps its own." Adding or editing a
+  board, when it comes, has no angle setting.
+- **Changing angle mid-session:** the angle can change between any two sends. Each send saves the angle on the slider
+  at that moment, and Tonight shows each row's own angle ("KB 45°", "KB 40°").
+- **Where the slider opens:** at the angle of your last climb on that board, from any session
+  (`Vocab.lastBoardAngle`). A board you just moved to 45° stays at 45° when you come back to log, and a one-angle board
+  like a Moon board never needs resetting. Only a board with no climbs yet opens at 40°. Switching boards in the sheet
+  moves the slider to that board's last angle. The sheet opens on the board you climbed last.
+- **Data:** `Board.angles` stays in the model and in backups so older files load, but nothing reads it. Progress
+  detail's boards panel keeps picking each board's main angle from the climbs (most climbs wins), unchanged.

@@ -679,7 +679,8 @@ struct TallyLogView: View {
     }
 }
 
-/// `3b` — board log: board, angle, grade, climb, outcome; no styles (DESIGN §12.3).
+/// `3b` — board log: board, angle, grade, climb, outcome; no styles (DESIGN §12.3). Boards have no angles of their
+/// own; the slider opens where that board was last climbed (§13).
 struct BoardLogView: View {
     @Environment(AscentStore.self) private var store
     @Environment(Router.self) private var router
@@ -712,7 +713,10 @@ struct BoardLogView: View {
                 HStack(spacing: 8) {
                     ForEach(db.boards) { b in
                         let on = b.id == board?.id
-                        Button { boardId = b.id } label: {
+                        Button {
+                            boardId = b.id
+                            angle = Vocab.lastBoardAngle(b.id, climbs: db.climbs)
+                        } label: {
                             Text(b.name).font(.sans(14, on ? .semibold : .medium))
                                 .foregroundStyle(on ? accent.onAccent : Palette.text)
                                 .frame(maxWidth: .infinity, minHeight: 44)
@@ -767,7 +771,13 @@ struct BoardLogView: View {
         }
         .sensoryFeedback(.success, trigger: logged)
         .sensoryFeedback(.selection, trigger: outcome)
-        .onAppear { if boardId.isEmpty { boardId = db.boards.first?.id ?? "" } }
+        .onAppear {
+            guard boardId.isEmpty else { return }
+            // The board climbed last, at its last angle
+            let last = db.climbs.filter { $0.boardId != nil }.max { $0.createdAt < $1.createdAt }?.boardId
+            boardId = db.boards.first { $0.id == last }?.id ?? db.boards.first?.id ?? ""
+            angle = Vocab.lastBoardAngle(boardId, climbs: db.climbs)
+        }
     }
 
     func pick(_ o: BoardOutcome) {

@@ -25,6 +25,30 @@ import Testing
         #expect(Vocab.defaultBoardAngle == 40)
     }
 
+    /// The slider opens at the angle of the last climb on that board, from any session (DESIGN §13).
+    @Test func boardAngleOpensAtTheLastOneLogged() {
+        func climb(_ board: String, _ angle: Int?, _ day: String, _ hour: Int) -> Climb {
+            Climb(sessionId: "s-\(day)", boardId: board, angle: angle, gradeKind: .v, grade: 5,
+                  tickType: .flash, attempts: 1, createdAt: Seed.at(day, hour, 0))
+        }
+        let climbs = [
+            climb("kilter", 40, "2026-10-01", 19),
+            climb("kilter", 45, "2026-10-08", 20),
+            climb("kilter", 30, "2026-10-08", 19),
+            climb("moon", 25, "2026-09-02", 18),
+            climb("tb2", nil, "2026-10-09", 18),
+        ]
+        #expect(Vocab.lastBoardAngle("kilter", climbs: climbs) == 45)
+        // A one-angle board keeps its angle across sessions instead of falling back to 40.
+        #expect(Vocab.lastBoardAngle("moon", climbs: climbs) == 25)
+        // No angle on record, or no climbs yet: 40.
+        #expect(Vocab.lastBoardAngle("tb2", climbs: climbs) == 40)
+        #expect(Vocab.lastBoardAngle("spray", climbs: climbs) == 40)
+        // Old logs outside the slider's range snap onto it.
+        #expect(Vocab.lastBoardAngle("old", climbs: [climb("old", 8, "2026-01-01", 9)]) == 10)
+        #expect(Vocab.lastBoardAngle("old", climbs: [climb("old", 42, "2026-01-01", 9)]) == 40)
+    }
+
     @Test func boardOutcomeFollowsTheCount() {
         #expect(BoardOutcome.of(attempts: 1, sent: true) == .flash)
         #expect(BoardOutcome.of(attempts: 2, sent: true) == .secondGo)

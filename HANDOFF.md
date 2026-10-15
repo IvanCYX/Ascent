@@ -281,9 +281,14 @@ End and rate → review → Save → Saved; closing the review leaves the sessio
 **Simulator state:** the demo's 65-hour live session was ended and rated during the test (it now holds one V6 board
 climb, 7 tries). TensionHouse is back to its name and VB to V10. Settings › Reset to demo data restores the demo.
 
+**Then, boards became angle-agnostic (DESIGN §13, 15 Oct 2026):** every board takes 10° to 70°, Moon boards included;
+the angle lives on each climb. Gyms and boards reads "V scale, any angle". The board log opens on the board climbed last,
+and the slider opens at that board's last logged angle from any session (`Vocab.lastBoardAngle`, snapped to 5°
+steps; 40° only for a board with no climbs). `Board.angles` stays in the model for older backups but nothing reads it.
+Verified: KB opened at 40°, switching to TB2 moved to its last 25°, a V3 logged at 55° reopened at 55° on TB2. The test
+session was deleted afterwards.
+
 **Still open:**
-- Board angles: a board's `angles` list no longer limits logging, but Gyms and boards still shows it ("25, 30, 40 and
-  45°") rather than the angles you have logged.
 - The Live Activity's end button was changed but not tapped on a real Lock Screen.
 
 ---

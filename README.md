@@ -26,7 +26,7 @@ open the plan. Logging a send, the Camp5 tally, board climbs and the review all 
 Each climb records a real attempt count from a pinned `[ − n + ]` bar: 1 is a flash, 2 a second go,
 3 or more "N tries". At a gym, pick any styles that apply (heel and toe hooks included) and turn on
 "Not sent" to log attempts on a climb you didn't top. On a board there are no styles: set the angle on a
-10° to 70° slider (it starts at 40°) and pick Flash, 2nd go, Project or Attempt only; the count follows,
+10° to 70° slider (every board takes any angle; it opens where you last climbed that board) and pick Flash, 2nd go, Project or Attempt only; the count follows,
 and you can type it for a long project. The bar resets to Flash after every save. "How did that feel?"
 only opens after End session, which asks first and stops the timer.
 

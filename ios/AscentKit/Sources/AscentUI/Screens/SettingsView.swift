@@ -277,7 +277,7 @@ struct GymsView: View {
                                     .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.raised))
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(b.name).font(.sans(15, .semibold)).foregroundStyle(Palette.text)
-                                    Text(Self.angles(b.angles)).font(.sans(13)).foregroundStyle(Palette.secondary)
+                                    Text("V scale, any angle").font(.sans(13)).foregroundStyle(Palette.secondary)
                                 }
                                 Spacer()
                                 Text("\(byBoard[b.id] ?? 0)").font(.num(20)).foregroundStyle(Palette.text)
@@ -290,7 +290,7 @@ struct GymsView: View {
                     .padding(.horizontal, 18).padding(.vertical, 4)
                 }
 
-                Text("Numbered gyms share one 1 to 15 scale. V, French and colour tags keep their own grades and are never converted. Boards stay on V and never mix with gyms.")
+                Text("Numbered gyms share one 1 to 15 scale. V, French and colour tags keep their own grades and are never converted. Boards stay on V and never mix with gyms. Every board takes any angle from 10° to 70°, and each climb keeps its own.")
                     .font(.sans(13)).foregroundStyle(Palette.secondary).padding(.horizontal, 4).padding(.top, 2)
             }
             .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 100)
@@ -310,12 +310,6 @@ struct GymsView: View {
         .font(.sans(13, .semibold)).foregroundStyle(Palette.secondary).padding(.horizontal, 4)
     }
 
-    /// "25, 30, 40 and 45°"
-    static func angles(_ xs: [Int]) -> String {
-        let s = xs.map(String.init)
-        guard let last = s.last else { return "" }
-        return s.count == 1 ? "\(last)°" : s.dropLast().joined(separator: ", ") + " and \(last)°"
-    }
 }
 
 extension GymsView {
