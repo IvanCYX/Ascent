@@ -68,7 +68,7 @@ cd ios/AscentKit && ./test.sh
 | `ios/AscentKit/Sources/AscentWidgetsUI` | Widget views and the Live Activity views |
 | `ios/Ascent`, `ios/AscentWidgets` | The app target and the widget extension |
 | `ios/project.yml` | XcodeGen spec; `xcodegen generate` rebuilds `Ascent.xcodeproj` |
-| `design/` | The approved r3 design spec (`DESIGN.md`, which links the design canvas). `draft.html` and `BRIEF.md` are the r2 draft |
+| `design/` | The approved r3 design spec (`DESIGN.md`, which links the design canvas) and `draft.html`, every r3 screen as one static page, rebuilt from the canvas by `tools/build-draft.js`. `BRIEF.md` is the r2 brief |
 
 **Storage.** One JSON file lives in the App Group container, so the widgets read the same log as the
 app. `Settings → Export backup` saves that file, and `Import backup` restores it.

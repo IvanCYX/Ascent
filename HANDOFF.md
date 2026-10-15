@@ -294,7 +294,9 @@ points at the view it is attached to. They were on whole screens and floated mid
 
 **Still open:**
 - The Live Activity's end button was changed but not tapped on a real Lock Screen.
-- `design/draft.html` is the r2 draft, kept for history; the r3 visuals are the canvas.
+- `design/draft.html` is generated: every current canvas board as a static frame (the first Progress detail and
+  Your normal grade boards are left out as superseded). After changing the canvas, read its `project/` files with the
+  Artifact tool and run `node design/tools/build-draft.js <that project dir> design/draft.html`.
 
 ---
 
