@@ -288,8 +288,13 @@ steps; 40° only for a board with no climbs). `Board.angles` stays in the model 
 Verified: KB opened at 40°, switching to TB2 moved to its last 25°, a V3 logged at 55° reopened at 55° on TB2. The test
 session was deleted afterwards.
 
+**Then, confirmations were anchored (DESIGN §12.6, `ab08b63`):** on iOS 26 a `confirmationDialog` is a popover that
+points at the view it is attached to. They were on whole screens and floated mid-screen; each now sits on its button
+(or row). Keep new ones on their trigger.
+
 **Still open:**
 - The Live Activity's end button was changed but not tapped on a real Lock Screen.
+- `design/draft.html` is the r2 draft, kept for history; the r3 visuals are the canvas.
 
 ---
 

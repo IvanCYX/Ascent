@@ -477,9 +477,9 @@ Order: header → `Gym | Board` segment → board picker → **Angle** → **Gra
   save with no styles. Old board climbs keep the styles they have.
 - **Angle**: a row in the field style, "Angle" on the left and the value in Archivo on the right with a chevron.
   It reads **40°** before any tap. Tapping the row opens a slider under it in the same card: 10° to 70° in 5° steps,
-  a tick at every step and a label every 10°, the current tick in the accent. Tap the row again to close it. The
-  angle stays where you set it for the rest of the sheet, and opens at 40° next time. A board's list of angles no
-  longer limits what you can log. The histogram under Tonight ("KilterBoard 45°, all time") follows the slider.
+  a tick at every step and a label every 10°, the current tick in the accent. Tap the row again to close it. Where
+  the slider opens is in §13 (the board's last logged angle). The histogram under Tonight ("KilterBoard 45°, all
+  time") follows the slider.
 - **Outcome**: four chips in one row, **Flash**, **2nd go**, **Project**, **Attempt only**. They and the bar's counter
   are one value:
   - Flash = 1, 2nd go = 2, Project = 3 or more (picking it from Flash or 2nd go sets 3), Attempt only = not sent,
@@ -492,7 +492,8 @@ Order: header → `Gym | Board` segment → board picker → **Angle** → **Gra
   - Bar label and hint: Flash "First go"; 2nd go "Sent on your second go"; Project "7 tries, tap to type";
     Attempt only "3 attempts, not sent". The button reads **Log** on Attempt only, else **Send**.
 - Data is unchanged: the chips set `attempts` and `tickType` exactly as §5.1 derives them (Attempt only =
-  `.attempt`). Rows read Flash, 2nd go, "7 tries", "3 attempts", with the board and angle on the right ("KB 40°").
+  `.attempt`). Rows read "Flash, 55°", "2nd go, 40°", "7 tries, 45°", "3 attempts, 40°": the outcome, then the
+  climb's own angle and name.
 - After Send the form resets to Flash with no grade, as at gyms. The board and angle stay.
 
 ### 12.4 Review only at the end of a session
@@ -504,7 +505,10 @@ Order: header → `Gym | Board` segment → board picker → **Angle** → **Gra
   "End this session?", "Batuu, 1:13:02, 9 sends", three small stats (Sends, High, Flashed), **End and rate**
   (accent) and **Keep climbing**.
 - **End and rate** ends the session first (the timer stops, the Live Activity ends) and then shows the review. The
-  review's subtitle says "Session ended, 1:13:02. 9 sends."
+  review's subtitle says "Session ended, 1:13:02. 9 sends." (under an hour, "1:08", like the live timer). The review
+  has no back button there, since behind it is only an empty Start session step; Close leaves it.
+- A second End request while the log sheet is already up (Quick add, the Live Activity, `ascent://end`) shows the
+  confirmation again.
 - Closing the review without saving leaves the session ended and unrated; it can be rated later from History, as
   now. Saving a review no longer ends the session, because it has already ended.
 - After every Send the sheet stays on the log with the toast (§3.5). Nothing pushes the review.
@@ -512,7 +516,12 @@ Order: header → `Gym | Board` segment → board picker → **Angle** → **Gra
 ### 12.5 Review chips
 Unchanged. "Confused with beta" was considered and dropped (14 Oct 2026): it overlaps "Read beta wrong".
 
-### 12.6 Not in this change
+### 12.6 Confirmations point at their button
+On iOS 26 a confirmation dialog is a popover that points at the view it is attached to, so each one sits on the
+control that opens it: Delete session, Delete climb (its row), Delete comp, Import backup, Reset to demo data and
+Clear everything. Attached to a whole screen, they float mid-screen pointing at nothing.
+
+### 12.7 Not in this change
 Editing a board (name, angles); editing a gym's scale once it has climbs; styles on board climbs; the board grade
 range (stays V1 to V10 in the grid).
 
