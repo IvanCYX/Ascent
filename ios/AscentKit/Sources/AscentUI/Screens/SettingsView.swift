@@ -97,10 +97,36 @@ struct SettingsView: View {
                     do { exportDoc = BackupDocument(data: try store.exportData()); exporting = true }
                     catch { dataError = error.localizedDescription }
                 } label: { LabeledContent { Text("JSON") } label: { Label("Export backup", systemImage: "square.and.arrow.up") } }
+                // Each confirmation sits on its own row, so the iOS 26 popover points at it.
                 Button { importing = true } label: { Label("Import backup", systemImage: "square.and.arrow.down") }
+                    .confirmationDialog("Replace your log with this backup?", isPresented: Binding(get: { pendingImport != nil }, set: { if !$0 { pendingImport = nil } }),
+                                        titleVisibility: .visible) {
+                        Button("Replace everything", role: .destructive) {
+                            if let d = pendingImport { do { try store.importData(d) } catch { dataError = error.localizedDescription } }
+                            pendingImport = nil
+                        }
+                    } message: {
+                        Text("Deletes \(db.climbs.count.formatted()) climbs on this iPhone.")
+                    }
                 Button { confirmReset = true } label: { Label("Reset to demo data…", systemImage: "arrow.counterclockwise") }
                     .foregroundStyle(Palette.text)
+                    .confirmationDialog("Reset to demo data?", isPresented: $confirmReset, titleVisibility: .visible) {
+                        Button("Export backup first") {
+                            if let d = try? store.exportData() { exportDoc = BackupDocument(data: d); exporting = true }
+                        }
+                        Button("Reset to demo data", role: .destructive) { store.resetToDemo() }
+                    } message: {
+                        Text("Deletes \(db.climbs.count.formatted()) climbs. Export a backup first.")
+                    }
                 Button(role: .destructive) { confirmClear = true } label: { Label("Clear everything…", systemImage: "trash") }
+                    .confirmationDialog("Clear everything?", isPresented: $confirmClear, titleVisibility: .visible) {
+                        Button("Export backup first") {
+                            if let d = try? store.exportData() { exportDoc = BackupDocument(data: d); exporting = true }
+                        }
+                        Button("Clear everything", role: .destructive) { store.clearAll() }
+                    } message: {
+                        Text("Deletes all sessions, climbs, reviews and injuries. Gyms and boards stay.")
+                    }
             } header: { header("Data") } footer: {
                 Text("\(Text("Stored only on this iPhone.").bold().foregroundStyle(Palette.text)) Export a backup before deleting the app.")
             }
@@ -134,31 +160,6 @@ struct SettingsView: View {
                 } catch { dataError = "That file is not an Ascent backup." }
             case .failure(let e): dataError = e.localizedDescription
             }
-        }
-        .confirmationDialog("Replace your log with this backup?", isPresented: Binding(get: { pendingImport != nil }, set: { if !$0 { pendingImport = nil } }),
-                            titleVisibility: .visible) {
-            Button("Replace everything", role: .destructive) {
-                if let d = pendingImport { do { try store.importData(d) } catch { dataError = error.localizedDescription } }
-                pendingImport = nil
-            }
-        } message: {
-            Text("Deletes \(db.climbs.count.formatted()) climbs on this iPhone.")
-        }
-        .confirmationDialog("Reset to demo data?", isPresented: $confirmReset, titleVisibility: .visible) {
-            Button("Export backup first") {
-                if let d = try? store.exportData() { exportDoc = BackupDocument(data: d); exporting = true }
-            }
-            Button("Reset to demo data", role: .destructive) { store.resetToDemo() }
-        } message: {
-            Text("Deletes \(db.climbs.count.formatted()) climbs. Export a backup first.")
-        }
-        .confirmationDialog("Clear everything?", isPresented: $confirmClear, titleVisibility: .visible) {
-            Button("Export backup first") {
-                if let d = try? store.exportData() { exportDoc = BackupDocument(data: d); exporting = true }
-            }
-            Button("Clear everything", role: .destructive) { store.clearAll() }
-        } message: {
-            Text("Deletes all sessions, climbs, reviews and injuries. Gyms and boards stay.")
         }
         .alert("Couldn’t do that", isPresented: Binding(get: { dataError != nil }, set: { if !$0 { dataError = nil } })) {
             Button("OK") { dataError = nil }

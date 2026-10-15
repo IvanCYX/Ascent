@@ -192,6 +192,11 @@ struct CompDetailView: View {
                     Band {
                         Button("Delete comp", role: .destructive) { confirmDelete = true }
                             .buttonStyle(SecondaryButtonStyle())
+                            .confirmationDialog("Delete \(comp.name)?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                                Button("Delete comp", role: .destructive) { dismiss(); store.deleteCompetition(comp.id) }
+                            } message: {
+                                Text("Its taper plan is removed too.")
+                            }
                     }
                     .padding(.bottom, 96)
                 }
@@ -205,11 +210,6 @@ struct CompDetailView: View {
                 }
             }
             .onAppear { notes = comp.notes ?? ""; result = comp.result ?? "" }
-            .confirmationDialog("Delete \(comp.name)?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button("Delete comp", role: .destructive) { dismiss(); store.deleteCompetition(comp.id) }
-            } message: {
-                Text("Its taper plan is removed too.")
-            }
         } else {
             Text("This comp was deleted.").font(.sans(14)).foregroundStyle(Palette.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Palette.ground)

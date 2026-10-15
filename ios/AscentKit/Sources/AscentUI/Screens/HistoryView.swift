@@ -102,6 +102,18 @@ struct SessionDetailView: View {
     @State private var pendingDelete: Climb?
     @State private var confirmSessionDelete = false
 
+    /// A climb in the session, swipe to delete; the confirmation points at the row.
+    func climbRow(_ c: Climb) -> some View {
+        ClimbRow(climb: c).plainRow(horizontal: 16)
+            .swipeActions { Button("Delete", role: .destructive) { pendingDelete = c } }
+            .confirmationDialog("Delete this climb?", isPresented: Binding(get: { pendingDelete?.id == c.id }, set: { if !$0 { pendingDelete = nil } }),
+                                titleVisibility: .visible) {
+                Button("Delete climb", role: .destructive) { store.deleteClimb(c.id); pendingDelete = nil }
+            } message: {
+                Text("\(gradeLabel(c).ifEmpty(Vocab.colourLabel(c.tagId))) · \(c.gradeKind == .v ? boardDetail(c) : climbDetail(c))")
+            }
+    }
+
     var body: some View {
         let db = store.db
         if let s = db.session(sessionId) {
@@ -144,17 +156,11 @@ struct SessionDetailView: View {
 
                 if !gymClimbs.isEmpty {
                     sectionHead("Gym climbs", note: nil)
-                    ForEach(gymClimbs) { c in
-                        ClimbRow(climb: c).plainRow(horizontal: 16)
-                            .swipeActions { Button("Delete", role: .destructive) { pendingDelete = c } }
-                    }
+                    ForEach(gymClimbs) { c in climbRow(c) }
                 }
                 if !boardClimbs.isEmpty {
                     sectionHead("Board climbs", note: Set(boardClimbs.compactMap { db.board($0.boardId)?.name }).sorted().joined(separator: ", "))
-                    ForEach(boardClimbs) { c in
-                        ClimbRow(climb: c).plainRow(horizontal: 16)
-                            .swipeActions { Button("Delete", role: .destructive) { pendingDelete = c } }
-                    }
+                    ForEach(boardClimbs) { c in climbRow(c) }
                 }
                 if let blocks = s.plannedBlocks, !blocks.isEmpty {
                     Band {
@@ -167,6 +173,12 @@ struct SessionDetailView: View {
                 Band {
                     Button("Delete session", role: .destructive) { confirmSessionDelete = true }
                         .buttonStyle(SecondaryButtonStyle())
+                        // On the button, so the iOS 26 popover points at it rather than the middle of the screen
+                        .confirmationDialog("Delete this session?", isPresented: $confirmSessionDelete, titleVisibility: .visible) {
+                            Button("Delete session", role: .destructive) { dismiss(); store.deleteSession(s.id) }
+                        } message: {
+                            Text("Its climbs, review and pain entries are deleted too.")
+                        }
                 }
                 .plainRow()
                 .padding(.bottom, 60)
@@ -181,17 +193,6 @@ struct SessionDetailView: View {
                 ToolbarItem(placement: .trailing) {
                     Button(review == nil ? "Rate" : "Edit review") { router.sheet = .reviewEdit(sessionId: s.id) }
                 }
-            }
-            .confirmationDialog("Delete this climb?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
-                                titleVisibility: .visible) {
-                Button("Delete climb", role: .destructive) { if let c = pendingDelete { store.deleteClimb(c.id) }; pendingDelete = nil }
-            } message: {
-                Text(pendingDelete.map { "\(gradeLabel($0).ifEmpty(Vocab.colourLabel($0.tagId))) · \($0.gradeKind == .v ? boardDetail($0) : climbDetail($0))" } ?? "")
-            }
-            .confirmationDialog("Delete this session?", isPresented: $confirmSessionDelete, titleVisibility: .visible) {
-                Button("Delete session", role: .destructive) { dismiss(); store.deleteSession(s.id) }
-            } message: {
-                Text("Its climbs, review and pain entries are deleted too.")
             }
         } else {
             Text("This session was deleted.").font(.sans(14)).foregroundStyle(Palette.secondary)
